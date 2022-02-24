@@ -6,7 +6,7 @@ import numpy as np
 import scipy.sparse as sp
 import torch
 
-from data import Graph
+from base import Graph
 from dataset import NodeDataset
 from utils import pkl_read_file, download_to
 

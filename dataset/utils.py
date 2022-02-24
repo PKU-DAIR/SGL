@@ -1,7 +1,6 @@
 import sys
 import os.path as osp
 import pickle as pkl
-import numpy as np
 import ssl
 import urllib
 

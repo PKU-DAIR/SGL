@@ -4,7 +4,7 @@ import torch
 from ogb.nodeproppred import PygNodePropPredDataset
 from torch_geometric.utils import to_undirected
 
-from data import Graph
+from base import Graph
 from dataset import NodeDataset
 from utils import pkl_read_file
 
