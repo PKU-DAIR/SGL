@@ -249,6 +249,5 @@ class LearnableWeightedMessageOp(MessageOp):
             weighted_feat = two_dim_weighted_add(feat_list[start:end], weight_list=weight_list)
         else:
             raise NotImplementedError
-        # print(weight_list)
 
         return weighted_feat
