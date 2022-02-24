@@ -234,13 +234,13 @@ class HeteroGraph:
             raise TypeError("Edge type or node type must be a string!")
         if key in self.__edge_types:
             if not isinstance(value, Edge):
-                raise TypeError("Please organize the data using the Edge class!")
+                raise TypeError("Please organize the dataset using the Edge class!")
             # more restrictions
 
             self.__edges_dict[key] = value
         elif key in self.__node_types:
             if not isinstance(value, Node):
-                raise TypeError("Please organize the data using the Node class!")
+                raise TypeError("Please organize the dataset using the Node class!")
             # more restrictions
 
             self.__nodes_dict[key] = value

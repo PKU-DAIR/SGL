@@ -4,9 +4,9 @@ import torch
 from ogb.nodeproppred import PygNodePropPredDataset
 from torch_geometric.utils import to_undirected
 
-from base import Graph
-from dataset import NodeDataset
-from utils import pkl_read_file
+from dataset.base_data import Graph
+from dataset.base_dataset import NodeDataset
+from dataset.utils import pkl_read_file
 
 
 class Ogbn(NodeDataset):

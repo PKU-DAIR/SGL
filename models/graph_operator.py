@@ -1,7 +1,7 @@
 import scipy.sparse as sp
 
-from base import GraphOp
-from utils import sparse_mx_to_torch_sparse_tensor, adj_to_symmetric_norm
+from models.base_op import GraphOp
+from models.utils import sparse_mx_to_torch_sparse_tensor, adj_to_symmetric_norm
 
 
 class LaplacianGraphOp(GraphOp):

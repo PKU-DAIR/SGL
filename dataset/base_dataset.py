@@ -1,7 +1,7 @@
 import os
 import os.path as osp
 
-from utils import file_exist
+from dataset.utils import file_exist
 
 
 # Base class for node-level tasks
@@ -35,7 +35,6 @@ class NodeDataset:
 
     def _preprocess(self):
         if file_exist(self.raw_file_paths):
-            print(self._name)
             print("Files already downloaded.")
         else:
             print("Downloading...")

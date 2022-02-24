@@ -39,7 +39,7 @@ def one_dim_weighted_add(feat_list, weight_list):
 
     feat_shape = feat_list[0].shape
     feat_reshape = torch.vstack([feat.view(1, -1).squeeze(0) for feat in feat_list])
-    weighted_feat = (feat_reshape * weight_list).sum(dim=0).view(feat_shape)
+    weighted_feat = (feat_reshape * weight_list.view(-1, 1)).sum(dim=0).view(feat_shape)
     return weighted_feat
 
 
@@ -51,7 +51,12 @@ def two_dim_weighted_add(feat_list, weight_list):
     elif len(weight_list.shape) != 2:
         raise ValueError("The weight list should be a 2d tensor!")
 
-    feat_reshape = torch.stack(feat_list, dim=2)
+    num_node = feat_list[0].shape[0]
+    weighted_feat = torch.mul(feat_list[0], weight_list[:, 0].view(num_node, 1))
+    for i in range(1, len(feat_list)):
+        weighted_feat = weighted_feat + torch.mul(feat_list[i], weight_list[:, i].view(num_node, 1))
+
+    '''feat_reshape = torch.stack(feat_list, dim=2)
     weight_reshape = weight_list.unsqueeze(dim=2)
-    weighted_feat = torch.bmm(feat_reshape, weight_reshape).squeeze(dim=2)
+    weighted_feat = torch.bmm(feat_reshape, weight_reshape).squeeze(dim=2)'''
     return weighted_feat

@@ -49,38 +49,3 @@ class MessageOp(nn.Module):
                 raise TypeError("The feature matrices must be tensors!")
 
         return self._combine(feat_list)
-
-
-class BaseSGAPModel(nn.Module):
-    def __init__(self, prop_steps, feat_dim, num_classes):
-        super(BaseSGAPModel, self).__init__()
-        self._prop_steps = prop_steps
-        self._feat_dim = feat_dim
-        self._num_classes = num_classes
-
-        self._pre_graph_op, self._pre_msg_op = None, None
-        self._post_graph_op, self._post_msg_op = None, None
-        self._base_model = None
-
-        self._processed_feat_list = None
-
-    def preprocess(self, adj, feature):
-        self._processed_feat_list = self._pre_graph_op.propagate(adj, feature)
-
-    def postprocess(self, output):
-        if self._post_graph_op is not None:
-            if self._post_msg_op.aggr_type == "learnable_weighted":
-                raise ValueError("Learnable weighted message operator is not supported in the post-processing phase!")
-            output = self._post_msg_op(self._post_graph_op(output))
-
-        return output
-
-    # a wrapper of the forward function
-    def train_model(self, adj, feature):
-        return self.forward(adj, feature)
-
-    def forward(self, adj, feature):
-        processed_feature = self._pre_msg_op.aggregate(self._processed_feat_list)
-        output = self._base_model(processed_feature)
-
-        return output

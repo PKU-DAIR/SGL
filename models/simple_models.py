@@ -9,7 +9,7 @@ class LogisticRegression(nn.Module):
 
     def forward(self, feature):
         output = self.__fc(feature)
-        return F.softmax(output, dim=1)
+        return output
 
 
 class MultiLayerPerceptron(nn.Module):
@@ -52,4 +52,4 @@ class MultiLayerPerceptron(nn.Module):
                 feature = self.__bns[i](feature)
 
         output = self.__fcs[-1](feature)
-        return F.softmax(output, dim=1)
+        return output

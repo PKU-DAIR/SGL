@@ -2,8 +2,8 @@ import torch
 from torch import Tensor
 from torch.nn import Parameter
 
-from base import MessageOp
-from utils import one_dim_weighted_add, two_dim_weighted_add
+from models.base_op import MessageOp
+from models.utils import one_dim_weighted_add, two_dim_weighted_add
 
 
 class LastMessageOp(MessageOp):
@@ -130,14 +130,14 @@ class SimpleWeightedMessageOp(MessageOp):
         if len(args) != 1:
             raise ValueError("Invalid parameter numbers for the simple weighted aggregator!")
         self.__alpha, self.__weight_list = None, None
-        if combination_type is "alpha":
+        if combination_type == "alpha":
             self.__alpha = args[0]
             if not isinstance(self.__alpha, float):
                 raise TypeError("The alpha must be a float!")
             elif self.__alpha > 1 or self.__alpha < 0:
                 raise ValueError("The alpha must be a float in [0,1]!")
 
-        elif combination_type is "hand_crafted":
+        elif combination_type == "hand_crafted":
             self.__weight_list = args[0]
             if isinstance(self.__weight_list, list):
                 weight_list = torch.FloatTensor(self.__weight_list)
@@ -196,19 +196,19 @@ class LearnableWeightedMessageOp(MessageOp):
             if len(args) != 1:
                 raise ValueError("Invalid parameter numbers for the gate learnable weighted aggregator!")
             feat_dim = args[0]
-            self.__learnable_weight = Parameter(torch.FloatTensor(feat_dim))
+            self.__learnable_weight = Parameter(torch.FloatTensor(feat_dim, 1))
 
         elif combination_type == "ori_ref":
             if len(args) != 1:
                 raise ValueError("Invalid parameter numbers for the ori_ref learnable weighted aggregator!")
             feat_dim = args[0]
-            self.__learnable_weight = Parameter(torch.FloatTensor(feat_dim + feat_dim))
+            self.__learnable_weight = Parameter(torch.FloatTensor(feat_dim + feat_dim, 1))
 
         elif combination_type == "jk":
             if len(args) != 2:
                 raise ValueError("Invalid parameter numbers for the jk learnable weighted aggregator!")
             prop_steps, feat_dim = args[0], args[1]
-            self.__learnable_weight = Parameter(torch.FloatTensor(feat_dim + (prop_steps + 1) * feat_dim))
+            self.__learnable_weight = Parameter(torch.FloatTensor(feat_dim + (prop_steps + 1) * feat_dim, 1))
 
     # two additional parameters, start and end, might be used
     def _combine(self, feat_list, *args):
@@ -224,21 +224,21 @@ class LearnableWeightedMessageOp(MessageOp):
 
         weight_list = None
         if self.__combination_type == "simple":
-            weight_list = self.__learnable_weight[start:end]
+            weight_list = torch.sigmoid(self.__learnable_weight[start:end])
 
         elif self.__combination_type == "gate":
             adopted_feat_list = torch.vstack(feat_list[start:end])
-            weight_list = torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start)
+            weight_list = torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start))
 
         elif self.__combination_type == "ori_ref":
             reference_feat = feat_list[0].repeat(end - start, 1)
             adopted_feat_list = torch.hstack((reference_feat, torch.vstack(feat_list[start:end])))
-            weight_list = torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start)
+            weight_list = torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start))
 
         elif self.__combination_type == "jk":
             reference_feat = torch.hstack(feat_list).repeat(end - start, 1)
             adopted_feat_list = torch.hstack((reference_feat, torch.vstack(feat_list[start:end])))
-            weight_list = torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start)
+            weight_list = torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start))
         else:
             raise NotImplementedError
 
@@ -249,5 +249,6 @@ class LearnableWeightedMessageOp(MessageOp):
             weighted_feat = two_dim_weighted_add(feat_list[start:end], weight_list=weight_list)
         else:
             raise NotImplementedError
+        # print(weight_list)
 
         return weighted_feat
