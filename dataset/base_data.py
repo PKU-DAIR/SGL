@@ -43,7 +43,7 @@ class Edge:
 
     @property
     def edge_attrs(self):
-        return self.edge_attrs
+        return self.__edge_attrs
 
     @edge_attrs.setter
     def edge_attrs(self, edge_attrs):
