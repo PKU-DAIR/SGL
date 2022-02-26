@@ -14,7 +14,7 @@ from dataset.utils import pkl_read_file, download_to
 class Planetoid(NodeDataset):
     def __init__(self, name="cora", root="./", split="official"):
         if name not in ["cora", "citeseer", "pubmed"]:
-            raise ValueError("Dataset name not found!")
+            raise ValueError("Dataset name not supported!")
         super(Planetoid, self).__init__(root + "Planetoid/", name)
 
         self._data = pkl_read_file(self.processed_file_paths)

@@ -13,7 +13,7 @@ class LaplacianGraphOp(GraphOp):
         if isinstance(adj, sp.csr_matrix):
             adj = adj.tocoo()
         elif not isinstance(adj, sp.coo_matrix):
-            raise TypeError("The adjacency matrix must be scipy.sparse.coo_matrix/csr_matrix!")
+            raise TypeError("The adjacency matrix must be a scipy.sparse.coo_matrix/csr_matrix!")
 
         adj_normalized = adj_to_symmetric_norm(adj, self.__r)
         return sparse_mx_to_torch_sparse_tensor(adj_normalized)
@@ -29,7 +29,7 @@ class PprGraphOp(GraphOp):
         if isinstance(adj, sp.csr_matrix):
             adj = adj.tocoo()
         elif not isinstance(adj, sp.coo_matrix):
-            raise TypeError("The adjacency matrix must be scipy.sparse.coo_matrix/csr_matrix!")
+            raise TypeError("The adjacency matrix must be a scipy.sparse.coo_matrix/csr_matrix!")
 
         adj_normalized = adj_to_symmetric_norm(adj, self.__r)
         adj_normalized = (1 - self.__alpha) * adj_normalized + self.__alpha * sp.eye(adj.shape[0])

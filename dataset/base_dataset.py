@@ -13,7 +13,7 @@ class NodeDataset:
         self._processed_dir = osp.join(self._root, "processed")
         self._data = None
         self._train_idx, self._val_idx, self._test_idx = None, None, None
-        self._preprocess()
+        self.__preprocess()
 
     @property
     def name(self):
@@ -33,7 +33,7 @@ class NodeDataset:
     def _process(self):
         raise NotImplementedError
 
-    def _preprocess(self):
+    def __preprocess(self):
         if file_exist(self.raw_file_paths):
             print("Files already downloaded.")
         else:
