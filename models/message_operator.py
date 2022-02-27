@@ -1,6 +1,7 @@
 import torch
 from torch import Tensor
 from torch.nn import Parameter
+import torch.nn.functional as F
 
 from models.base_op import MessageOp
 from models.utils import one_dim_weighted_add, two_dim_weighted_add
@@ -224,21 +225,25 @@ class LearnableWeightedMessageOp(MessageOp):
 
         weight_list = None
         if self.__combination_type == "simple":
-            weight_list = torch.sigmoid(self.__learnable_weight[start:end])
+            weight_list = F.softmax(torch.sigmoid(self.__learnable_weight[start:end]), dim=1)
 
         elif self.__combination_type == "gate":
             adopted_feat_list = torch.vstack(feat_list[start:end])
-            weight_list = torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start))
+            weight_list = F.softmax(
+                torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start)), dim=1)
 
         elif self.__combination_type == "ori_ref":
             reference_feat = feat_list[0].repeat(end - start, 1)
             adopted_feat_list = torch.hstack((reference_feat, torch.vstack(feat_list[start:end])))
-            weight_list = torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start))
+            weight_list = F.softmax(
+                torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start)), dim=1)
 
         elif self.__combination_type == "jk":
             reference_feat = torch.hstack(feat_list).repeat(end - start, 1)
             adopted_feat_list = torch.hstack((reference_feat, torch.vstack(feat_list[start:end])))
-            weight_list = torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start))
+            weight_list = F.softmax(
+                torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start)), dim=1)
+
         else:
             raise NotImplementedError
 

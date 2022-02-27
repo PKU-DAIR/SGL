@@ -18,12 +18,16 @@ class BaseSGAPModel(nn.Module):
         self._pre_msg_learnable = False
 
     def preprocess(self, adj, feature):
-        self._processed_feat_list = self._pre_graph_op.propagate(adj, feature)
-        if self._pre_msg_op.aggr_type == "learnable_weighted":
-            self._pre_msg_learnable = True
+        if self._pre_graph_op is not None:
+            self._processed_feat_list = self._pre_graph_op.propagate(adj, feature)
+            if self._pre_msg_op.aggr_type == "learnable_weighted":
+                self._pre_msg_learnable = True
+            else:
+                self._pre_msg_learnable = False
+                self._processed_feature = self._pre_msg_op.aggregate(self._processed_feat_list)
         else:
             self._pre_msg_learnable = False
-            self._processed_feature = self._pre_msg_op.aggregate(self._processed_feat_list)
+            self._processed_feature = feature
 
     def postprocess(self, output):
         if self._post_graph_op is not None:

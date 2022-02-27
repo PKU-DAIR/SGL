@@ -4,6 +4,6 @@ class BaseTask:
 
     def _evaluate(self):
         return NotImplementedError
-        
+
     def _train(self):
         return NotImplementedError
