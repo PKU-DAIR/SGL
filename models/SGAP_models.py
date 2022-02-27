@@ -22,7 +22,7 @@ class SIGN(BaseSGAPModel):
 
         self._pre_graph_op = LaplacianGraphOp(prop_steps, r=0.5)
         self._pre_msg_op = ConcatMessageOp()
-        self._base_model = MultiLayerPerceptron((prop_steps+1)*feat_dim, hidden_dim, num_layers, num_classes)
+        self._base_model = MultiLayerPerceptron((prop_steps + 1) * feat_dim, hidden_dim, num_layers, num_classes)
 
 
 class SSGC(BaseSGAPModel):
