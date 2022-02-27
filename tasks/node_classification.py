@@ -7,12 +7,14 @@ from tasks.utils import accuracy, set_seed
 
 
 class NodeClassification(BaseTask):
+
+    # data = (labels, train_idx, val_idx, test_idx)
     def __init__(self, data, model, lr, weight_decay, epochs, device, loss_fn=nn.CrossEntropyLoss(), seed=42):
         super(NodeClassification, self).__init__()
         if len(data) != 4:
             raise ValueError("The fist parameter must be a tuple (labels, idx_train, idx_val, idx_test)!")
 
-        (self.__labels, self.__idx_train, self.__idx_val, self.__idx_test) = data
+        (self.__labels, self.__train_idx, self.__val_idx, self.__test_idx) = data
         self.__model = model
         self.__optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
         self.__epochs = epochs
@@ -53,8 +55,8 @@ class NodeClassification(BaseTask):
         self.__model.eval()
         output = self.__model.train_model(self.__device)
 
-        acc_val = accuracy(output[self.__idx_val], self.__labels[self.__idx_val])
-        acc_test = accuracy(output[self.__idx_test], self.__labels[self.__idx_test])
+        acc_val = accuracy(output[self.__val_idx], self.__labels[self.__val_idx])
+        acc_test = accuracy(output[self.__test_idx], self.__labels[self.__test_idx])
         return acc_val, acc_test
 
     def _train(self):
@@ -62,8 +64,8 @@ class NodeClassification(BaseTask):
         self.__optimizer.zero_grad()
 
         output = self.__model.train_model(self.__device)
-        loss_train = self.__loss_fn(output[self.__idx_train], self.__labels[self.__idx_train])
-        acc_train = accuracy(output[self.__idx_train], self.__labels[self.__idx_train])
+        loss_train = self.__loss_fn(output[self.__train_idx], self.__labels[self.__train_idx])
+        acc_train = accuracy(output[self.__train_idx], self.__labels[self.__train_idx])
         loss_train.backward()
         self.__optimizer.step()
 
