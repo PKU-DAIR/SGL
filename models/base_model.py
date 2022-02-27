@@ -28,6 +28,7 @@ class BaseSGAPModel(nn.Module):
         else:
             self._pre_msg_learnable = False
             self._processed_feature = feature
+        return self._processed_feature
 
     def postprocess(self, output):
         if self._post_graph_op is not None:
