@@ -2,7 +2,7 @@ from models.base_model import BaseSGAPModel
 
 from models.graph_operator import LaplacianGraphOp
 from models.message_operator import LastMessageOp, ConcatMessageOp, MeanMessageOp, SimpleWeightedMessageOp, \
-    LearnableWeightedMessageOp, IterateWeightedMessageOp
+    LearnableWeightedMessageOp, IterateLearnableWeightedMessageOp
 from models.simple_models import LogisticRegression, MultiLayerPerceptron
 
 
@@ -57,5 +57,5 @@ class GAMLPRecursive(BaseSGAPModel):
         super(GAMLPRecursive, self).__init__(prop_steps, feat_dim, num_classes)
 
         self._pre_graph_op = LaplacianGraphOp(prop_steps, r=0.5)
-        self._pre_msg_op = IterateWeightedMessageOp(0, prop_steps + 1, "recursive", feat_dim)
+        self._pre_msg_op = IterateLearnableWeightedMessageOp(0, prop_steps + 1, "recursive", feat_dim)
         self._base_model = MultiLayerPerceptron(feat_dim, hidden_dim, num_layers, num_classes)

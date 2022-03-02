@@ -184,12 +184,12 @@ class LearnableWeightedMessageOp(MessageOp):
         return weighted_feat
 
 
-class IterateWeightedMessageOp(MessageOp):
+class IterateLearnableWeightedMessageOp(MessageOp):
 
     # 'recursive' needs one additional parameter 'feat_dim'
     def __init__(self, start, end, combination_type, *args):
-        super(IterateWeightedMessageOp, self).__init__(start, end)
-        self._aggr_type = "iterate_weighted"
+        super(IterateLearnableWeightedMessageOp, self).__init__(start, end)
+        self._aggr_type = "iterate_learnable_weighted"
 
         if combination_type not in ["recursive"]:
             raise ValueError("Invalid weighted combination type! Type must be 'recursive'.")
