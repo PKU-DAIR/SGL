@@ -1,2 +1,2 @@
 # SGL
-Scalabel graph Learning Toolkit.
+Scalable graph Learning Toolkit.

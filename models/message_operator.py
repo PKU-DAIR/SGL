@@ -12,116 +12,61 @@ class LastMessageOp(MessageOp):
         super(LastMessageOp, self).__init__()
         self._aggr_type = "last"
 
-    def _combine(self, feat_list, *args):
+    def _combine(self, feat_list):
         return feat_list[-1]
 
 
 class SumMessageOp(MessageOp):
-    def __init__(self):
-        super(SumMessageOp, self).__init__()
+    def __init__(self, start, end):
+        super(SumMessageOp, self).__init__(start, end)
         self._aggr_type = "sum"
 
-    # two additional parameters, start and end, might be used
-    def _combine(self, feat_list, *args):
-        start, end = None, None
-        if len(args) == 0:
-            start, end = 0, len(feat_list)
-        elif len(args) == 2:
-            start, end = args[0], args[1] + 1
-        elif len(args) not in [0, 2]:
-            raise ValueError("Invalid parameter numbers for the sum aggregator!")
-        elif args[0] < 0 or args[1] >= len(feat_list):
-            raise ValueError("Invalid value for 'start' or 'end'!")
-
-        return sum(feat_list[start:end])
+    def _combine(self, feat_list):
+        return sum(feat_list[self._start:self._end])
 
 
 class MeanMessageOp(MessageOp):
-    def __init__(self):
-        super(MeanMessageOp, self).__init__()
+    def __init__(self, start, end):
+        super(MeanMessageOp, self).__init__(start, end)
         self._aggr_type = "mean"
 
-    # two additional parameters, start and end, might be used
-    def _combine(self, feat_list, *args):
-        start, end = None, None
-        if len(args) == 0:
-            start, end = 0, len(feat_list)
-        elif len(args) == 2:
-            start, end = args[0], args[1] + 1
-        elif len(args) not in [0, 2]:
-            raise ValueError("Invalid parameter numbers for the mean aggregator!")
-        elif args[0] < 0 or args[1] >= len(feat_list):
-            raise ValueError("Invalid value for 'start' or 'end'!")
-
-        return sum(feat_list[start:end]) / (end - start)
+    def _combine(self, feat_list):
+        return sum(feat_list[self._start:self._end]) / (self._end - self._start)
 
 
 class MaxMessageOp(MessageOp):
-    def __init__(self):
-        super(MaxMessageOp, self).__init__()
+    def __init__(self, start, end):
+        super(MaxMessageOp, self).__init__(start, end)
         self._aggr_type = "max"
 
-    # two additional parameters, start and end, might be used
-    def _combine(self, feat_list, *args):
-        start, end = None, None
-        if len(args) == 0:
-            start, end = 0, len(feat_list)
-        elif len(args) == 2:
-            start, end = args[0], args[1] + 1
-        elif len(args) not in [0, 2]:
-            raise ValueError("Invalid parameter numbers for the maximum aggregator!")
-        elif args[0] < 0 or args[1] >= len(feat_list):
-            raise ValueError("Invalid value for 'start' or 'end'!")
-
-        return torch.stack(feat_list[start:end], dim=0).max(dim=0)[0]
+    def _combine(self, feat_list):
+        return torch.stack(feat_list[self._start:self._end], dim=0).max(dim=0)[0]
 
 
 class MinMessageOp(MessageOp):
-    def __init__(self):
-        super(MinMessageOp, self).__init__()
+    def __init__(self, start, end):
+        super(MinMessageOp, self).__init__(start, end)
         self._aggr_type = "min"
 
-    # two additional parameters, start and end, might be used
-    def _combine(self, feat_list, *args):
-        start, end = None, None
-        if len(args) == 0:
-            start, end = 0, len(feat_list)
-        elif len(args) == 2:
-            start, end = args[0], args[1] + 1
-        elif len(args) not in [0, 2]:
-            raise ValueError("Invalid parameter numbers for the minimum aggregator!")
-        elif args[0] < 0 or args[1] >= len(feat_list):
-            raise ValueError("Invalid value for 'start' or 'end'!")
-
-        return torch.stack(feat_list[start:end], dim=0).min(dim=0)[0]
+    def _combine(self, feat_list):
+        return torch.stack(feat_list[self._start:self._end], dim=0).min(dim=0)[0]
 
 
 class ConcatMessageOp(MessageOp):
-    def __init__(self):
-        super(ConcatMessageOp, self).__init__()
+    def __init__(self, start, end):
+        super(ConcatMessageOp, self).__init__(start, end)
         self._aggr_type = "concat"
 
-    # two additional parameters, start and end, might be used
-    def _combine(self, feat_list, *args):
-        start, end = None, None
-        if len(args) == 0:
-            start, end = 0, len(feat_list)
-        elif len(args) == 2:
-            start, end = args[0], args[1] + 1
-        elif len(args) not in [0, 2]:
-            raise ValueError("Invalid parameter numbers for the concat aggregator!")
-        elif args[0] < 0 or args[1] >= len(feat_list):
-            raise ValueError("Invalid value for 'start' or 'end'!")
-
-        return torch.hstack(feat_list[start:end])
+    def _combine(self, feat_list):
+        return torch.hstack(feat_list[self._start:self._end])
 
 
 class SimpleWeightedMessageOp(MessageOp):
 
     # 'alpha' needs one additional parameter 'alpha';
     # 'hand_crafted' needs one additional parameter 'weight_list'
-    def __init__(self, combination_type, *args):
-        super(SimpleWeightedMessageOp, self).__init__()
+    def __init__(self, start, end, combination_type, *args):
+        super(SimpleWeightedMessageOp, self).__init__(start, end)
         self._aggr_type = "simple_weighted"
 
         if combination_type not in ["alpha", "hand_crafted"]:
@@ -141,34 +86,23 @@ class SimpleWeightedMessageOp(MessageOp):
         elif combination_type == "hand_crafted":
             self.__weight_list = args[0]
             if isinstance(self.__weight_list, list):
-                weight_list = torch.FloatTensor(self.__weight_list)
+                self.__weight_list = torch.FloatTensor(self.__weight_list)
             elif not isinstance(self.__weight_list, (list, Tensor)):
                 raise TypeError("The input weight list must be a list or a tensor!")
 
-    # two additional parameters, start and end, might be used
-    def _combine(self, feat_list, *args):
-        start, end = None, None
-        if len(args) == 0:
-            start, end = 0, len(feat_list)
-        elif len(args) == 2:
-            start, end = args[0], args[1] + 1
-        elif len(args) not in [0, 2]:
-            raise ValueError("Invalid parameter numbers for the simple weighted aggregator!")
-        elif args[0] < 0 or args[1] >= len(feat_list):
-            raise ValueError("Invalid value for 'start' or 'end'!")
-
+    def _combine(self, feat_list):
         if self.__combination_type == "alpha":
             self.__weight_list = [self.__alpha]
             for _ in range(len(feat_list) - 1):
                 self.__weight_list.append((1 - self.__alpha) * self.__weight_list[-1])
-            self.__weight_list = torch.FloatTensor(self.__weight_list[start:end])
+            self.__weight_list = torch.FloatTensor(self.__weight_list[self._start:self._end])
 
         elif self.__combination_type == "hand_crafted":
             pass
         else:
             raise NotImplementedError
 
-        weighted_feat = one_dim_weighted_add(feat_list[start:end], weight_list=self.__weight_list)
+        weighted_feat = one_dim_weighted_add(feat_list[self._start:self._end], weight_list=self.__weight_list)
         return weighted_feat
 
 
@@ -178,8 +112,8 @@ class LearnableWeightedMessageOp(MessageOp):
     # 'gate' needs one additional parameter 'feat_dim';
     # 'ori_ref' needs one additional parameter 'feat_dim';
     # 'jk' needs two additional parameter 'prop_steps' and 'feat_dim'
-    def __init__(self, combination_type, *args):
-        super(LearnableWeightedMessageOp, self).__init__()
+    def __init__(self, start, end, combination_type, *args):
+        super(LearnableWeightedMessageOp, self).__init__(start, end)
         self._aggr_type = "learnable_weighted"
 
         if combination_type not in ["simple", "gate", "ori_ref", "jk"]:
@@ -211,47 +145,39 @@ class LearnableWeightedMessageOp(MessageOp):
             prop_steps, feat_dim = args[0], args[1]
             self.__learnable_weight = Parameter(torch.FloatTensor(feat_dim + (prop_steps + 1) * feat_dim, 1))
 
-    # two additional parameters, start and end, might be used
-    def _combine(self, feat_list, *args):
-        start, end = None, None
-        if len(args) == 0:
-            start, end = 0, len(feat_list)
-        elif len(args) == 2:
-            start, end = args[0], args[1] + 1
-        elif len(args) not in [0, 2]:
-            raise ValueError("Invalid parameter numbers for the learnable weighted aggregator!")
-        elif args[0] < 0 or args[1] >= len(feat_list):
-            raise ValueError("Invalid value for 'start' or 'end'!")
-
+    def _combine(self, feat_list):
         weight_list = None
         if self.__combination_type == "simple":
-            weight_list = F.softmax(torch.sigmoid(self.__learnable_weight[start:end]), dim=1)
+            weight_list = F.softmax(torch.sigmoid(self.__learnable_weight[self._start:self._end]), dim=1)
 
         elif self.__combination_type == "gate":
-            adopted_feat_list = torch.vstack(feat_list[start:end])
+            adopted_feat_list = torch.vstack(feat_list[self._start:self._end])
             weight_list = F.softmax(
-                torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start)), dim=1)
+                torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, self._end - self._start)),
+                dim=1)
 
         elif self.__combination_type == "ori_ref":
-            reference_feat = feat_list[0].repeat(end - start, 1)
-            adopted_feat_list = torch.hstack((reference_feat, torch.vstack(feat_list[start:end])))
+            reference_feat = feat_list[0].repeat(self._end - self._start, 1)
+            adopted_feat_list = torch.hstack((reference_feat, torch.vstack(feat_list[self._start:self._end])))
             weight_list = F.softmax(
-                torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start)), dim=1)
+                torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, self._end - self._start)),
+                dim=1)
 
         elif self.__combination_type == "jk":
-            reference_feat = torch.hstack(feat_list).repeat(end - start, 1)
-            adopted_feat_list = torch.hstack((reference_feat, torch.vstack(feat_list[start:end])))
+            reference_feat = torch.hstack(feat_list).repeat(self._end - self._start, 1)
+            adopted_feat_list = torch.hstack((reference_feat, torch.vstack(feat_list[self._start:self._end])))
             weight_list = F.softmax(
-                torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, end - start)), dim=1)
+                torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, self._end - self._start)),
+                dim=1)
 
         else:
             raise NotImplementedError
 
         weighted_feat = None
         if self.__combination_type == "simple":
-            weighted_feat = one_dim_weighted_add(feat_list[start:end], weight_list=weight_list)
+            weighted_feat = one_dim_weighted_add(feat_list[self._start:self._end], weight_list=weight_list)
         elif self.__combination_type in ["gate", "ori_ref", "jk"]:
-            weighted_feat = two_dim_weighted_add(feat_list[start:end], weight_list=weight_list)
+            weighted_feat = two_dim_weighted_add(feat_list[self._start:self._end], weight_list=weight_list)
         else:
             raise NotImplementedError
 

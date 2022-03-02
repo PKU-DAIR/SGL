@@ -30,15 +30,16 @@ class GraphOp:
 
 # Might include training parameters
 class MessageOp(nn.Module):
-    def __init__(self):
+    def __init__(self, start=None, end=None):
         super(MessageOp, self).__init__()
         self._aggr_type = None
+        self._start, self._end = start, end
 
     @property
     def aggr_type(self):
         return self._aggr_type
 
-    def _combine(self, feat_list, *args):
+    def _combine(self, feat_list):
         return NotImplementedError
 
     def aggregate(self, feat_list):
