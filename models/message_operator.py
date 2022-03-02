@@ -215,8 +215,8 @@ class IterateWeightedMessageOp(MessageOp):
                 weight_list = F.softmax(weight_list, dim=1)
 
                 weighted_feat = torch.mul(feat_list[self._start], weight_list[:, 0].view(-1, 1))
-                for j in range(1, i+1):
-                    weighted_feat = weighted_feat + torch.mul(feat_list[self._start+j], weight_list[:, j].view(-1, 1))
+                for j in range(1, i + 1):
+                    weighted_feat = weighted_feat + torch.mul(feat_list[self._start + j], weight_list[:, j].view(-1, 1))
 
         else:
             raise NotImplementedError
