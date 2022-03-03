@@ -8,8 +8,9 @@ import torch
 
 def to_undirected(edge_index):
     row, col = edge_index
-    row, col = torch.cat([row, col], dim=0), torch.cat([col, row], dim=0)
-    edge_index = torch.stack([row, col], dim=0)
+    row = torch.hstack((row, col))
+    col = torch.hstack((col, row))
+    edge_index = torch.stack((row, col), dim=0)
 
     return edge_index
 

@@ -87,6 +87,10 @@ class Node:
         return self.__num_node
 
     @property
+    def node_ids(self):
+        return self.__node_ids
+
+    @property
     def node_type(self):
         return self.__node_type
 
@@ -184,7 +188,7 @@ class HeteroGraph:
             if not isinstance(edge_type, str):
                 raise TypeError("Edge type must be a string!")
         if (not isinstance(row_dict, dict)) or (not isinstance(col_dict, dict)) or (
-        not isinstance(edge_weight_dict, dict)) or (
+                not isinstance(edge_weight_dict, dict)) or (
                 edge_attr_dict is not None and not isinstance(edge_attr_dict, dict)):
             raise TypeError("Rows, cols, edge weights and edge attrs must be dicts!")
         elif not isinstance(edge_types, list):
@@ -217,10 +221,18 @@ class HeteroGraph:
                 (y_dict is not None) and (not isinstance(y_dict, dict))):
             raise TypeError("Xs and Ys must be a dict!")
 
+        self.__node_id_offsets = {}
+        node_count = 0
+        for node_type in node_types:
+            self.__node_id_offsets[node_type] = node_count
+            node_count += num_node_dict[node_type]
+
         if node_id_dict is None:
             self.__node_id_dict = {}
             for node_type in node_types:
-                self.__node_id_dict[node_type] = range(num_node_dict[node_type])
+                self.__node_id_dict[node_type] = list(range(self.__node_id_offsets[node_type],
+                                                            self.__node_id_offsets[node_type] + num_node_dict[
+                                                                node_type]))
         else:
             self.__node_id_dict = node_id_dict
 
@@ -253,6 +265,18 @@ class HeteroGraph:
             self.__nodes_dict[key] = value
         else:
             raise ValueError("Please input valid edge type or node type!")
+
+    @property
+    def node_id_dict(self):
+        return self.__node_id_dict
+
+    @property
+    def node_types(self):
+        return self.__node_types
+
+    @property
+    def edge_types(self):
+        return self.__edge_types
 
     @property
     def num_features(self):

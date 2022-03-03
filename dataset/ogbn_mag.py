@@ -4,11 +4,11 @@ import torch
 from ogb.nodeproppred import PygNodePropPredDataset
 
 from dataset.base_data import HeteroGraph
-from dataset.base_dataset import NodeDataset
+from dataset.base_dataset import HeteroNodeDataset
 from dataset.utils import pkl_read_file
 
 
-class OgbnMag(NodeDataset):
+class OgbnMag(HeteroNodeDataset):
     def __init__(self, name="mag", root="./", split="official"):
         if name not in ["mag"]:
             raise ValueError("Dataset name not found!")
@@ -40,6 +40,7 @@ class OgbnMag(NodeDataset):
         current_nodes = [0]
         current_nodes_dict = {}
 
+        # the order of node types is important, which decides the node id
         num_node_dict, node_id_dict, x_dict, y_dict = {}, {}, {}, {}
         for i, node_type in enumerate(node_types):
             num_nodes_temp = data.num_nodes_dict[node_type]
@@ -57,7 +58,7 @@ class OgbnMag(NodeDataset):
 
         row_dict, col_dict, edge_weight_dict = {}, {}, {}
         for i, edge_type in enumerate(edge_types):
-            edge_type_used = "_".join(edge_type)
+            edge_type_used = "__".join(edge_type)
 
             row_temp = data.edge_index_dict[edge_type][0, :] + current_nodes_dict[edge_type[0]]
             col_temp = data.edge_index_dict[edge_type][1, :] + current_nodes_dict[edge_type[2]]
@@ -67,7 +68,7 @@ class OgbnMag(NodeDataset):
             col_dict[edge_type_used] = col_temp
             edge_weight_dict[edge_type_used] = edge_weight_temp
 
-        edge_types = ["_".join(edge_type) for edge_type in edge_types]
+        edge_types = ["__".join(edge_type) for edge_type in edge_types]
         g = HeteroGraph(row_dict, col_dict, edge_weight_dict, num_node_dict, node_types, edge_types, node_id_dict,
                         x_dict, y_dict)
         with open(self.processed_file_paths, 'wb') as rf:
@@ -90,5 +91,7 @@ class OgbnMag(NodeDataset):
 
         return train_idx, val_idx, test_idx
 
+
 # test
 # dataset = OgbnMag(name="mag", root="./")
+# adj, feature, node_id = dataset.sample_by_edge_type(("paper__cites__paper", "author__writes__paper"))

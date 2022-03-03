@@ -1,6 +1,10 @@
 import os
 import os.path as osp
+import warnings
+import torch
+from scipy.sparse import csr_matrix
 
+from dataset.base_data import Node, Edge
 from dataset.utils import file_exist
 
 
@@ -112,3 +116,165 @@ class NodeDataset:
 # Base class for graph-level tasks
 class GraphDataset:
     pass
+
+
+# Base class for heterogeneous node-level tasks
+class HeteroNodeDataset:
+    def __init__(self, root, name):
+        self._name = name
+        self._root = osp.join(root, name)
+        self._raw_dir = osp.join(self._root, "raw")
+        self._processed_dir = osp.join(self._root, "processed")
+        self._data = None
+        self._train_idx, self._val_idx, self._test_idx = None, None, None
+        self.__preprocess()
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def raw_file_paths(self):
+        raise NotImplementedError
+
+    @property
+    def processed_file_paths(self):
+        raise NotImplementedError
+
+    def _download(self):
+        raise NotImplementedError
+
+    def _process(self):
+        raise NotImplementedError
+
+    def __preprocess(self):
+        if file_exist(self.raw_file_paths):
+            print("Files already downloaded.")
+        else:
+            print("Downloading...")
+            if not file_exist(self._raw_dir):
+                os.makedirs(self._raw_dir)
+            self._download()
+            print("Downloading done!")
+
+        if file_exist(self.processed_file_paths):
+            print("Files already processed.")
+        else:
+            print("Processing...")
+            if not file_exist(self._processed_dir):
+                os.makedirs(self._processed_dir)
+            self._process()
+            print("Processing done!")
+
+    def __getitem__(self, key):
+        if key in self.data.edge_types:
+            return self.data[key]
+        elif key in self.data.node_types:
+            return self.data[key]
+        else:
+            raise ValueError("Please input valid edge type or node type!")
+
+    def __setitem__(self, key, value):
+        if not isinstance(key, str):
+            raise TypeError("Edge type or node type must be a string!")
+        if key in self.data.edge_types:
+            if not isinstance(value, Edge):
+                raise TypeError("Please organize the dataset using the Edge class!")
+            # more restrictions
+
+            self.data.edges_dict[key] = value
+        elif key in self.data.node_types:
+            if not isinstance(value, Node):
+                raise TypeError("Please organize the dataset using the Node class!")
+            # more restrictions
+
+            self.data.nodes_dict[key] = value
+        else:
+            raise ValueError("Please input valid edge type or node type!")
+
+    @property
+    def data(self):
+        return self._data
+
+    @property
+    def train_idx(self):
+        return self._train_idx
+
+    @property
+    def val_idx(self):
+        return self._val_idx
+
+    @property
+    def test_idx(self):
+        return self._test_idx
+
+    # return sampled adjacency matrix containing edges of given edge types
+    def sample_by_edge_type(self, edge_types):
+        if not isinstance(edge_types, (str, list, tuple)):
+            raise TypeError("The given edge types must be a string or a list or a tuple!")
+        elif isinstance(edge_types, str):
+            edge_types = [edge_types]
+        elif isinstance(edge_types, (list, tuple)):
+            for edge_type in edge_types:
+                if not isinstance(edge_type, str):
+                    raise TypeError("Edge type must be a string!")
+
+        pre_sampled_node_types = []
+        for edge_type in edge_types:
+            pre_sampled_node_types = pre_sampled_node_types + [edge_type.split('__')[0], edge_type.split('__')[2]]
+        pre_sampled_node_types = list(set(pre_sampled_node_types))
+
+        sampled_node_types = []
+        node_id_offsets = {}
+        node_count = 0
+        for node_type in self._data.node_types:
+            if node_type in pre_sampled_node_types:
+                sampled_node_types.append(node_type)
+
+            node_id_offsets[node_type] = node_count
+            node_count += self._data.num_node[node_type]
+
+        num_node = 0
+        feature = None
+        node_id = None
+        node_id_offset = {}
+        for node_type in sampled_node_types:
+            node_id_offset[node_type] = node_id_offsets[node_type] - num_node
+            num_node += self._data.num_node[node_type]
+
+            current_feature = self._data[node_type].x
+            if current_feature is None:
+                warnings.warn(f'{node_type} nodes have no features!', UserWarning)
+            if feature is None:
+                feature = current_feature
+            else:
+                feature = torch.vstack((feature, current_feature))
+
+            if node_id is None:
+                node_id = self._data.node_id_dict[node_type]
+            else:
+                node_id += self._data.node_id_dict[node_type]
+
+        rows, cols = None, None
+        for edge_type in edge_types:
+            row_temp, col_temp = self._data[edge_type].edge_index
+
+            node_type_of_row = edge_type.split('__')[0]
+            node_type_of_col = edge_type.split('__')[2]
+            row_temp -= node_id_offset[node_type_of_row]
+            col_temp -= node_id_offset[node_type_of_col]
+
+            if rows is None:
+                rows, cols = row_temp, col_temp
+            else:
+                rows = torch.hstack((rows, row_temp))
+                cols = torch.hstack((cols, col_temp))
+
+        edge_weight = torch.ones(len(rows))
+        adj = csr_matrix((edge_weight.numpy(), (rows.numpy(), cols.numpy())), shape=(num_node, num_node))
+
+        return adj, feature, torch.LongTensor(node_id)
+
+    # return sampled adjacency matrix containing the given meta-path
+    def sample_by_meta_path(self, meta_paths):
+        return NotImplementedError
