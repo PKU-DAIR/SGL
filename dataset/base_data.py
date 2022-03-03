@@ -176,50 +176,57 @@ class Graph:
 
 # Base class for heterogeneous graph
 class HeteroGraph:
-    def __init__(self, rows, cols, edge_weights, num_nodes, node_types, edge_types, node_ids, edge_attrs=None,
-                 xs=None, ys=None):
+    def __init__(self, row_dict, col_dict, edge_weight_dict, num_node_dict, node_types, edge_types, node_id_dict,
+                 x_dict=None, y_dict=None, edge_attr_dict=None):
         self.__edges_dict = {}
         self.__edge_types = edge_types
         for edge_type in edge_types:
             if not isinstance(edge_type, str):
                 raise TypeError("Edge type must be a string!")
-        if (not isinstance(rows, dict)) or (not isinstance(cols, dict)) or (not isinstance(edge_weights, dict)) or (
-                edge_attrs is not None and not isinstance(edge_attrs, dict)):
+        if (not isinstance(row_dict, dict)) or (not isinstance(col_dict, dict)) or (
+        not isinstance(edge_weight_dict, dict)) or (
+                edge_attr_dict is not None and not isinstance(edge_attr_dict, dict)):
             raise TypeError("Rows, cols, edge weights and edge attrs must be dicts!")
         elif not isinstance(edge_types, list):
             raise TypeError("Edge types must be a list!")
-        elif not ((rows.keys() == cols.keys()) and (cols.keys() == edge_weights.keys()) and (
-                list(edge_weights.keys()).sort() == edge_types.sort())):
+        elif not ((row_dict.keys() == col_dict.keys()) and (col_dict.keys() == edge_weight_dict.keys()) and (
+                list(edge_weight_dict.keys()).sort() == edge_types.sort())):
             raise ValueError("The keys of the rows, cols, edge_weights and edge_types must be the same!")
 
         for edge_type in edge_types:
-            self.__edges_dict[edge_type] = Edge(rows[edge_type], cols[edge_type], edge_weights[edge_type],
-                                                edge_type, edge_attrs.get(edge_type, None))
+            if edge_attr_dict is not None:
+                self.__edges_dict[edge_type] = Edge(row_dict[edge_type], col_dict[edge_type],
+                                                    edge_weight_dict[edge_type], edge_type,
+                                                    edge_attr_dict.get(edge_type, None))
+            else:
+                self.__edges_dict[edge_type] = Edge(row_dict[edge_type], col_dict[edge_type],
+                                                    edge_weight_dict[edge_type], edge_type)
 
         self.__nodes_dict = {}
         self.__node_types = node_types
         for node_type in node_types:
             if not isinstance(node_type, str):
                 raise TypeError("Node type must be a string!")
-        if not isinstance(num_nodes, list):
-            raise TypeError("Num nodes must be a list!")
+        if not isinstance(num_node_dict, dict):
+            raise TypeError("Num nodes must be a dict!")
         elif not isinstance(node_types, list):
             raise TypeError("Node types must be a list!")
-        elif list(num_nodes.keys()).sort() != node_types.sort():
+        elif list(num_node_dict.keys()).sort() != node_types.sort():
             raise TypeError("The keys of num_nodes and node_types must be the same!")
-        elif ((xs is not None) and (not isinstance(xs, dict))) or ((ys is not None) and (not isinstance(ys, dict))):
+        elif ((x_dict is not None) and (not isinstance(x_dict, dict))) or (
+                (y_dict is not None) and (not isinstance(y_dict, dict))):
             raise TypeError("Xs and Ys must be a dict!")
 
-        if node_ids is None:
-            self.__node_ids = {}
+        if node_id_dict is None:
+            self.__node_id_dict = {}
             for node_type in node_types:
-                self.__node_ids[node_type] = range(num_nodes[node_type])
+                self.__node_id_dict[node_type] = range(num_node_dict[node_type])
         else:
-            self.__node_ids = node_ids
+            self.__node_id_dict = node_id_dict
 
         for node_type in node_types:
-            self.__nodes_dict[node_type] = Node(node_type, num_nodes[node_type], xs.get(node_type, None),
-                                                ys.get(node_type, None), self.__node_ids[node_type])
+            self.__nodes_dict[node_type] = Node(node_type, num_node_dict[node_type], x_dict.get(node_type, None),
+                                                y_dict.get(node_type, None), self.__node_id_dict[node_type])
 
     def __getitem__(self, key):
         if key in self.__edge_types:
@@ -260,11 +267,9 @@ class HeteroGraph:
 
     @property
     def num_classes(self):
-        num_classes = 0
+        num_classes = {}
         for node_type in self.__node_types:
-            y_temp = self.__nodes_dict[node_type].y
-            if y_temp is not None:
-                num_classes = max(y_temp.max() + 1, num_classes)
+            num_classes[node_type] = (self.__nodes_dict[node_type].y.max() + 1)
         return num_classes
 
     @property

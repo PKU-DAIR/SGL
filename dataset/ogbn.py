@@ -2,16 +2,15 @@ import pickle as pkl
 import os.path as osp
 import torch
 from ogb.nodeproppred import PygNodePropPredDataset
-from torch_geometric.utils import to_undirected
 
 from dataset.base_data import Graph
 from dataset.base_dataset import NodeDataset
-from dataset.utils import pkl_read_file
+from dataset.utils import pkl_read_file, to_undirected
 
 
 class Ogbn(NodeDataset):
     def __init__(self, name="arxiv", root="./", split="official"):
-        if name not in ["arxiv", "products", "papars100m", "mag"]:
+        if name not in ["arxiv", "products"]:
             raise ValueError("Dataset name not found!")
         super(Ogbn, self).__init__(root + "ogbn/", name)
 
@@ -42,7 +41,7 @@ class Ogbn(NodeDataset):
         else:
             node_type = "paper"
 
-        undi_edge_index = to_undirected(data.edge_index, num_nodes=num_node)
+        undi_edge_index = to_undirected(data.edge_index)
         row, col = undi_edge_index
         edge_weight = torch.ones(len(row))
         if self._name == "products":
@@ -69,7 +68,6 @@ class Ogbn(NodeDataset):
             raise ValueError("Please input valid split pattern!")
 
         return train_idx, val_idx, test_idx
-
 
 # test
 # dataset = Ogbn(name="arxiv", root="./")
