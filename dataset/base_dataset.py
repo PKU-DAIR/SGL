@@ -289,15 +289,81 @@ class HeteroNodeDataset:
         return adj, feature, torch.LongTensor(node_id)
 
     # return sampled adjacency matrix containing the given meta-path, "xxx__to__xxx__to...__xxx"
-    def sample_by_meta_path(self, meta_paths, undirected=True):
-        if not isinstance(meta_paths, (str, list, tuple)):
-            raise TypeError("The given meta-paths must be a string or a list or a tuple!")
-        elif isinstance(meta_paths, str):
-            if len(meta_paths.split("__")) == 3:
-                return self.sample_by_edge_type(meta_paths, undirected)
-            meta_paths = [meta_paths]
-        elif isinstance(meta_paths, (list, tuple)):
-            for meta_path in meta_paths:
-                if not isinstance(meta_path, str):
-                    raise TypeError("Meta-path must be a string!")
+    def sample_by_meta_path(self, meta_path, undirected=True):
+        if isinstance(meta_path, str):
+            if len(meta_path.split("__")) == 3:
+                return self.sample_by_edge_type(meta_path, undirected)
 
+        node_types = meta_path.split("__")
+
+        node_type_st, node_type_ed = node_types[0], node_types[-1]
+        sampled_node_types = []
+        num_node = 0
+        for node_type in self.node_types:
+            if node_type in [node_type_st, node_type_ed]:
+                sampled_node_types.append(node_type)
+                num_node += self._data.num_node[node_type]
+
+        feature = None
+        node_id = None
+        for node_type in sampled_node_types:
+            current_feature = self._data[node_type].x
+            if current_feature is None:
+                warnings.warn(f'{node_type} nodes have no features!', UserWarning)
+            if feature is None:
+                feature = current_feature
+            else:
+                feature = torch.vstack((feature, current_feature))
+
+            if node_id is None:
+                node_id = self._data.node_id_dict[node_type]
+            else:
+                node_id += self._data.node_id_dict[node_type]
+
+        # two at a time
+        adj = None
+        for i in range(int((len(node_types) - 1) / 2)):
+            edge_type = "__".join([node_types[i * 2], "to", node_types[(i + 1) * 2]])
+            row, col = self._data[edge_type].edge_index
+            edge_weight = torch.ones(len(row))
+            adj_temp = csr_matrix((edge_weight.numpy(), (row.numpy(), col.numpy())))
+
+            # extremely slow
+            if adj is None:
+                adj = adj_temp
+            else:
+                adj = adj * adj_temp
+
+        adj = adj.tocoo()
+        row, col, data = torch.LongTensor(adj.row), torch.LongTensor(adj.col), torch.FloatTensor(adj.data)
+
+        st_index, ed_index = self.node_types.index(node_type_st), self.node_types.index(node_type_ed)
+        if st_index == ed_index:
+            for node_type in self.node_types[:st_index]:
+                row -= self._data.num_node[node_type]
+                col -= self._data.num_node[node_type]
+        else:
+            if st_index < ed_index:
+                for node_type in self.node_types[:st_index]:
+                    row -= self._data.num_node[node_type]
+                    col -= self._data.num_node[node_type]
+                for node_type in self.node_types[st_index:ed_index]:
+                    col -= self._data.num_node[node_type]
+                col += self._data.num_node[node_type_st]
+            else:
+                for node_type in self.node_types[:ed_index]:
+                    print(node_type)
+                    col -= self._data.num_node[node_type]
+                    row -= self._data.num_node[node_type]
+                for node_type in self.node_types[ed_index:st_index]:
+                    row -= self._data.num_node[node_type]
+                row += self._data.num_node[node_type_ed]
+
+        if undirected is True:
+            data = torch.ones(2*len(data))
+            row, col = to_undirected((row, col))
+        adj = csr_matrix((data.numpy(), (row.numpy(), col.numpy())), shape=(num_node, num_node))
+
+        # remove existed self loops
+        adj.data = torch.ones(len(adj.data)).numpy()
+        return adj, feature, torch.LongTensor(node_id)
