@@ -1,3 +1,4 @@
+import time
 import os.path as osp
 import pickle as pkl
 import torch
@@ -5,7 +6,7 @@ from ogb.nodeproppred import PygNodePropPredDataset
 
 from dataset.base_data import HeteroGraph
 from dataset.base_dataset import HeteroNodeDataset
-from dataset.utils import pkl_read_file
+from dataset.utils import pkl_read_file, to_undirected
 
 
 class OgbnMag(HeteroNodeDataset):
@@ -56,20 +57,41 @@ class OgbnMag(HeteroNodeDataset):
             x_dict[node_type] = x_temp
             y_dict[node_type] = y_temp
 
+        edge_types_found = []
         row_dict, col_dict, edge_weight_dict = {}, {}, {}
         for i, edge_type in enumerate(edge_types):
-            edge_type_used = "__".join(edge_type)
+            row_type = edge_type[0]
+            col_type = edge_type[2]
 
-            row_temp = data.edge_index_dict[edge_type][0, :] + current_nodes_dict[edge_type[0]]
-            col_temp = data.edge_index_dict[edge_type][1, :] + current_nodes_dict[edge_type[2]]
-            edge_weight_temp = torch.ones(len(row_temp))
+            edge_type_used = "__".join([row_type, "to", col_type])
+            edge_types_found.append(edge_type_used)
 
-            row_dict[edge_type_used] = row_temp
-            col_dict[edge_type_used] = col_temp
-            edge_weight_dict[edge_type_used] = edge_weight_temp
+            row_temp = data.edge_index_dict[edge_type][0, :] + current_nodes_dict[row_type]
+            col_temp = data.edge_index_dict[edge_type][1, :] + current_nodes_dict[col_type]
 
-        edge_types = ["__".join(edge_type) for edge_type in edge_types]
-        g = HeteroGraph(row_dict, col_dict, edge_weight_dict, num_node_dict, node_types, edge_types, node_id_dict,
+            if row_type != col_type:
+                edge_weight_temp = torch.ones(len(row_temp))
+
+                row_dict[edge_type_used] = row_temp
+                col_dict[edge_type_used] = col_temp
+                edge_weight_dict[edge_type_used] = edge_weight_temp
+
+                reverse_edge_type_used = "__".join([col_type, "to", row_type])
+                edge_types_found.append(reverse_edge_type_used)
+
+                row_dict[reverse_edge_type_used] = col_temp
+                col_dict[reverse_edge_type_used] = row_temp
+                edge_weight_dict[reverse_edge_type_used] = edge_weight_temp
+
+            else:
+                row_temp, col_temp = to_undirected((row_temp, col_temp))
+                edge_weight_temp = torch.ones(len(row_temp))
+
+                row_dict[edge_type_used] = row_temp
+                col_dict[edge_type_used] = col_temp
+                edge_weight_dict[edge_type_used] = edge_weight_temp
+
+        g = HeteroGraph(row_dict, col_dict, edge_weight_dict, num_node_dict, node_types, edge_types_found, node_id_dict,
                         x_dict, y_dict)
         with open(self.processed_file_paths, 'wb') as rf:
             try:
@@ -93,5 +115,11 @@ class OgbnMag(HeteroNodeDataset):
 
 
 # test
-# dataset = OgbnMag(name="mag", root="./")
-# adj, feature, node_id = dataset.sample_by_edge_type(("paper__cites__paper", "author__writes__paper"))
+'''dataset = OgbnMag(name="mag", root="./")
+print(dataset.node_types)
+print(dataset.edge_types)
+
+adj, feature, node_id = dataset.sample_by_edge_type(("paper__to__paper", "paper__to__author"), undirected=False)
+print(adj, adj.shape, adj.sum())
+print(feature, feature.shape)
+print(node_id)'''

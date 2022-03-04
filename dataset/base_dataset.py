@@ -5,7 +5,7 @@ import torch
 from scipy.sparse import csr_matrix
 
 from dataset.base_data import Node, Edge
-from dataset.utils import file_exist
+from dataset.utils import file_exist, to_undirected
 
 
 # Base class for node-level tasks
@@ -197,6 +197,14 @@ class HeteroNodeDataset:
         return self._data
 
     @property
+    def node_types(self):
+        return self._data.node_types
+
+    @property
+    def edge_types(self):
+        return self._data.edge_types
+
+    @property
     def train_idx(self):
         return self._train_idx
 
@@ -208,8 +216,8 @@ class HeteroNodeDataset:
     def test_idx(self):
         return self._test_idx
 
-    # return sampled adjacency matrix containing edges of given edge types
-    def sample_by_edge_type(self, edge_types):
+    # return a sampled adjacency matrix containing edges of given edge types
+    def sample_by_edge_type(self, edge_types, undirected=True):
         if not isinstance(edge_types, (str, list, tuple)):
             raise TypeError("The given edge types must be a string or a list or a tuple!")
         elif isinstance(edge_types, str):
@@ -227,7 +235,7 @@ class HeteroNodeDataset:
         sampled_node_types = []
         node_id_offsets = {}
         node_count = 0
-        for node_type in self._data.node_types:
+        for node_type in self.node_types:
             if node_type in pre_sampled_node_types:
                 sampled_node_types.append(node_type)
 
@@ -263,6 +271,8 @@ class HeteroNodeDataset:
             node_type_of_col = edge_type.split('__')[2]
             row_temp -= node_id_offset[node_type_of_row]
             col_temp -= node_id_offset[node_type_of_col]
+            if undirected is True and node_type_of_row != node_type_of_col:
+                row_temp, col_temp = to_undirected((row_temp, col_temp))
 
             if rows is None:
                 rows, cols = row_temp, col_temp
@@ -273,8 +283,21 @@ class HeteroNodeDataset:
         edge_weight = torch.ones(len(rows))
         adj = csr_matrix((edge_weight.numpy(), (rows.numpy(), cols.numpy())), shape=(num_node, num_node))
 
+        # remove previously existed undirected edges
+        adj.data = torch.ones(len(adj.data)).numpy()
+
         return adj, feature, torch.LongTensor(node_id)
 
-    # return sampled adjacency matrix containing the given meta-path
-    def sample_by_meta_path(self, meta_paths):
-        return NotImplementedError
+    # return sampled adjacency matrix containing the given meta-path, "xxx__to__xxx__to...__xxx"
+    def sample_by_meta_path(self, meta_paths, undirected=True):
+        if not isinstance(meta_paths, (str, list, tuple)):
+            raise TypeError("The given meta-paths must be a string or a list or a tuple!")
+        elif isinstance(meta_paths, str):
+            if len(meta_paths.split("__")) == 3:
+                return self.sample_by_edge_type(meta_paths, undirected)
+            meta_paths = [meta_paths]
+        elif isinstance(meta_paths, (list, tuple)):
+            for meta_path in meta_paths:
+                if not isinstance(meta_path, str):
+                    raise TypeError("Meta-path must be a string!")
+

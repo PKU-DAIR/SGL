@@ -8,11 +8,11 @@ import torch
 
 def to_undirected(edge_index):
     row, col = edge_index
-    row = torch.hstack((row, col))
-    col = torch.hstack((col, row))
-    edge_index = torch.stack((row, col), dim=0)
+    new_row = torch.hstack((row, col))
+    new_col = torch.hstack((col, row))
+    new_edge_index = torch.stack((new_row, new_col), dim=0)
 
-    return edge_index
+    return new_edge_index
 
 
 def download_to(url, path):
