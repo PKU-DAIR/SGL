@@ -2,16 +2,38 @@ import torch
 from torch import Tensor
 import numpy as np
 import scipy.sparse as sp
+import numpy.ctypeslib as ctl
+from ctypes import c_int
 
 
-def sparse_mx_to_torch_sparse_tensor(sparse_mx):
-    """Convert a scipy sparse matrix to a torch sparse tensor."""
-    sparse_mx = sparse_mx.tocoo().astype(np.float32)
-    indices = torch.from_numpy(
-        np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
-    values = torch.from_numpy(sparse_mx.data)
-    shape = torch.Size(sparse_mx.shape)
-    return torch.sparse.FloatTensor(indices, values, shape)
+def csr_sparse_dense_matmul(adj, feature):
+    ctl_lib = ctl.load_library("libmatmul.so", "./models/")
+
+    arr_1d_int = ctl.ndpointer(
+        dtype=np.int32,
+        ndim=1,
+        flags="CONTIGUOUS"
+    )
+
+    arr_1d_float = ctl.ndpointer(
+        dtype=np.float32,
+        ndim=1,
+        flags="CONTIGUOUS"
+    )
+    ctl_lib.FloatCSRMulDenseAVX256OMP.argtypes = [arr_1d_float, arr_1d_float, arr_1d_int, arr_1d_int, arr_1d_float,
+                                                  c_int, c_int]
+    ctl_lib.FloatCSRMulDenseAVX256OMP.restypes = None
+
+    answer = np.zeros(feature.shape).astype(np.float32).flatten()
+    data = adj.data.astype(np.float32)
+    indices = adj.indices
+    indptr = adj.indptr
+    mat = feature.flatten()
+    mat_row, mat_col = feature.shape
+
+    ctl_lib.FloatCSRMulDenseAVX256OMP(answer, data, indices, indptr, mat, mat_row, mat_col)
+
+    return answer.reshape(feature.shape)
 
 
 def adj_to_symmetric_norm(adj, r):

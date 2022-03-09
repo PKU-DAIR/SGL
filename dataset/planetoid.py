@@ -69,13 +69,13 @@ class Planetoid(NodeDataset):
 
         features = sp.vstack((allx, tx)).tolil()
         features[test_idx_reorder, :] = features[test_idx_range, :]
-        features = torch.FloatTensor(np.array(features.todense()))
+        features = np.array(features.todense())
         num_node = features.shape[0]
         node_type = "paper"
 
         adj = sp.coo_matrix(nx.adjacency_matrix(nx.from_dict_of_lists(graph)))
         row, col, edge_weight = adj.row, adj.col, adj.data
-        edge_type = "paper_cite_paper"
+        edge_type = "paper__to__paper"
 
         labels = np.vstack((ally, ty))
         labels[test_idx_reorder, :] = labels[test_idx_range, :]
@@ -101,7 +101,6 @@ class Planetoid(NodeDataset):
             raise ValueError("Please input valid split pattern!")
 
         return train_idx, val_idx, test_idx
-
 
 # for test
 # dataset = Planetoid(name="citeseer", root="./")

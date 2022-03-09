@@ -1,7 +1,7 @@
 import scipy.sparse as sp
 
 from models.base_op import GraphOp
-from models.utils import sparse_mx_to_torch_sparse_tensor, adj_to_symmetric_norm
+from models.utils import adj_to_symmetric_norm
 
 
 class LaplacianGraphOp(GraphOp):
@@ -16,7 +16,7 @@ class LaplacianGraphOp(GraphOp):
             raise TypeError("The adjacency matrix must be a scipy.sparse.coo_matrix/csr_matrix!")
 
         adj_normalized = adj_to_symmetric_norm(adj, self.__r)
-        return sparse_mx_to_torch_sparse_tensor(adj_normalized)
+        return adj_normalized.tocsr()
 
 
 class PprGraphOp(GraphOp):
@@ -33,7 +33,7 @@ class PprGraphOp(GraphOp):
 
         adj_normalized = adj_to_symmetric_norm(adj, self.__r)
         adj_normalized = (1 - self.__alpha) * adj_normalized + self.__alpha * sp.eye(adj.shape[0])
-        return sparse_mx_to_torch_sparse_tensor(adj_normalized)
+        return adj_normalized.tocsr()
 
 
 class MotifGraphOp(GraphOp):

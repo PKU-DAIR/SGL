@@ -22,6 +22,7 @@ class NodeClassification(BaseTask):
 
     def _execute(self):
         set_seed(self.__seed)
+
         self.__model.preprocess(self.__dataset.adj, self.__dataset.x)
         self.__model = self.__model.to(self.__device)
         self.__dataset.y = self.__dataset.y.to(self.__device)

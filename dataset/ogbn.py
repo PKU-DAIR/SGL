@@ -1,6 +1,7 @@
 import pickle as pkl
 import os.path as osp
 import torch
+import numpy as np
 from ogb.nodeproppred import PygNodePropPredDataset
 
 from dataset.base_data import Graph
@@ -34,7 +35,7 @@ class Ogbn(NodeDataset):
         dataset = PygNodePropPredDataset("ogbn-" + self._name, self._raw_dir)
 
         data = dataset[0]
-        features, labels = data.x, data.y.to(torch.long).squeeze(1)
+        features, labels = data.x.numpy().astype(np.float32), data.y.to(torch.long).squeeze(1)
         num_node = data.num_nodes
         if self._name == "products":
             node_type = "product"
@@ -45,9 +46,9 @@ class Ogbn(NodeDataset):
         row, col = undi_edge_index
         edge_weight = torch.ones(len(row))
         if self._name == "products":
-            edge_type = "product_together_product"
+            edge_type = "product__to__product"
         else:
-            edge_type = "paper_cite_paper"
+            edge_type = "paper__to__paper"
 
         g = Graph(row, col, edge_weight, num_node, node_type, edge_type, x=features, y=labels)
         with open(self.processed_file_paths, 'wb') as rf:
