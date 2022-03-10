@@ -170,7 +170,7 @@ class Graph:
     @property
     def num_classes(self):
         if self.__node.y is not None:
-            return self.__node.y.max() + 1
+            return int(self.__node.y.max() + 1)
 
     @property
     def node_degrees(self):
