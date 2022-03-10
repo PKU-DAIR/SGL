@@ -153,7 +153,7 @@ class LearnableWeightedMessageOp(MessageOp):
         elif self.__combination_type == "gate":
             adopted_feat_list = torch.vstack(feat_list[self._start:self._end])
             weight_list = F.softmax(
-                torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, self._end - self._start)),
+                torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(self._end - self._start, -1).T),
                 dim=1)
 
         elif self.__combination_type == "ori_ref":

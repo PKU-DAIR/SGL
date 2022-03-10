@@ -13,7 +13,7 @@ class LogisticRegression(nn.Module):
 
 
 class MultiLayerPerceptron(nn.Module):
-    def __init__(self, feat_dim, hidden_dim, num_layers, num_classes, dropout=0.5, residual=False, bn=False):
+    def __init__(self, feat_dim, hidden_dim, num_layers, num_classes, dropout=0.5, bn=False):
         super(MultiLayerPerceptron, self).__init__()
         if num_layers < 2:
             raise ValueError("MLP must have at least two layers!")
@@ -31,25 +31,15 @@ class MultiLayerPerceptron(nn.Module):
             for _ in range(num_layers - 1):
                 self.__bns.append(nn.BatchNorm1d(hidden_dim))
 
-        self.__residual = residual
         self.__dropout = nn.Dropout(dropout)
 
     def forward(self, feature):
-        feature = self.__fcs[0](feature)
-        feature = F.relu(feature)
-        feature = self.__dropout(feature)
-        if self.__bn is True:
-            feature = self.__bns[0](feature)
-
-        for i in range(1, self.__num_layers - 1):
-            if self.__residual is True:
-                feature = self.__fcs[i](feature) + feature
-            else:
-                feature = self.__fcs[i](feature)
-            feature = F.relu(feature)
-            feature = self.__dropout(feature)
+        for i in range(self.__num_layers - 1):
+            feature = self.__fcs[i](feature)
             if self.__bn is True:
                 feature = self.__bns[i](feature)
+            feature = F.relu(feature)
+            feature = self.__dropout(feature)
 
         output = self.__fcs[-1](feature)
         return output

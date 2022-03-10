@@ -20,7 +20,7 @@ class OgbnMag(HeteroNodeDataset):
 
     @property
     def raw_file_paths(self):
-        filepath = "ogbn_" + self._name + "/processed/geometric_data_processed.pt"
+        filepath = "ogbn_" + self._name + "/raw/geometric_data_processed.pt"
         return osp.join(self._raw_dir, filepath)
 
     @property

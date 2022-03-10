@@ -158,7 +158,7 @@ class HeteroNodeDataset:
             print("Downloading done!")
 
         if file_exist(self.processed_file_paths):
-            print("Files already processed.")
+            print("Files already raw.")
         else:
             print("Processing...")
             if not file_exist(self._processed_dir):
