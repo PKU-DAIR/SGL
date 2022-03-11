@@ -1,5 +1,29 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+class OneDimConvolution(nn.Module):
+    def __init__(self, subgraph_num, hop_num, feat_dim):
+        super(OneDimConvolution, self).__init__()
+        self.__subgraph_num = subgraph_num
+        self.__hop_num = hop_num
+        self.__feat_dim = feat_dim
+
+        self.__learnable_weight = nn.ParameterList()
+        for _ in range(hop_num):
+            self.__learnable_weight.append(nn.Parameter(torch.FloatTensor(feat_dim, subgraph_num)))
+
+    # feat_list_list = hop_num * feat_list = hop_num * (subgraph_num * feat)
+    def forward(self, feat_list_list):
+        aggregated_feat_list = []
+        for i in range(self.__hop_num):
+            adopted_feat = torch.stack(feat_list_list[i], dim=2)
+            intermediate_feat = (adopted_feat * (self.__learnable_weight[i].unsqueeze(dim=0))).mean(dim=2)
+
+            aggregated_feat_list.append(intermediate_feat)
+
+        return aggregated_feat_list
 
 
 class LogisticRegression(nn.Module):

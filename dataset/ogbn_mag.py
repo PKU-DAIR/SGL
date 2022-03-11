@@ -119,7 +119,10 @@ class OgbnMag(HeteroNodeDataset):
 print(dataset.node_types)
 print(dataset.edge_types)
 
-adj, feature, node_id = dataset.sample_by_meta_path("paper__to__author__to__paper__to__field_of_study")
+subgraph_dict = dataset.nars_preprocess(['author__to__institution', 'author__to__paper', 'paper__to__paper'], 2)
+print(subgraph_dict)'''
+
+'''adj, feature, node_id = dataset.sample_by_meta_path("paper__to__author__to__paper__to__field_of_study")
 print(adj, adj.shape, adj.sum())
 print(feature, feature.shape)
 print(node_id)'''

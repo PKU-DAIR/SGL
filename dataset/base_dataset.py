@@ -1,5 +1,6 @@
 import os
 import os.path as osp
+import itertools
 import warnings
 import torch
 from scipy.sparse import csr_matrix
@@ -259,7 +260,7 @@ class HeteroNodeDataset:
                 feature = torch.vstack((feature, current_feature))
 
             if node_id is None:
-                node_id = self._data.node_id_dict[node_type]
+                node_id = self._data.node_id_dict[node_type][:]
             else:
                 node_id += self._data.node_id_dict[node_type]
 
@@ -316,7 +317,7 @@ class HeteroNodeDataset:
                 feature = torch.vstack((feature, current_feature))
 
             if node_id is None:
-                node_id = self._data.node_id_dict[node_type]
+                node_id = self._data.node_id_dict[node_type][:]
             else:
                 node_id += self._data.node_id_dict[node_type]
 
@@ -367,3 +368,24 @@ class HeteroNodeDataset:
         # remove existed self loops
         adj.data = torch.ones(len(adj.data)).numpy()
         return adj, feature, torch.LongTensor(node_id)
+
+    # return a dict of sub-graphs that contain all the combinations of given edge types and sampled number
+    def nars_preprocess(self, edge_types, random_num):
+        if not isinstance(edge_types, (str, list, tuple)):
+            raise TypeError("The given edge types must be a string or a list or a tuple!")
+        elif isinstance(edge_types, str):
+            edge_types = [edge_types]
+        elif isinstance(edge_types, (list, tuple)):
+            for edge_type in edge_types:
+                if not isinstance(edge_type, str):
+                    raise TypeError("Edge type must be a string!")
+        elif random_num > len(edge_types):
+            raise ValueError("Random selected number must not exceed the number of edge types!")
+
+        chosen_edge_types = [edge_type for edge_type in itertools.combinations(edge_types, random_num)]
+        subgraph_dict = {}
+        for chosen_edge_type in chosen_edge_types:
+            print(chosen_edge_type)
+            subgraph_dict[chosen_edge_type] = self.sample_by_edge_type(chosen_edge_type)
+
+        return subgraph_dict
