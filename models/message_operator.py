@@ -1,6 +1,6 @@
 import torch
 from torch import Tensor
-from torch.nn import Parameter
+from torch.nn import Parameter, ModuleList, Linear
 import torch.nn.functional as F
 
 from models.base_op import MessageOp
@@ -59,6 +59,29 @@ class ConcatMessageOp(MessageOp):
 
     def _combine(self, feat_list):
         return torch.hstack(feat_list[self._start:self._end])
+
+
+class ProjectedConcatMessageOp(MessageOp):
+    def __init__(self, start, end, feat_dim, hidden_dim):
+        super(ProjectedConcatMessageOp, self).__init__(start, end)
+        self._aggr_type = "proj_concat"
+
+        self.__learnable_weight = ModuleList()
+        for _ in range(end-start):
+            self.__learnable_weight.append(Linear(feat_dim, hidden_dim))
+
+    def _combine(self, feat_list):
+        adopted_feat_list = feat_list[self._start:self._end]
+
+        concat_feat = None
+        for i in range(self._end-self._start):
+            transformed_feat = F.relu(self.__learnable_weight[i](adopted_feat_list[i]))
+            if concat_feat is None:
+                concat_feat = transformed_feat
+            else:
+                concat_feat = torch.hstack((concat_feat, transformed_feat))
+
+        return concat_feat
 
 
 class SimpleWeightedMessageOp(MessageOp):
@@ -131,19 +154,19 @@ class LearnableWeightedMessageOp(MessageOp):
             if len(args) != 1:
                 raise ValueError("Invalid parameter numbers for the gate learnable weighted aggregator!")
             feat_dim = args[0]
-            self.__learnable_weight = Parameter(torch.FloatTensor(feat_dim, 1))
+            self.__learnable_weight = Linear(feat_dim, 1)
 
         elif combination_type == "ori_ref":
             if len(args) != 1:
                 raise ValueError("Invalid parameter numbers for the ori_ref learnable weighted aggregator!")
             feat_dim = args[0]
-            self.__learnable_weight = Parameter(torch.FloatTensor(feat_dim + feat_dim, 1))
+            self.__learnable_weight = Linear(feat_dim + feat_dim, 1)
 
         elif combination_type == "jk":
             if len(args) != 2:
                 raise ValueError("Invalid parameter numbers for the jk learnable weighted aggregator!")
             prop_steps, feat_dim = args[0], args[1]
-            self.__learnable_weight = Parameter(torch.FloatTensor(feat_dim + (prop_steps + 1) * feat_dim, 1))
+            self.__learnable_weight = Linear(feat_dim + (prop_steps + 1) * feat_dim, 1)
 
     def _combine(self, feat_list):
         weight_list = None
@@ -153,22 +176,19 @@ class LearnableWeightedMessageOp(MessageOp):
         elif self.__combination_type == "gate":
             adopted_feat_list = torch.vstack(feat_list[self._start:self._end])
             weight_list = F.softmax(
-                torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(self._end - self._start, -1).T),
-                dim=1)
+                torch.sigmoid(self.__learnable_weight(adopted_feat_list).view(self._end - self._start, -1).T), dim=1)
 
         elif self.__combination_type == "ori_ref":
             reference_feat = feat_list[0].repeat(self._end - self._start, 1)
             adopted_feat_list = torch.hstack((reference_feat, torch.vstack(feat_list[self._start:self._end])))
             weight_list = F.softmax(
-                torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, self._end - self._start)),
-                dim=1)
+                torch.sigmoid(self.__learnable_weight(adopted_feat_list).view(-1, self._end - self._start)), dim=1)
 
         elif self.__combination_type == "jk":
             reference_feat = torch.hstack(feat_list).repeat(self._end - self._start, 1)
             adopted_feat_list = torch.hstack((reference_feat, torch.vstack(feat_list[self._start:self._end])))
             weight_list = F.softmax(
-                torch.sigmoid(torch.mm(adopted_feat_list, self.__learnable_weight).view(-1, self._end - self._start)),
-                dim=1)
+                torch.sigmoid(self.__learnable_weight(adopted_feat_list).view(-1, self._end - self._start)), dim=1)
 
         else:
             raise NotImplementedError
@@ -200,14 +220,14 @@ class IterateLearnableWeightedMessageOp(MessageOp):
             if len(args) != 1:
                 raise ValueError("Invalid parameter numbers for the recursive iterate weighted aggregator!")
             feat_dim = args[0]
-            self.__learnable_weight = Parameter(torch.FloatTensor(feat_dim + feat_dim, 1))
+            self.__learnable_weight = Linear(feat_dim + feat_dim, 1)
 
     def _combine(self, feat_list):
         weight_list = None
         if self.__combination_type == "recursive":
             weighted_feat = feat_list[self._start]
             for i in range(self._start, self._end):
-                weights = torch.sigmoid(torch.mm(torch.hstack((feat_list[i], weighted_feat)), self.__learnable_weight))
+                weights = torch.sigmoid(self.__learnable_weight(torch.hstack((feat_list[i], weighted_feat))))
                 if i == self._start:
                     weight_list = weights
                 else:

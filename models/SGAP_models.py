@@ -1,8 +1,8 @@
 from models.base_model import BaseSGAPModel
 
 from models.graph_operator import LaplacianGraphOp
-from models.message_operator import LastMessageOp, ConcatMessageOp, MeanMessageOp, SimpleWeightedMessageOp, \
-    LearnableWeightedMessageOp, IterateLearnableWeightedMessageOp
+from models.message_operator import LastMessageOp, ConcatMessageOp, ProjectedConcatMessageOp, MeanMessageOp, \
+    SimpleWeightedMessageOp, LearnableWeightedMessageOp, IterateLearnableWeightedMessageOp
 from models.simple_models import LogisticRegression, MultiLayerPerceptron
 
 
@@ -21,7 +21,8 @@ class SIGN(BaseSGAPModel):
         super(SIGN, self).__init__(prop_steps, feat_dim, num_classes)
 
         self._pre_graph_op = LaplacianGraphOp(prop_steps, r=0.5)
-        self._pre_msg_op = ConcatMessageOp(start=0, end=prop_steps + 1)
+        # self._pre_msg_op = ProjectedConcatMessageOp(0, prop_steps + 1, feat_dim, hidden_dim)
+        self._pre_msg_op = ConcatMessageOp(0, prop_steps + 1)
         self._base_model = MultiLayerPerceptron((prop_steps + 1) * feat_dim, hidden_dim, num_layers, num_classes)
 
 
@@ -48,7 +49,7 @@ class GAMLP(BaseSGAPModel):
         super(GAMLP, self).__init__(prop_steps, feat_dim, num_classes)
 
         self._pre_graph_op = LaplacianGraphOp(prop_steps, r=0.5)
-        self._pre_msg_op = LearnableWeightedMessageOp(0, prop_steps + 1, "gate", feat_dim)
+        self._pre_msg_op = LearnableWeightedMessageOp(0, prop_steps + 1, "jk", prop_steps, feat_dim)
         self._base_model = MultiLayerPerceptron(feat_dim, hidden_dim, num_layers, num_classes)
 
 
