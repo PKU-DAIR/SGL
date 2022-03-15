@@ -38,7 +38,11 @@ class NodeClassification(BaseTask):
     def _execute(self):
         set_seed(self.__seed)
 
+        pre_time_st = time.time()
         self.__model.preprocess(self.__dataset.adj, self.__dataset.x)
+        pre_time_ed = time.time()
+        print(f"Preprocessing done in {(pre_time_ed-pre_time_st):.4f}s")
+
         self.__model = self.__model.to(self.__device)
         self.__dataset.y = self.__dataset.y.to(self.__device)
 

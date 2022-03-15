@@ -36,6 +36,36 @@ def csr_sparse_dense_matmul(adj, feature):
     return answer.reshape(feature.shape)
 
 
+def cuda_csr_sparse_dense_matmul(adj, feature):
+    ctl_lib = ctl.load_library("libcudamatmul.so", "./models/")
+
+    arr_1d_int = ctl.ndpointer(
+        dtype=np.int32,
+        ndim=1,
+        flags="CONTIGUOUS"
+    )
+    arr_1d_float = ctl.ndpointer(
+        dtype=np.float32,
+        ndim=1,
+        flags="CONTIGUOUS"
+    )
+    ctl_lib.FloatCSRMulDense.argtypes = [arr_1d_float, c_int, arr_1d_float, arr_1d_int, arr_1d_int, arr_1d_float, c_int,
+                                         c_int]
+    ctl_lib.FloatCSRMulDense.restypes = c_int
+
+    answer = np.zeros(feature.shape).astype(np.float32).flatten()
+    data = adj.data.astype(np.float32)
+    data_nnz = len(data)
+    indices = adj.indices
+    indptr = adj.indptr
+    mat = feature.flatten()
+    mat_row, mat_col = feature.shape
+
+    ctl_lib.FloatCSRMulDense(answer, data_nnz, data, indices, indptr, mat, mat_row, mat_col)
+
+    return answer.reshape(feature.shape)
+
+
 def adj_to_symmetric_norm(adj, r):
     adj = adj + sp.eye(adj.shape[0])
     degrees = np.array(adj.sum(1))

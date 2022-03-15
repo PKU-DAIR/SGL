@@ -5,7 +5,7 @@ import scipy.sparse as sp
 import numpy as np
 import platform
 
-from models.utils import csr_sparse_dense_matmul
+from models.utils import csr_sparse_dense_matmul, cuda_csr_sparse_dense_matmul
 
 
 class GraphOp:
@@ -29,7 +29,7 @@ class GraphOp:
         prop_feat_list = [feature]
         for _ in range(self._prop_steps):
             if platform.system() == "Linux":
-                feat_temp = csr_sparse_dense_matmul(self._adj, prop_feat_list[-1])
+                feat_temp = cuda_csr_sparse_dense_matmul(self._adj, prop_feat_list[-1])
             elif platform.system() == "Windows":
                 feat_temp = self._adj.dot(prop_feat_list[-1])
             else:
