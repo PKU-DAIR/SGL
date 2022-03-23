@@ -13,9 +13,7 @@ class LastMessageOp(MessageOp):
         self._aggr_type = "last"
 
     def _combine(self, feat_list):
-        if self._cached_feat is None:
-            self._cached_feat = feat_list[-1]
-        return self._cached_feat
+        return feat_list[-1]
 
 
 class SumMessageOp(MessageOp):
@@ -24,9 +22,7 @@ class SumMessageOp(MessageOp):
         self._aggr_type = "sum"
 
     def _combine(self, feat_list):
-        if self._cached_feat is None:
-            self._cached_feat = sum(feat_list[self._start:self._end])
-        return self._cached_feat
+        return sum(feat_list[self._start:self._end])
 
 
 class MeanMessageOp(MessageOp):
@@ -35,9 +31,7 @@ class MeanMessageOp(MessageOp):
         self._aggr_type = "mean"
 
     def _combine(self, feat_list):
-        if self._cached_feat is None:
-            self._cached_feat = sum(feat_list[self._start:self._end]) / (self._end - self._start)
-        return self._cached_feat
+        return sum(feat_list[self._start:self._end]) / (self._end - self._start)
 
 
 class MaxMessageOp(MessageOp):
@@ -46,9 +40,7 @@ class MaxMessageOp(MessageOp):
         self._aggr_type = "max"
 
     def _combine(self, feat_list):
-        if self._cached_feat is None:
-            self._cached_feat = torch.stack(feat_list[self._start:self._end], dim=0).max(dim=0)[0]
-        return self._cached_feat
+        return torch.stack(feat_list[self._start:self._end], dim=0).max(dim=0)[0]
 
 
 class MinMessageOp(MessageOp):
@@ -57,9 +49,7 @@ class MinMessageOp(MessageOp):
         self._aggr_type = "min"
 
     def _combine(self, feat_list):
-        if self._cached_feat is None:
-            self._cached_feat = torch.stack(feat_list[self._start:self._end], dim=0).min(dim=0)[0]
-        return self._cached_feat
+        return torch.stack(feat_list[self._start:self._end], dim=0).min(dim=0)[0]
 
 
 class ConcatMessageOp(MessageOp):
@@ -68,9 +58,7 @@ class ConcatMessageOp(MessageOp):
         self._aggr_type = "concat"
 
     def _combine(self, feat_list):
-        if self._cached_feat is None:
-            self._cached_feat = torch.hstack(feat_list[self._start:self._end])
-        return self._cached_feat
+        return torch.hstack(feat_list[self._start:self._end])
 
 
 class ProjectedConcatMessageOp(MessageOp):
@@ -83,19 +71,17 @@ class ProjectedConcatMessageOp(MessageOp):
             self.__learnable_weight.append(Linear(feat_dim, hidden_dim))
 
     def _combine(self, feat_list):
-        if self._cached_feat is None:
-            adopted_feat_list = feat_list[self._start:self._end]
+        adopted_feat_list = feat_list[self._start:self._end]
 
-            concat_feat = None
-            for i in range(self._end-self._start):
-                transformed_feat = F.relu(self.__learnable_weight[i](adopted_feat_list[i]))
-                if concat_feat is None:
-                    concat_feat = transformed_feat
-                else:
-                    concat_feat = torch.hstack((concat_feat, transformed_feat))
-            self._cached_feat = concat_feat
+        concat_feat = None
+        for i in range(self._end-self._start):
+            transformed_feat = F.relu(self.__learnable_weight[i](adopted_feat_list[i]))
+            if concat_feat is None:
+                concat_feat = transformed_feat
+            else:
+                concat_feat = torch.hstack((concat_feat, transformed_feat))
 
-        return self._cached_feat
+        return concat_feat
 
 
 class SimpleWeightedMessageOp(MessageOp):
@@ -188,24 +174,21 @@ class LearnableWeightedMessageOp(MessageOp):
             weight_list = F.softmax(torch.sigmoid(self.__learnable_weight[self._start:self._end]), dim=1)
 
         elif self.__combination_type == "gate":
-            if self._cached_feat is None:
-                self._cached_feat = torch.vstack(feat_list[self._start:self._end])
+            adopted_feat_list = torch.vstack(feat_list[self._start:self._end])
             weight_list = F.softmax(
-                torch.sigmoid(self.__learnable_weight(self._cached_feat).view(self._end - self._start, -1).T), dim=1)
+                torch.sigmoid(self.__learnable_weight(adopted_feat_list).view(self._end - self._start, -1).T), dim=1)
 
         elif self.__combination_type == "ori_ref":
-            if self._cached_feat is None:
-                reference_feat = feat_list[0].repeat(self._end - self._start, 1)
-                self._cached_feat = torch.hstack((reference_feat, torch.vstack(feat_list[self._start:self._end])))
+            reference_feat = feat_list[0].repeat(self._end - self._start, 1)
+            adopted_feat_list = torch.hstack((reference_feat, torch.vstack(feat_list[self._start:self._end])))
             weight_list = F.softmax(
-                torch.sigmoid(self.__learnable_weight(self._cached_feat).view(-1, self._end - self._start)), dim=1)
+                torch.sigmoid(self.__learnable_weight(adopted_feat_list).view(-1, self._end - self._start)), dim=1)
 
         elif self.__combination_type == "jk":
-            if self._cached_feat is None:
-                reference_feat = torch.hstack(feat_list).repeat(self._end - self._start, 1)
-                self._cached_feat = torch.hstack((reference_feat, torch.vstack(feat_list[self._start:self._end])))
+            reference_feat = torch.hstack(feat_list).repeat(self._end - self._start, 1)
+            adopted_feat_list = torch.hstack((reference_feat, torch.vstack(feat_list[self._start:self._end])))
             weight_list = F.softmax(
-                torch.sigmoid(self.__learnable_weight(self._cached_feat).view(-1, self._end - self._start)), dim=1)
+                torch.sigmoid(self.__learnable_weight(adopted_feat_list).view(-1, self._end - self._start)), dim=1)
 
         else:
             raise NotImplementedError

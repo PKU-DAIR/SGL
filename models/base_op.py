@@ -45,8 +45,6 @@ class MessageOp(nn.Module):
         self._aggr_type = None
         self._start, self._end = start, end
 
-        self._cached_feat = None
-
     @property
     def aggr_type(self):
         return self._aggr_type
