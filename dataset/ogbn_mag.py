@@ -2,6 +2,7 @@ import time
 import os.path as osp
 import pickle as pkl
 import torch
+import scipy.sparse as sp
 from ogb.nodeproppred import PygNodePropPredDataset
 
 from dataset.base_data import HeteroGraph
@@ -37,6 +38,30 @@ class OgbnMag(HeteroNodeDataset):
         data = dataset[0]
         node_types = list(data.num_nodes_dict.keys())
         edge_types = list(data.edge_index_dict.keys())
+
+        # generate feature for nodes without features via averaging
+        data.x_dict['paper'] = data.x_dict['paper'].numpy()
+
+        row_author_temp = data.edge_index_dict[('author', 'writes', 'paper')][0, :].numpy()
+        col_author_temp = data.edge_index_dict[('author', 'writes', 'paper')][1, :].numpy()
+        edge_weight_author_temp = torch.ones(len(row_author_temp)).numpy()
+        adj_author_temp = sp.csr_matrix((edge_weight_author_temp, (row_author_temp, col_author_temp)),
+                                        shape=(data.num_nodes_dict['author'], data.num_nodes_dict['paper']))
+        data.x_dict['author'] = adj_author_temp.dot(data.x_dict['paper'])
+
+        row_inst_temp = data.edge_index_dict[('author', 'affiliated_with', 'institution')][1, :].numpy()
+        col_inst_temp = data.edge_index_dict[('author', 'affiliated_with', 'institution')][0, :].numpy()
+        edge_weight_inst_temp = torch.ones(len(row_inst_temp)).numpy()
+        adj_inst_temp = sp.csr_matrix((edge_weight_inst_temp, (row_inst_temp, col_inst_temp)),
+                                      shape=(data.num_nodes_dict['institution'], data.num_nodes_dict['author']))
+        data.x_dict['institution'] = adj_inst_temp.dot(data.x_dict['author'])
+
+        row_field_temp = data.edge_index_dict[('paper', 'has_topic', 'field_of_study')][1, :].numpy()
+        col_field_temp = data.edge_index_dict[('paper', 'has_topic', 'field_of_study')][0, :].numpy()
+        edge_weight_field_temp = torch.ones(len(row_field_temp)).numpy()
+        adj_field_temp = sp.csr_matrix((edge_weight_field_temp, (row_field_temp, col_field_temp)),
+                                       shape=(data.num_nodes_dict['field_of_study'], data.num_nodes_dict['paper']))
+        data.x_dict['field_of_study'] = adj_field_temp.dot(data.x_dict['paper'])
 
         current_nodes = [0]
         current_nodes_dict = {}
