@@ -6,8 +6,7 @@ import numpy as np
 
 from dataset.ogbn_mag import OgbnMag
 from models.graph_operator import LaplacianGraphOp
-from models.simple_models import MultiLayerPerceptron
-from simple_models import OneDimConvolution
+from models.simple_models import MultiLayerPerceptron, OneDimConvolution
 
 
 def mini_batch_evaluate(model, dataset, x_list_list, labels, val_loader, test_loader, device):
@@ -42,7 +41,6 @@ def mini_batch_train(model, dataset, x_list_list, labels, train_loader, loss_fn,
     correct_num = 0
     loss_train_sum = 0.
     for batch in train_loader:
-        # train_output = model.model_forward(batch, device)
         train_input = []
         for x_list in x_list_list:
             train_input.append([])
@@ -97,12 +95,12 @@ val_loader = torch.utils.data.DataLoader(
 test_loader = torch.utils.data.DataLoader(
     dataset.test_idx, batch_size=10000, shuffle=False, drop_last=False)
 
-# subgraph = adj, feature, node_id
 graph_op = LaplacianGraphOp(prop_steps=2, r=0.5)
 
 propagated_x_list_list = []
 for _ in range(len(subgraph_dict)):
     propagated_x_list_list.append([])
+# subgraph = adj, feature, node_id
 for key in subgraph_dict.keys():
     edge_type_list = []
     for edge_type in key:
