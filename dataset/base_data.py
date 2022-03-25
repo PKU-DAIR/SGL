@@ -221,6 +221,8 @@ class HeteroGraph:
                 (y_dict is not None) and (not isinstance(y_dict, dict))):
             raise TypeError("Xs and Ys must be a dict!")
 
+        self.__y_dict = y_dict
+
         self.__node_id_offsets = {}
         node_count = 0
         for node_type in node_types:
@@ -293,7 +295,8 @@ class HeteroGraph:
     def num_classes(self):
         num_classes = {}
         for node_type in self.__node_types:
-            num_classes[node_type] = (self.__nodes_dict[node_type].y.max() + 1)
+            if self.__nodes_dict[node_type].y is not None:
+                num_classes[node_type] = (self.__nodes_dict[node_type].y.max() + 1)
         return num_classes
 
     @property

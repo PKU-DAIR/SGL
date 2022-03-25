@@ -159,7 +159,7 @@ class HeteroNodeDataset:
             print("Downloading done!")
 
         if file_exist(self.processed_file_paths):
-            print("Files already raw.")
+            print("Files already processed.")
         else:
             print("Processing...")
             if not file_exist(self._processed_dir):
@@ -196,6 +196,10 @@ class HeteroNodeDataset:
     @property
     def data(self):
         return self._data
+
+    @property
+    def y_dict(self):
+        return self._data.y_dict
 
     @property
     def node_types(self):
@@ -241,7 +245,7 @@ class HeteroNodeDataset:
                 sampled_node_types.append(node_type)
 
             node_id_offsets[node_type] = node_count
-            node_count += self._data.num_node[node_type]
+            node_count = node_count + self._data.num_node[node_type]
 
         num_node = 0
         feature = None
@@ -249,9 +253,9 @@ class HeteroNodeDataset:
         node_id_offset = {}
         for node_type in sampled_node_types:
             node_id_offset[node_type] = node_id_offsets[node_type] - num_node
-            num_node += self._data.num_node[node_type]
+            num_node = num_node + self._data.num_node[node_type]
 
-            current_feature = self._data[node_type].x
+            current_feature = torch.from_numpy(self._data[node_type].x)
             if current_feature is None:
                 warnings.warn(f'{node_type} nodes have no features!', UserWarning)
             if feature is None:
@@ -262,7 +266,7 @@ class HeteroNodeDataset:
             if node_id is None:
                 node_id = self._data.node_id_dict[node_type][:]
             else:
-                node_id += self._data.node_id_dict[node_type]
+                node_id = node_id + self._data.node_id_dict[node_type]
 
         rows, cols = None, None
         for edge_type in edge_types:
@@ -270,8 +274,8 @@ class HeteroNodeDataset:
 
             node_type_of_row = edge_type.split('__')[0]
             node_type_of_col = edge_type.split('__')[2]
-            row_temp -= node_id_offset[node_type_of_row]
-            col_temp -= node_id_offset[node_type_of_col]
+            row_temp = row_temp - node_id_offset[node_type_of_row]
+            col_temp = col_temp - node_id_offset[node_type_of_col]
             if undirected is True and node_type_of_row != node_type_of_col:
                 row_temp, col_temp = to_undirected((row_temp, col_temp))
 
@@ -287,7 +291,7 @@ class HeteroNodeDataset:
         # remove previously existed undirected edges
         adj.data = torch.ones(len(adj.data)).numpy()
 
-        return adj, feature, torch.LongTensor(node_id)
+        return adj, feature.numpy(), torch.LongTensor(node_id)
 
     # return sampled adjacency matrix containing the given meta-path, "xxx__to__xxx__to...__xxx"
     def sample_by_meta_path(self, meta_path, undirected=True):
@@ -303,12 +307,12 @@ class HeteroNodeDataset:
         for node_type in self.node_types:
             if node_type in [node_type_st, node_type_ed]:
                 sampled_node_types.append(node_type)
-                num_node += self._data.num_node[node_type]
+                num_node = num_node + self._data.num_node[node_type]
 
         feature = None
         node_id = None
         for node_type in sampled_node_types:
-            current_feature = self._data[node_type].x
+            current_feature = torch.from_numpy(self._data[node_type].x)
             if current_feature is None:
                 warnings.warn(f'{node_type} nodes have no features!', UserWarning)
             if feature is None:
@@ -319,7 +323,7 @@ class HeteroNodeDataset:
             if node_id is None:
                 node_id = self._data.node_id_dict[node_type][:]
             else:
-                node_id += self._data.node_id_dict[node_type]
+                node_id = node_id + self._data.node_id_dict[node_type]
 
         # two at a time
         adj = None
@@ -341,24 +345,24 @@ class HeteroNodeDataset:
         st_index, ed_index = self.node_types.index(node_type_st), self.node_types.index(node_type_ed)
         if st_index == ed_index:
             for node_type in self.node_types[:st_index]:
-                row -= self._data.num_node[node_type]
-                col -= self._data.num_node[node_type]
+                row = row - self._data.num_node[node_type]
+                col = col - self._data.num_node[node_type]
         else:
             if st_index < ed_index:
                 for node_type in self.node_types[:st_index]:
-                    row -= self._data.num_node[node_type]
-                    col -= self._data.num_node[node_type]
+                    row = row - self._data.num_node[node_type]
+                    col = col - self._data.num_node[node_type]
                 for node_type in self.node_types[st_index:ed_index]:
-                    col -= self._data.num_node[node_type]
-                col += self._data.num_node[node_type_st]
+                    col = col - self._data.num_node[node_type]
+                col = col + self._data.num_node[node_type_st]
             else:
                 for node_type in self.node_types[:ed_index]:
                     print(node_type)
-                    col -= self._data.num_node[node_type]
-                    row -= self._data.num_node[node_type]
+                    col = col - self._data.num_node[node_type]
+                    row = row - self._data.num_node[node_type]
                 for node_type in self.node_types[ed_index:st_index]:
-                    row -= self._data.num_node[node_type]
-                row += self._data.num_node[node_type_ed]
+                    row = row - self._data.num_node[node_type]
+                row = row + self._data.num_node[node_type_ed]
 
         if undirected is True:
             data = torch.ones(2*len(data))
@@ -367,7 +371,7 @@ class HeteroNodeDataset:
 
         # remove existed self loops
         adj.data = torch.ones(len(adj.data)).numpy()
-        return adj, feature, torch.LongTensor(node_id)
+        return adj, feature.numpy(), torch.LongTensor(node_id)
 
     # return a dict of sub-graphs that contain all the combinations of given edge types and sampled number
     def nars_preprocess(self, edge_types, random_num):

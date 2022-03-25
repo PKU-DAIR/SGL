@@ -4,15 +4,15 @@ import torch.nn.functional as F
 
 
 class OneDimConvolution(nn.Module):
-    def __init__(self, subgraph_num, hop_num, feat_dim):
+    def __init__(self, num_subgraphs, prop_steps, feat_dim):
         super(OneDimConvolution, self).__init__()
-        self.__subgraph_num = subgraph_num
-        self.__hop_num = hop_num
+        self.__subgraph_num = num_subgraphs
+        self.__hop_num = prop_steps
         self.__feat_dim = feat_dim
 
         self.__learnable_weight = nn.ParameterList()
-        for _ in range(hop_num):
-            self.__learnable_weight.append(nn.Parameter(torch.FloatTensor(feat_dim, subgraph_num)))
+        for _ in range(prop_steps):
+            self.__learnable_weight.append(nn.Parameter(torch.FloatTensor(feat_dim, num_subgraphs)))
 
     # feat_list_list = hop_num * feat_list = hop_num * (subgraph_num * feat)
     def forward(self, feat_list_list):
