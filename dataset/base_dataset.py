@@ -374,7 +374,7 @@ class HeteroNodeDataset:
         return adj, feature.numpy(), torch.LongTensor(node_id)
 
     # return a dict of sub-graphs that contain all the combinations of given edge types and sampled number
-    def nars_preprocess(self, edge_types, random_num):
+    def nars_preprocess(self, edge_types, sampled_num):
         if not isinstance(edge_types, (str, list, tuple)):
             raise TypeError("The given edge types must be a string or a list or a tuple!")
         elif isinstance(edge_types, str):
@@ -383,10 +383,10 @@ class HeteroNodeDataset:
             for edge_type in edge_types:
                 if not isinstance(edge_type, str):
                     raise TypeError("Edge type must be a string!")
-        elif random_num > len(edge_types):
+        elif sampled_num > len(edge_types):
             raise ValueError("Random selected number must not exceed the number of edge types!")
 
-        chosen_edge_types = [edge_type for edge_type in itertools.combinations(edge_types, random_num)]
+        chosen_edge_types = [edge_type for edge_type in itertools.combinations(edge_types, sampled_num)]
         subgraph_dict = {}
         for chosen_edge_type in chosen_edge_types:
             print(chosen_edge_type)

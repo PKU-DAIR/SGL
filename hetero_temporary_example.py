@@ -84,7 +84,7 @@ class NARS(nn.Module):
 dataset = OgbnMag("mag", "../dataset/")
 random_edge_types = list(np.random.choice(dataset.edge_types, size=3, replace=False))
 print(random_edge_types)
-subgraph_dict = dataset.nars_preprocess(random_edge_types, random_num=2)
+subgraph_dict = dataset.nars_preprocess(random_edge_types, sampled_num=2)
 predict_class = 'paper'
 predict_idx = dataset.data.node_id_dict['paper']
 
