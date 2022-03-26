@@ -47,16 +47,11 @@ class Reddit(NodeDataset):
     def _process(self):
         adj = sp.coo_matrix(sp.load_npz(
             osp.join(self._raw_dir, 'reddit_graph.npz')))
-    #    adj = adj[:100, :]
-    #    print(f"adj shape: {adj.shape}")
         row, col, edge_weight = adj.row, adj.col, adj.data
         edge_type = "post__to__post"
 
         data = np.load(osp.join(self._raw_dir, 'reddit_data.npz'))
         features, labels, split = data['feature'], data['label'], data['node_types']
-    #    features = features[:100, :]
-    #    print(f"feature shape: {features.shape}")
-    # 后面需要修改，通过排序让train_data排在数据集最前面
         num_node = features.shape[0]
         node_type = "post"
         labels = torch.LongTensor(labels)
