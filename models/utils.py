@@ -7,7 +7,7 @@ from ctypes import c_int
 
 
 def csr_sparse_dense_matmul(adj, feature):
-    ctl_lib = ctl.load_library("libmatmul.so", "./models/")
+    ctl_lib = ctl.load_library("./csrc/libmatmul.so", "./models/")
 
     arr_1d_int = ctl.ndpointer(
         dtype=np.int32,
@@ -37,7 +37,7 @@ def csr_sparse_dense_matmul(adj, feature):
 
 
 def cuda_csr_sparse_dense_matmul(adj, feature):
-    ctl_lib = ctl.load_library("libcudamatmul.so", "./models/")
+    ctl_lib = ctl.load_library("./csrc/libcudamatmul.so", "./models/")
 
     arr_1d_int = ctl.ndpointer(
         dtype=np.int32,
