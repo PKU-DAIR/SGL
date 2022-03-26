@@ -66,22 +66,25 @@ class NARS(nn.Module):
         self.__aggregator = OneDimConvolution(num_subgraphs, prop_steps, feat_dim)
         self.__fcs = nn.ModuleList()
         for _ in range(prop_steps):
-            self.__fcs.append(nn.Linear(feat_dim, hidden_dim))
+            self.__fcs.append(MultiLayerPerceptron(feat_dim, hidden_dim, num_layers, hidden_dim))
+
         self.__out_model = MultiLayerPerceptron(hidden_dim * prop_steps, hidden_dim, num_layers, num_classes)
+
+        self.__prelu = nn.PReLU()
 
     def forward(self, feat_list_list):
         aggregated_feat_list = self.__aggregator(feat_list_list)
 
         concat_feat = self.__fcs[0](aggregated_feat_list[0])
         for i in range(1, len(aggregated_feat_list)):
-            feat_temp = F.relu(self.__fcs[i](aggregated_feat_list[i]))
+            feat_temp = self.__prelu(self.__fcs[i](aggregated_feat_list[i]))
             concat_feat = torch.hstack((concat_feat, feat_temp))
 
         output = self.__out_model(concat_feat)
         return output
 
 
-dataset = OgbnMag("mag", "../dataset/")
+dataset = OgbnMag("mag", "../")
 random_edge_types = list(np.random.choice(dataset.edge_types, size=3, replace=False))
 print(random_edge_types)
 subgraph_dict = dataset.nars_preprocess(random_edge_types, sampled_num=2)
@@ -117,7 +120,7 @@ for key in subgraph_dict.keys():
 device = torch.device(f"cuda:{0}" if torch.cuda.is_available() else "cpu")
 model = NARS(len(propagated_x_list_list[0]), 2, dataset.data.num_features[predict_class],
              dataset.data.num_classes[predict_class], 256, 2).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=0)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0)
 
 labels = dataset.data[predict_class].y.squeeze(-1).to(device)
 
