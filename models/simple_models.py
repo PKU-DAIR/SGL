@@ -14,6 +14,12 @@ class OneDimConvolution(nn.Module):
         for _ in range(prop_steps):
             self.__learnable_weight.append(nn.Parameter(torch.FloatTensor(feat_dim, num_subgraphs)))
 
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        for weight in self.__learnable_weight:
+            nn.init.xavier_uniform_(weight)
+
     # feat_list_list = hop_num * feat_list = hop_num * (subgraph_num * feat)
     def forward(self, feat_list_list):
         aggregated_feat_list = []
@@ -56,13 +62,21 @@ class MultiLayerPerceptron(nn.Module):
                 self.__bns.append(nn.BatchNorm1d(hidden_dim))
 
         self.__dropout = nn.Dropout(dropout)
+        self.__prelu = nn.PReLU()
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        gain = nn.init.calculate_gain("relu")
+        for fc in self.__fcs:
+            nn.init.xavier_uniform_(fc.weight, gain=gain)
+            nn.init.zeros_(fc.bias)
 
     def forward(self, feature):
         for i in range(self.__num_layers - 1):
             feature = self.__fcs[i](feature)
             if self.__bn is True:
                 feature = self.__bns[i](feature)
-            feature = F.relu(feature)
+            feature = self.__prelu(feature)
             feature = self.__dropout(feature)
 
         output = self.__fcs[-1](feature)
