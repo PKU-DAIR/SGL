@@ -81,7 +81,7 @@ class BaseHeteroSGAPModel(nn.Module):
             raise ValueError("Please input valid node class for prediction!")
         predict_idx = dataset.data.node_id_dict[predict_class]
 
-        subgraph_dict = dataset.nars_preprocess(dataset.edge_types, self._random_subgraph_num,
+        subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class, self._random_subgraph_num,
                                                 self._subgraph_edge_type_num)
 
         self._propagated_feat_list_list = []

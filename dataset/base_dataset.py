@@ -375,7 +375,7 @@ class HeteroNodeDataset:
         return adj, feature.numpy(), torch.LongTensor(node_id)
 
     # return a dict of sub-graphs that contain all the combinations of given edge types and sampled number
-    def nars_preprocess(self, edge_types, random_subgraph_num, subgraph_edge_type_num):
+    def nars_preprocess(self, edge_types, predict_class, random_subgraph_num, subgraph_edge_type_num):
         if not isinstance(edge_types, (str, list, tuple)):
             raise TypeError("The given edge types must be a string or a list or a tuple!")
         elif isinstance(edge_types, str):
@@ -387,14 +387,21 @@ class HeteroNodeDataset:
 
         edge_type_combinations = np.array(
             [edge_type for edge_type in itertools.combinations(edge_types, subgraph_edge_type_num)])
-        if random_subgraph_num > len(edge_type_combinations):
-            random_subgraph_num = len(edge_type_combinations)
+        adopted_edge_type_combinations = []
+        for combination in edge_type_combinations:
+            for edge_type in combination:
+                if edge_type.find(predict_class) != -1:
+                    adopted_edge_type_combinations.append(combination.tolist())
+                    continue
+
+        if random_subgraph_num > len(adopted_edge_type_combinations):
+            random_subgraph_num = len(adopted_edge_type_combinations)
             warnings.warn(
                 "The input random_subgraph_num exceeds the number of all the combinations of edge types!"
-                f"\nThe random_subgraph_num has been set to {len(edge_type_combinations)}.", UserWarning)
+                f"\nThe random_subgraph_num has been set to {len(adopted_edge_type_combinations)}.", UserWarning)
 
-        chosen_idx = np.random.choice(np.arange(len(edge_type_combinations)), size=random_subgraph_num, replace=False)
-        chosen_edge_types = [tuple(edge_type) for edge_type in edge_type_combinations[chosen_idx]]
+        chosen_idx = np.random.choice(np.arange(len(adopted_edge_type_combinations)), size=random_subgraph_num, replace=False)
+        chosen_edge_types = [tuple(edge_type) for edge_type in np.array(adopted_edge_type_combinations)[chosen_idx]]
         subgraph_dict = {}
         for chosen_edge_type in chosen_edge_types:
             print(chosen_edge_type)
