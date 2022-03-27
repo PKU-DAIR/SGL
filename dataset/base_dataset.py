@@ -85,6 +85,10 @@ class NodeDataset:
     @property
     def edge_type(self):
         return self._data.edge_type
+    
+    @property
+    def edge_type_cnt(self):
+        return len(self.edge_types)
 
     @property
     def node_type(self):
@@ -209,6 +213,10 @@ class HeteroNodeDataset:
     @property
     def edge_types(self):
         return self._data.edge_types
+    
+    @property
+    def edge_type_cnt(self):
+        return len(self.edge_types)
 
     @property
     def train_idx(self):
