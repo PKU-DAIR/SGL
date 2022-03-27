@@ -1,4 +1,7 @@
-def GetGpuMemory() -> list[int]:
+from typing import List
+
+
+def GetGpuMemory() -> List[int]:
     import os
     import random
 
@@ -14,7 +17,7 @@ def GetGpuMemory() -> list[int]:
     return gpu_mem_list
 
 
-def IdxOfMaxElement(list: list[int]) -> int:
+def IdxOfMaxElement(list: List[int]) -> int:
     return list.index(max(list))
 
 
