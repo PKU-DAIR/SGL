@@ -28,7 +28,7 @@ with open('search_result.txt', 'w') as output:
                 output.writelines(
                     f'''random_subgraph_num: {random_subgraph_num}, ''' +
                     f'''subgraph_edge_type_num: {subgraph_edge_type_num}, ''' +
-                    f'''iteration:{iteration}''')
+                    f'''iteration:{iteration}''' + '\t')
                 test_acc = OneTrial(random_subgraph_num,
                                     subgraph_edge_type_num)
                 output.writelines(f'test accuracy: {test_acc}\n')
