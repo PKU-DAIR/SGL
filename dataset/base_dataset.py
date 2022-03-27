@@ -2,6 +2,7 @@ import os
 import os.path as osp
 import itertools
 import warnings
+import numpy as np
 import torch
 from scipy.sparse import csr_matrix
 
@@ -365,7 +366,7 @@ class HeteroNodeDataset:
                 row = row + self._data.num_node[node_type_ed]
 
         if undirected is True:
-            data = torch.ones(2*len(data))
+            data = torch.ones(2 * len(data))
             row, col = to_undirected((row, col))
         adj = csr_matrix((data.numpy(), (row.numpy(), col.numpy())), shape=(num_node, num_node))
 
@@ -374,7 +375,7 @@ class HeteroNodeDataset:
         return adj, feature.numpy(), torch.LongTensor(node_id)
 
     # return a dict of sub-graphs that contain all the combinations of given edge types and sampled number
-    def nars_preprocess(self, edge_types, sampled_num):
+    def nars_preprocess(self, edge_types, random_num, subgraph_edge_type_num):
         if not isinstance(edge_types, (str, list, tuple)):
             raise TypeError("The given edge types must be a string or a list or a tuple!")
         elif isinstance(edge_types, str):
@@ -383,10 +384,13 @@ class HeteroNodeDataset:
             for edge_type in edge_types:
                 if not isinstance(edge_type, str):
                     raise TypeError("Edge type must be a string!")
-        elif sampled_num > len(edge_types):
-            raise ValueError("Random selected number must not exceed the number of edge types!")
 
-        chosen_edge_types = [edge_type for edge_type in itertools.combinations(edge_types, sampled_num)]
+        edge_type_combinations = np.array(
+            [edge_type for edge_type in itertools.combinations(edge_types, subgraph_edge_type_num)])
+        if random_num > len(edge_type_combinations):
+            raise ValueError("The input random_num exceeds the number of all the combinations of edge types!")
+        chosen_idx = np.random.choice(np.arange(len(edge_type_combinations)), size=random_num, replace=False)
+        chosen_edge_types = [tuple(edge_type) for edge_type in edge_type_combinations[chosen_idx]]
         subgraph_dict = {}
         for chosen_edge_type in chosen_edge_types:
             print(chosen_edge_type)
