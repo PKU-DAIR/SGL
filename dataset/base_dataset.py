@@ -400,7 +400,8 @@ class HeteroNodeDataset:
                 "The input random_subgraph_num exceeds the number of all the combinations of edge types!"
                 f"\nThe random_subgraph_num has been set to {len(adopted_edge_type_combinations)}.", UserWarning)
 
-        chosen_idx = np.random.choice(np.arange(len(adopted_edge_type_combinations)), size=random_subgraph_num, replace=False)
+        chosen_idx = np.random.choice(np.arange(len(adopted_edge_type_combinations)), size=random_subgraph_num,
+                                      replace=False)
         chosen_edge_types = [tuple(edge_type) for edge_type in np.array(adopted_edge_type_combinations)[chosen_idx]]
         subgraph_dict = {}
         for chosen_edge_type in chosen_edge_types:

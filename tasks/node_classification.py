@@ -35,7 +35,11 @@ class NodeClassification(BaseTask):
             self.__all_eval_loader = DataLoader(
                 range(self.__dataset.data.num_node), batch_size=eval_batch_size, shuffle=False, drop_last=False)
 
-        self._execute()
+        self.__test_acc = self._execute()
+
+    @property
+    def test_acc(self):
+        return self.__test_acc
 
     def _execute(self):
         set_seed(self.__seed)
@@ -130,7 +134,11 @@ class HeteroNodeClassification(BaseTask):
             self.__test_loader = DataLoader(
                 self.__dataset.test_idx, batch_size=eval_batch_size, shuffle=False, drop_last=False)
 
-        self._execute()
+        self.__test_acc = self._execute()
+
+    @property
+    def test_acc(self):
+        return self.__test_acc
 
     def _execute(self):
         set_seed(self.__seed)
