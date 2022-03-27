@@ -85,7 +85,7 @@ class BaseHeteroSGAPModel(nn.Module):
                                                 self._subgraph_edge_type_num)
 
         self._propagated_feat_list_list = []
-        for _ in range(len(subgraph_dict)):
+        for _ in range(self._prop_steps + 1):
             self._propagated_feat_list_list.append([])
         # subgraph = adj, feature, node_id
         for key in subgraph_dict.keys():
