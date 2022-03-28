@@ -6,7 +6,7 @@ import numpy as np
 
 # Base class for adjacency matrix
 class Edge:
-    def __init__(self, row, col, edge_weight, edge_type, edge_attrs=None):
+    def __init__(self, row, col, edge_weight, edge_type, num_node, edge_attrs=None):
         if not isinstance(edge_type, str):
             raise TypeError("Edge type must be a string!")
         self.__edge_type = edge_type
@@ -21,9 +21,10 @@ class Edge:
         self.__num_edge = len(row)
 
         if isinstance(row, Tensor) or isinstance(col, Tensor):
-            self.__sparse_matrix = csr_matrix((edge_weight.numpy(), (row.numpy(), col.numpy())))
+            self.__sparse_matrix = csr_matrix((edge_weight.numpy(), (row.numpy(), col.numpy())),
+                                              shape=(num_node, num_node))
         else:
-            self.__sparse_matrix = csr_matrix((edge_weight, (row, col)))
+            self.__sparse_matrix = csr_matrix((edge_weight, (row, col)), shape=(num_node, num_node))
 
     @property
     def sparse_matrix(self):
@@ -119,7 +120,7 @@ class Node:
 class Graph:
     def __init__(self, row, col, edge_weight, num_node, node_type, edge_type, x=None, y=None, node_ids=None,
                  edge_attr=None):
-        self.__edge = Edge(row, col, edge_weight, edge_type, edge_attr)
+        self.__edge = Edge(row, col, edge_weight, edge_type, num_node, edge_attr)
         if node_ids is None:
             self.__node_ids = range(num_node)
         else:
@@ -221,6 +222,8 @@ class HeteroGraph:
                 (y_dict is not None) and (not isinstance(y_dict, dict))):
             raise TypeError("Xs and Ys must be a dict!")
 
+        self.__y_dict = y_dict
+
         self.__node_id_offsets = {}
         node_count = 0
         for node_type in node_types:
@@ -293,7 +296,8 @@ class HeteroGraph:
     def num_classes(self):
         num_classes = {}
         for node_type in self.__node_types:
-            num_classes[node_type] = (self.__nodes_dict[node_type].y.max() + 1)
+            if self.__nodes_dict[node_type].y is not None:
+                num_classes[node_type] = (self.__nodes_dict[node_type].y.max() + 1)
         return num_classes
 
     @property

@@ -7,7 +7,7 @@ from ctypes import c_int
 
 
 def csr_sparse_dense_matmul(adj, feature):
-    ctl_lib = ctl.load_library("libmatmul.so", "./models/")
+    ctl_lib = ctl.load_library("./csrc/libmatmul.so", "./models/")
 
     arr_1d_int = ctl.ndpointer(
         dtype=np.int32,
@@ -20,9 +20,9 @@ def csr_sparse_dense_matmul(adj, feature):
         ndim=1,
         flags="CONTIGUOUS"
     )
-    ctl_lib.FloatCSRMulDenseAVX256OMP.argtypes = [arr_1d_float, arr_1d_float, arr_1d_int, arr_1d_int, arr_1d_float,
+    ctl_lib.FloatCSRMulDenseOMP.argtypes = [arr_1d_float, arr_1d_float, arr_1d_int, arr_1d_int, arr_1d_float,
                                                   c_int, c_int]
-    ctl_lib.FloatCSRMulDenseAVX256OMP.restypes = None
+    ctl_lib.FloatCSRMulDenseOMP.restypes = None
 
     answer = np.zeros(feature.shape).astype(np.float32).flatten()
     data = adj.data.astype(np.float32)
@@ -31,13 +31,13 @@ def csr_sparse_dense_matmul(adj, feature):
     mat = feature.flatten()
     mat_row, mat_col = feature.shape
 
-    ctl_lib.FloatCSRMulDenseAVX256OMP(answer, data, indices, indptr, mat, mat_row, mat_col)
+    ctl_lib.FloatCSRMulDenseOMP(answer, data, indices, indptr, mat, mat_row, mat_col)
 
     return answer.reshape(feature.shape)
 
 
 def cuda_csr_sparse_dense_matmul(adj, feature):
-    ctl_lib = ctl.load_library("libcudamatmul.so", "./models/")
+    ctl_lib = ctl.load_library("./csrc/libcudamatmul.so", "./models/")
 
     arr_1d_int = ctl.ndpointer(
         dtype=np.int32,

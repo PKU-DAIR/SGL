@@ -4,15 +4,21 @@ import torch.nn.functional as F
 
 
 class OneDimConvolution(nn.Module):
-    def __init__(self, subgraph_num, hop_num, feat_dim):
+    def __init__(self, num_subgraphs, prop_steps, feat_dim):
         super(OneDimConvolution, self).__init__()
-        self.__subgraph_num = subgraph_num
-        self.__hop_num = hop_num
+        self.__subgraph_num = num_subgraphs
+        self.__hop_num = prop_steps
         self.__feat_dim = feat_dim
 
         self.__learnable_weight = nn.ParameterList()
-        for _ in range(hop_num):
-            self.__learnable_weight.append(nn.Parameter(torch.FloatTensor(feat_dim, subgraph_num)))
+        for _ in range(prop_steps):
+            self.__learnable_weight.append(nn.Parameter(torch.FloatTensor(feat_dim, num_subgraphs)))
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        for weight in self.__learnable_weight:
+            nn.init.xavier_uniform_(weight)
 
     # feat_list_list = hop_num * feat_list = hop_num * (subgraph_num * feat)
     def forward(self, feat_list_list):
@@ -56,13 +62,21 @@ class MultiLayerPerceptron(nn.Module):
                 self.__bns.append(nn.BatchNorm1d(hidden_dim))
 
         self.__dropout = nn.Dropout(dropout)
+        self.__prelu = nn.PReLU()
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        gain = nn.init.calculate_gain("relu")
+        for fc in self.__fcs:
+            nn.init.xavier_uniform_(fc.weight, gain=gain)
+            nn.init.zeros_(fc.bias)
 
     def forward(self, feature):
         for i in range(self.__num_layers - 1):
             feature = self.__fcs[i](feature)
             if self.__bn is True:
                 feature = self.__bns[i](feature)
-            feature = F.relu(feature)
+            feature = self.__prelu(feature)
             feature = self.__dropout(feature)
 
         output = self.__fcs[-1](feature)
