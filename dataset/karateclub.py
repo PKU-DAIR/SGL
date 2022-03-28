@@ -66,9 +66,11 @@ class KarateClub(NodeDataset):
                 1, 1, 1, 1, 3, 3, 3, 1, 0, 1, 3, 1, 1, 1, 0, 0, 3, 1, 0, 1, 0, 1,
                 0, 0, 2, 2, 0, 0, 2, 0, 0, 2, 0, 0
             ])
+
             # By Default: Select a single training node (the first one) for each community
             num_train_per_class = self._num_train_per_class
             num_val = self._num_valid_per_class
+            
             train_idx, val_idx, test_idx = np.empty(0), np.empty(0), np.empty(0)
             for i in range(self.num_classes):
                 idx = np.where(labels == i)[0]
