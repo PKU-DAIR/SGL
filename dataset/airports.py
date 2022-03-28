@@ -13,7 +13,8 @@ from dataset.utils import pkl_read_file, download_to
 
 
 class Airports(NodeDataset):
-    def __init__(self, name="usa", root="./", split="official", num_train_per_class=5, num_valid_per_class=5):
+    # The number of nodes in training needs to be carefully selected
+    def __init__(self, name="usa", root="./", split="official", num_train_per_class=100, num_valid_per_class=20):
         name = name.lower()
         if name not in ["usa", "brazil", "europe"]:
             raise ValueError("Dataset name not found!")
@@ -72,13 +73,6 @@ class Airports(NodeDataset):
                 edge_indices.append([index_map[int(src)], index_map[int(dst)]])
         edge_index = np.array(edge_indices).T
         row, col = edge_index[0], edge_index[1]
-
-        print("features: \n", features)
-        print("feature shape: ", features.shape)
-        print("num_node: ", num_node)
-        print("row shape: ", row.shape, "\ncol shape: ", col.shape)
-        print("labels shape: ", labels.shape)
-        print(edge_index.shape)
 
         # Set default edge weight to 1
         edge_weight = np.ones(len(row))
