@@ -87,7 +87,7 @@ class NodeClassification(BaseTask):
         print("Optimization Finished!")
         print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
         print(f'Best val: {best_val:.4f}, best test: {best_test:.4f}')
-        return best_test.item()
+        return best_test
 
     def _postprocess(self):
         self.__model.eval()
