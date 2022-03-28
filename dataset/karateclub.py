@@ -13,7 +13,7 @@ from dataset.utils import pkl_read_file, download_to
 class KarateClub(NodeDataset):
     def __init__(self, name="karateclub", root="./", split="official", num_train_per_class=1, num_valid_per_class=1):
         super(KarateClub, self).__init__(root + "KarateClub/", name)
-
+        
         self._data = pkl_read_file(self.processed_file_paths)
         self._split = split
         self._num_train_per_class = num_train_per_class
@@ -70,7 +70,7 @@ class KarateClub(NodeDataset):
             # By Default: Select a single training node (the first one) for each community
             num_train_per_class = self._num_train_per_class
             num_val = self._num_valid_per_class
-            
+
             train_idx, val_idx, test_idx = np.empty(0), np.empty(0), np.empty(0)
             for i in range(self.num_classes):
                 idx = np.where(labels == i)[0]
