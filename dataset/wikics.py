@@ -60,13 +60,7 @@ class Wikics(NodeDataset):
         edge_index = edge_index.numpy()
         row, col = edge_index[0], edge_index[1]
         edge_weight = np.ones(len(row))
-
         edge_type = "article__to__article"
-
-    #    print("features.shape: ", features.shape)
-    #    print("labels.shape: ", labels.shape)
-    #    print("row: ", row, "row.shape: ", row.shape)
-    #    print("col: ", col, "col.shape: ", col.shape)
 
         g = Graph(row, col, edge_weight, num_node, node_type, edge_type, x=features, y=labels)
         with open(self.processed_file_paths, 'wb') as rf:
@@ -103,10 +97,6 @@ class Wikics(NodeDataset):
             stopping_idx = torch.nonzero(stopping_mask == 1).reshape(-1)
             val_idx = torch.cat((val_idx, stopping_idx), dim=0)
             test_idx = torch.nonzero(test_mask == 1).reshape(-1)
-
-        #    print(train_mask.shape, val_mask.shape, test_mask.shape, sep='\n')
-        #    print(train_mask, val_mask, test_mask, sep='\n')
-        #    print(len(train_idx[0]), len(val_idx[0]), len(test_idx[0]), sep='\n')
 
         elif split == "random":
             raise NotImplementedError
