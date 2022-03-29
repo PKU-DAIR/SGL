@@ -72,6 +72,8 @@ class Nell(NodeDataset):
 
         tx, ty = tx_ext, ty_ext
 
+        # PyG creates feature vectors for relations here. Whereas the augmented features consume
+        # too much memory to be stored in a dense matrix (numpy matrix), thus we ignore that.
         x = torch.cat([allx, tx], dim=0)
         x[test_index] = x[sorted_test_index]
         x = x.numpy()
