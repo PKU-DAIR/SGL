@@ -16,7 +16,9 @@ from torch_geometric.io import read_txt_array
 from torch_sparse import SparseTensor
 
 class Nell(NodeDataset):
-    def __init__(self, name="nell", root='./', split="official"):
+    def __init__(self, name="nell.0.001", root='./', split="official"):
+        if name not in ["nell.0.1", "nell.0.01", "nell.0.001"]:
+            raise ValueError("Dataset name not supported!")
         super(Nell, self).__init__(root + "Nell/", name)
 
         self._data = pkl_read_file(self.processed_file_paths)
@@ -26,7 +28,7 @@ class Nell(NodeDataset):
     @property
     def raw_file_paths(self):
         filenames = ['x', 'tx', 'allx', 'y', 'ty', 'ally', 'graph', 'test.index']
-        return [osp.join(self._raw_dir, f'ind.nell.0.001.{filename}') for filename in filenames]
+        return [osp.join(self._raw_dir, f'ind.{self._name}.{filename}') for filename in filenames]
 
     @property
     def processed_file_paths(self):
@@ -43,7 +45,8 @@ class Nell(NodeDataset):
         raw_dir_path = osp.join(self._raw_dir, "nell_data")
         for root, dirs, files in os.walk(raw_dir_path, topdown=False):
             for file in files:
-                shutil.move(osp.join(root, file), self._raw_dir)
+                if self._name in file:
+                    shutil.move(osp.join(root, file), self._raw_dir)
         shutil.rmtree(raw_dir_path)
 
     def _process(self):
@@ -57,13 +60,8 @@ class Nell(NodeDataset):
             objects[i] = torch.Tensor(tmp)
 
         x, tx, allx, y, ty, ally, graph = tuple(objects)
-        test_index = read_txt_array(osp.join(self._raw_dir, "ind.nell.0.001.test.index"), dtype=torch.long)
+        test_index = read_txt_array(osp.join(self._raw_dir, f"ind.{self._name}.test.index"), dtype=torch.long)
 
-        #print("y.size: ", y.size)
-        #print("y: ", y)
-
-        train_index = torch.arange(y.shape[0], dtype=torch.long)
-        val_index = torch.arange(y.shape[0], y.shape[0] + 500, dtype=torch.long)
         sorted_test_index = test_index.sort()[0]
 
         tx_ext = torch.zeros(len(graph) - allx.shape[0], x.shape[1])
@@ -89,14 +87,6 @@ class Nell(NodeDataset):
         node_type = "knowledge"
         edge_type = "knowledge__to__knowledge"
 
-        '''
-        print("x.shape: ", x.shape)
-        print("type(x): ", type(x))
-        print("y.shape: ", y.shape)
-        print("type(y): ", type(y))
-        print("row.shape: ", row.shape, " cow.shape: ",row.shape)
-        '''
-
         g = Graph(row, col, edge_weight, num_node, node_type, edge_type, x=x, y=y)
         with open(self.processed_file_paths, 'wb') as rf:
             try:
@@ -107,12 +97,10 @@ class Nell(NodeDataset):
 
     def __generate_split(self, split):
         if split == "official":
-            y = pkl_read_file(osp.join(self._raw_dir, "ind.nell.0.001.y"))
-            test_idx = read_txt_array(osp.join(self._raw_dir, "ind.nell.0.001.test.index"), dtype=torch.long)
+            y = pkl_read_file(osp.join(self._raw_dir, f"ind.{self._name}.y"))
+            test_idx = read_txt_array(osp.join(self._raw_dir, f"ind.{self._name}.test.index"), dtype=torch.long)
             train_idx = torch.arange(y.shape[0], dtype=torch.long)
             val_idx = torch.arange(y.shape[0], y.shape[0] + 500, dtype=torch.long)
-
-        #    print("training set size: ", y.shape[0])
 
         elif split == "random":
             raise NotImplementedError
