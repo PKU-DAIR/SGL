@@ -69,7 +69,7 @@ class Facebook(NodeDataset):
             num_val = self._num_valid_per_class
             train_idx, val_idx, test_idx = np.empty(0), np.empty(0), np.empty(0)
             for i in range(self.num_classes):
-                idx = np.where(labels == i)[0]
+                idx = np.nonzero(labels == i)[0]
                 train_idx = np.append(train_idx, idx[:num_train_per_class])
                 val_idx = np.append(val_idx, idx[num_train_per_class: num_train_per_class + num_val])
                 test_idx = np.append(test_idx, idx[num_train_per_class + num_val:])

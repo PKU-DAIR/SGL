@@ -8,7 +8,8 @@ import torch
 
 from dataset.base_data import Graph
 from dataset.base_dataset import NodeDataset
-from dataset.utils import pkl_read_file, download_to
+from dataset.utils import download_to, pkl_read_file
+
 
 class Github(NodeDataset):
     def __init__(self, name="github", root="./", split="official", num_train_per_class=30, num_valid_per_class=100):
@@ -69,7 +70,7 @@ class Github(NodeDataset):
             num_val = self._num_valid_per_class
             train_idx, val_idx, test_idx = np.empty(0), np.empty(0), np.empty(0)
             for i in range(self.num_classes):
-                idx = np.where(labels == i)[0]
+                idx = np.nonzero(labels == i)[0]
                 train_idx = np.append(train_idx, idx[:num_train_per_class])
                 val_idx = np.append(val_idx, idx[num_train_per_class: num_train_per_class + num_val])
                 test_idx = np.append(test_idx, idx[num_train_per_class + num_val:])
