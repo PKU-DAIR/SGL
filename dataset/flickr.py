@@ -13,7 +13,7 @@ from dataset.utils import pkl_read_file, download_to
 
 class Flickr(NodeDataset):
     def __init__(self, name="flickr", root="./", split="official"):
-        super(Flickr, self).__init__(root + "Flickr", name="flickr")
+        super(Flickr, self).__init__(root + "Flickr", name)
 
         self._data = pkl_read_file(self.processed_file_paths)
         self._split = split

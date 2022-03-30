@@ -23,7 +23,6 @@ class Reddit(NodeDataset):
 
         self._data = pkl_read_file(self.processed_file_paths)
         self._split = split
-        self._train_mask, self._val_mask, self._test_mask = None, None, None
         self._train_idx, self._val_idx, self._test_idx = self.__generate_split(
             split)
 
@@ -56,10 +55,6 @@ class Reddit(NodeDataset):
         node_type = "post"
         labels = torch.LongTensor(labels)
 
-        self._train_mask = split == 1
-        self._val_mask = split == 2
-        self._test_mask = split == 3
-
         g = Graph(row, col, edge_weight, num_node,
                   node_type, edge_type, x=features, y=labels)
         with open(self.processed_file_paths, 'wb') as rf:
@@ -71,17 +66,12 @@ class Reddit(NodeDataset):
 
     def __generate_split(self, split):
         if split == "official":
-            # Reload mask when _process() is not Called
-            if self._train_mask == None:
-                data = np.load(osp.join(self._raw_dir, 'reddit_data.npz'))
-                split = data['node_types']
-                self._train_mask = split == 1
-                self._val_mask = split == 2
-                self._test_mask = split == 3
+            data = np.load(osp.join(self._raw_dir, 'reddit_data.npz'))
+            split = torch.tensor(data['node_types'])
 
-            train_idx = np.where(self._train_mask == True)
-            val_idx = np.where(self._val_mask == True)
-            test_idx = np.where(self._test_mask == True)
+            train_idx = torch.nonzero(split == 1).reshape(-1)
+            val_idx = torch.nonzero(split == 2).reshape(-1)
+            test_idx = torch.nonzero(split == 3).reshape(-1)
         elif split == "random":
             raise NotImplementedError
         else:
