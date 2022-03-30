@@ -169,7 +169,7 @@ class LearnableWeightedMessageOp(MessageOp):
     def _combine(self, feat_list):
         weight_list = None
         if self.__combination_type == "simple":
-            weight_list = F.softmax(torch.sigmoid(self.__learnable_weight[self._start:self._end]), dim=1)
+            weight_list = F.softmax(torch.sigmoid(self.__learnable_weight[self._start:self._end]), dim=0)
 
         elif self.__combination_type == "gate":
             adopted_feat_list = torch.vstack(feat_list[self._start:self._end])
