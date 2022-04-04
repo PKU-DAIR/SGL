@@ -37,13 +37,15 @@ def mini_batch_evaluate(model, val_idx, val_loader, test_idx, test_loader, label
         val_output = model.model_forward(batch, device)
         pred = val_output.max(1)[1].type_as(labels)
         correct_num_val += pred.eq(labels[batch]).double().sum()
+    acc_val = correct_num_val / len(val_idx)
 
     for batch in test_loader:
         test_output = model.model_forward(batch, device)
         pred = test_output.max(1)[1].type_as(labels)
         correct_num_test += pred.eq(labels[batch]).double().sum()
+    acc_test = correct_num_test / len(test_idx)
 
-    return (correct_num_val / len(val_idx)).item(), (correct_num_test / len(test_idx)).item()
+    return acc_val.item(), acc_test.item()
 
 
 def train(model, train_idx, labels, device, optimizer, loss_fn):
@@ -75,4 +77,7 @@ def mini_batch_train(model, train_idx, train_loader, labels, device, optimizer, 
         loss_train.backward()
         optimizer.step()
 
-    return (loss_train_sum / len(train_loader)).item(), (correct_num / len(train_idx)).item()
+    loss_train = loss_train_sum / len(train_loader)
+    acc_train = correct_num / len(train_idx)
+
+    return loss_train, acc_train.item()
