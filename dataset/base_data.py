@@ -195,7 +195,7 @@ class HeteroGraph:
         elif not isinstance(edge_types, list):
             raise TypeError("Edge types must be a list!")
         elif not ((row_dict.keys() == col_dict.keys()) and (col_dict.keys() == edge_weight_dict.keys()) and (
-                list(edge_weight_dict.keys()).sort() == edge_types.sort())):
+                list(edge_weight_dict.keys()).sort() == edge_types.copy().sort())):
             raise ValueError("The keys of the rows, cols, edge_weights and edge_types must be the same!")
 
         for edge_type in edge_types:
