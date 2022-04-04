@@ -61,7 +61,6 @@ class DBLP(InMemoryDataset):
     def download(self):
         path = self.__path_of_zip
         extract_zip(path, self.raw_dir)
-        os.remove(path)
 
     def process(self):
         data = HeteroData()
