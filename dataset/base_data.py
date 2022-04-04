@@ -222,8 +222,6 @@ class HeteroGraph:
                 (y_dict is not None) and (not isinstance(y_dict, dict))):
             raise TypeError("Xs and Ys must be a dict!")
 
-        self.__y_dict = y_dict
-
         self.__node_id_offsets = {}
         node_count = 0
         for node_type in node_types:
