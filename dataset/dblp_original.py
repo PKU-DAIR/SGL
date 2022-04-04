@@ -1,5 +1,4 @@
 # DO NOT use this one directly. Instead, go to dblp.py
-import os
 import os.path as osp
 from itertools import product
 from typing import Callable, List, Optional
