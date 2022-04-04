@@ -216,7 +216,7 @@ class HeteroGraph:
             raise TypeError("Num nodes must be a dict!")
         elif not isinstance(node_types, list):
             raise TypeError("Node types must be a list!")
-        elif list(num_node_dict.keys()).sort() != node_types.sort():
+        elif list(num_node_dict.keys()).sort() != node_types.copy().sort():
             raise TypeError("The keys of num_nodes and node_types must be the same!")
         elif ((x_dict is not None) and (not isinstance(x_dict, dict))) or (
                 (y_dict is not None) and (not isinstance(y_dict, dict))):
