@@ -152,8 +152,8 @@ class HeteroNodeClassification(BaseTask):
         self.__labels = self.__labels.to(self.__device)
 
         t_total = time.time()
-        best_val = torch.tensor(0.)
-        best_test = torch.tensor(0.)
+        best_val = 0.
+        best_test = 0.
         for epoch in range(self.__epochs):
             t = time.time()
             if self.__mini_batch is False:
@@ -181,4 +181,4 @@ class HeteroNodeClassification(BaseTask):
         print("Optimization Finished!")
         print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
         print(f'Best val: {best_val:.4f}, best test: {best_test:.4f}')
-        return best_test.item()
+        return best_test
