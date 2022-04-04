@@ -152,8 +152,8 @@ class HeteroNodeClassification(BaseTask):
         self.__labels = self.__labels.to(self.__device)
 
         t_total = time.time()
-        best_val = 0.
-        best_test = 0.
+        best_val = torch.tensor(0.)
+        best_test = torch.tensor(0.)
         for epoch in range(self.__epochs):
             t = time.time()
             if self.__mini_batch is False:
