@@ -110,8 +110,3 @@ class Actor(NodeDataset):
             raise ValueError("Please input valid split pattern!")
 
         return train_idx, val_idx, test_idx
-
-
-
-
-
