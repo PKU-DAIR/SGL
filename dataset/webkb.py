@@ -50,6 +50,7 @@ class WebKB(NodeDataset):
             raw_file_name = osp.basename(f)
             path = osp.join(self._raw_dir, raw_file_name)
             file_url = f'{url}/splits/{raw_file_name}'
+            print(file_url)
             download_to(file_url, path)
         
     def _process(self):
