@@ -42,7 +42,9 @@ class Wikics(NodeDataset):
     def _download(self):
         url = 'https://github.com/pmernyei/wiki-cs-dataset/raw/master/dataset'
         path = self.raw_file_paths[0]
-        download_to(f'{url}/data.json', path)
+        file_url = url + 'data.json'
+        print(file_url)
+        download_to(file_url, path)
 
     def _process(self):
         with open(self.raw_file_paths[0], 'r') as f:

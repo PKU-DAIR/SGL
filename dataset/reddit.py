@@ -39,6 +39,7 @@ class Reddit(NodeDataset):
     def _download(self):
         url = "https://data.dgl.ai/dataset/reddit.zip"
         path = osp.join(self._raw_dir, "reddit.zip")
+        print(url)
         download_to(url, path)
         extract_zip(path, self._raw_dir)
         os.unlink(path)

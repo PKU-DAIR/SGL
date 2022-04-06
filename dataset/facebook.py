@@ -33,6 +33,7 @@ class Facebook(NodeDataset):
     def _download(self):
         url = "https://graphmining.ai/datasets/ptg/facebook.npz"
         path = osp.join(self._raw_dir, "facebook.npz")
+        print(url)
         download_to(url, path)
     
     def _process(self):

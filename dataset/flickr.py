@@ -38,16 +38,24 @@ class Flickr(NodeDataset):
         role_id = '1htXCtuktuCW8TR8KiKfrFDAxUgekQoV7'
 
         path = osp.join(self._raw_dir, 'adj_full.npz')
-        download_to(url.format(adj_full_id), path)
+        file_url = url.format(adj_full_id)
+        print(file_url)
+        download_to(file_url, path)
 
         path = osp.join(self._raw_dir, 'feats.npy')
-        download_to(url.format(feats_id), path)
+        file_url = url.format(feats_id)
+        print(file_url)
+        download_to(file_url, path)
 
         path = osp.join(self._raw_dir, 'class_map.json')
-        download_to(url.format(class_map_id), path)
+        file_url = url.format(class_map_id)
+        print(file_url)
+        download_to(file_url, path)
 
         path = osp.join(self._raw_dir, 'role.json')
-        download_to(url.format(role_id), path)
+        file_url = url.format(role_id)
+        print(file_url)
+        download_to(file_url, path)
 
     def _process(self):
         features = np.load(osp.join(self._raw_dir, 'feats.npy'))

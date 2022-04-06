@@ -38,6 +38,7 @@ class Nell(NodeDataset):
     def _download(self):
         url = 'http://www.cs.cmu.edu/~zhiliny/data/nell_data.tar.gz'
         path = osp.join(self._raw_dir, "nell_data.tar.gz")
+        print(url)
         download_to(url, path)
         extract_tar(path, self._raw_dir)
         os.unlink(path)

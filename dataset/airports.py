@@ -47,7 +47,9 @@ class Airports(NodeDataset):
         edge_url = edge_url.format(self._name)
         label_url = label_url.format(self._name)
 
+        print(edge_url)
         download_to(edge_url, self.raw_file_paths[0])
+        print(label_url)
         download_to(label_url, self.raw_file_paths[1])
 
     def _process(self):
