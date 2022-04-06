@@ -18,6 +18,8 @@ class Wikics(NodeDataset):
     # Currently, we only support calculating the accuracy of one split, 
     # and average accuracy will be supported in the future.
     def __init__(self, name="wikics", root="./", split="official", is_undirected=True, split_id = 0):
+        if split_id not in range(20):
+            raise ValueError("Split id not supported")
         
         self._is_undirected = is_undirected
         super(Wikics, self).__init__(root + "Wikics", name)

@@ -18,6 +18,8 @@ class Actor(NodeDataset):
     # Currently, we only support calculating the accuracy of one split, 
     # and average accuracy will be supported in the future.
     def __init__(self, name="actor", root="./", split="official", split_id=0):
+        if split_id not in range(10):
+            raise ValueError("Split id not supported")
         super(Actor, self).__init__(root + "Actor", name)
 
         self._data = pkl_read_file(self.processed_file_paths)
