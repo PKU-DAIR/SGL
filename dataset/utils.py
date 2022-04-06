@@ -38,14 +38,14 @@ def download_to(url, path):
 def file_exist(filepaths):
     if isinstance(filepaths, list):
         for filepath in filepaths:
-            if osp.exists(filepath):
-                return True
+            if not osp.exists(filepath):
+                return False
+        return True
     else:
         if osp.exists(filepaths):
             return True
-
-    return False
-
+        else:
+            return False
 
 def pkl_read_file(filepath):
     file = None
