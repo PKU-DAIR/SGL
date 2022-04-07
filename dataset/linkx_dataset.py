@@ -1,3 +1,4 @@
+from cProfile import label
 import os.path as osp
 import pickle as pkl
 
@@ -14,7 +15,7 @@ from dataset.utils import pkl_read_file, download_to, random_split_dataset
 # Note that only "penn94" has official split_mask, split_id in [0, 9] to identify different 
 # For other datasets applied official split, you should set numbers of samples for training/valid set
 class LINKXDataset(NodeDataset):
-    def __init__(self, name="penn94", root="./", split="official", split_id=0, num_train_per_class=30, num_valid_per_class=100):
+    def __init__(self, name="penn94", root="./", split="official", split_id=0, num_train_per_class=10, num_valid_per_class=10):
         name = name.lower()
         if name not in ['penn94', 'reed98', 'amherst41', 'cornell5', 'johnshopkins55']:
             raise ValueError("Dataset name not supported!")
@@ -115,13 +116,10 @@ class LINKXDataset(NodeDataset):
         if self._name in have_split:
             if split == 'official':
                 split_full = np.load(self.raw_file_paths[1], allow_pickle=True)
-            #    print("split_full.shape: ", split_full.shape)
-            #    print("len(split_full): ", len(split_full))
-                
+                 
                 split_idx = split_full[self._split_id]
                 train_idx, val_idx, test_idx = split_idx['train'], split_idx['valid'], split_idx['test']
-            #    print("mask_size: ", len(train_idx), len(val_idx), len(test_idx))
-            #    print("node_num: ",self.num_node)
+
             else:
                 raise ValueError("Please input valid split pattern!")
 
@@ -129,23 +127,29 @@ class LINKXDataset(NodeDataset):
             if split == 'official':
 
                 mat = loadmat(self.raw_file_paths[0])
-                metadata = torch.from_numpy(mat['local_info'].astype('int64'))
+                metadata = mat['local_info'].astype('int64')
                 labels = metadata[:, 1] - 1  # gender label, -1 means unlabeled
+
+                '''
+                print("labels.shape: ", labels.shape)
+                print("numclasses: ", self.num_classes)
+                print("num_node: ",self.num_node)
+                print("unique labels: ",np.unique(labels))
+                print("labels:\n", labels)
+                '''
 
                 num_train_per_class = self._num_train_per_class
                 num_val = self._num_valid_per_class
                 train_idx, val_idx, test_idx = np.empty(0), np.empty(0), np.empty(0)
                 for i in range(self.num_classes):
                     idx = np.nonzero(labels == i)[0]
+                #    print("class = ", i, "idx size: ", idx.shape)
                     train_idx = np.append(train_idx, idx[:num_train_per_class])
                     val_idx = np.append(val_idx, idx[num_train_per_class: num_train_per_class + num_val])
                     test_idx = np.append(test_idx, idx[num_train_per_class + num_val:])
                 train_idx.reshape(-1)
                 val_idx.reshape(-1)
                 test_idx.reshape(-1)
-
-            elif split == "random":
-                train_idx, val_idx, test_idx = random_split_dataset(self.num_node)
 
             else:
                 raise ValueError("Please input valid split pattern!")
