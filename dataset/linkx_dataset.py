@@ -1,4 +1,3 @@
-from cProfile import label
 import os.path as osp
 import pickle as pkl
 
@@ -116,7 +115,7 @@ class LINKXDataset(NodeDataset):
         if self._name in have_split:
             if split == 'official':
                 split_full = np.load(self.raw_file_paths[1], allow_pickle=True)
-                 
+
                 split_idx = split_full[self._split_id]
                 train_idx, val_idx, test_idx = split_idx['train'], split_idx['valid'], split_idx['test']
 
