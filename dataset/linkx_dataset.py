@@ -129,14 +129,6 @@ class LINKXDataset(NodeDataset):
                 metadata = mat['local_info'].astype('int64')
                 labels = metadata[:, 1] - 1  # gender label, -1 means unlabeled
 
-                '''
-                print("labels.shape: ", labels.shape)
-                print("numclasses: ", self.num_classes)
-                print("num_node: ",self.num_node)
-                print("unique labels: ",np.unique(labels))
-                print("labels:\n", labels)
-                '''
-
                 num_train_per_class = self._num_train_per_class
                 num_val = self._num_valid_per_class
                 train_idx, val_idx, test_idx = np.empty(0), np.empty(0), np.empty(0)
