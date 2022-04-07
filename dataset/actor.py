@@ -40,19 +40,17 @@ class Actor(NodeDataset):
     def _download(self):
         url = 'https://raw.githubusercontent.com/graphdml-uiuc-jlu/geom-gcn/master'
 
-        for f in self.raw_file_paths[:2]:
-            raw_file_name = osp.basename(f)
-            path = osp.join(self._raw_dir, raw_file_name)
+        for raw_file_path in self.raw_file_paths[:2]:
+            raw_file_name = osp.basename(raw_file_path)
             file_url = f'{url}/new_data/film/{raw_file_name}'
             print(file_url)
-            download_to(file_url, path)
+            download_to(file_url, raw_file_path)
         
-        for f in self.raw_file_paths[2:]:
-            raw_file_name = osp.basename(f)
-            path = osp.join(self._raw_dir, raw_file_name)
+        for raw_file_path in self.raw_file_paths[2:]:
+            raw_file_name = osp.basename(raw_file_path)
             file_url = f'{url}/splits/{raw_file_name}'
             print(file_url)
-            download_to(file_url, path)
+            download_to(file_url, raw_file_path)
         
     def _process(self):
         with open(self.raw_file_paths[0], 'r') as f:
