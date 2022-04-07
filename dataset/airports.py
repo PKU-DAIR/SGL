@@ -9,7 +9,7 @@ import torch
 
 from dataset.base_data import Graph
 from dataset.base_dataset import NodeDataset
-from dataset.utils import pkl_read_file, download_to
+from dataset.utils import pkl_read_file, download_to, random_split_dataset
 
 
 class Airports(NodeDataset):
@@ -113,7 +113,7 @@ class Airports(NodeDataset):
 
 
         elif split == "random":
-            raise NotImplementedError
+            train_idx, val_idx, test_idx = random_split_dataset(self.num_node)
         else:
             raise ValueError("Please input valid split pattern!")
 

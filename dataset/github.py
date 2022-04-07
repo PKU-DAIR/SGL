@@ -8,7 +8,7 @@ import torch
 
 from dataset.base_data import Graph
 from dataset.base_dataset import NodeDataset
-from dataset.utils import download_to, pkl_read_file
+from dataset.utils import download_to, pkl_read_file, random_split_dataset
 
 
 class Github(NodeDataset):
@@ -80,7 +80,7 @@ class Github(NodeDataset):
             test_idx.reshape(-1)
 
         elif split == "random":
-            raise NotImplementedError
+            train_idx, val_idx, test_idx = random_split_dataset(self.num_node)
         else:
             raise ValueError("Please input valid split pattern!")
 

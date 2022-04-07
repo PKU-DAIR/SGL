@@ -8,7 +8,7 @@ import torch
 
 from dataset.base_data import Graph
 from dataset.base_dataset import NodeDataset
-from dataset.utils import pkl_read_file, download_to
+from dataset.utils import pkl_read_file, download_to, random_split_dataset
 
 class Facebook(NodeDataset):
     def __init__(self, name="facebook", root="./", split="official", num_train_per_class=30, num_valid_per_class=100):
@@ -79,7 +79,7 @@ class Facebook(NodeDataset):
             test_idx.reshape(-1)
 
         elif split == "random":
-            raise NotImplementedError
+            train_idx, val_idx, test_idx = random_split_dataset(self.num_node)
         else:
             raise ValueError("Please input valid split pattern!")
 
