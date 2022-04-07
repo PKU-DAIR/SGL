@@ -10,7 +10,7 @@ from dataset.base_dataset import NodeDataset
 from dataset.utils import pkl_read_file, download_to
 
 class WebKB(NodeDataset):
-    # Have 10 different split of training and validation set, identified by split_id in [0, 10]
+    # Have 10 different split of training and validation set, identified by split_id in [0, 9]
     # Currently, we only support calculating the accuracy of one split, 
     # and average accuracy will be supported in the future.
     def __init__(self, name="cornell", root="./", split="official", split_id=0):
