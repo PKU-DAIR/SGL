@@ -8,7 +8,6 @@ from dataset.amazon import Amazon
 
 from models.SGAP_models import GAMLPRecursive, GAMLP, SGC, SIGN
 from tasks.node_classification import NodeClassification
-from dataset.ppi import PPI
 from dataset.facebook import Facebook
 from dataset.twitch import Twitch
 from dataset.karateclub import KarateClub
