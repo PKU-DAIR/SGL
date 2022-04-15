@@ -1,7 +1,7 @@
 from models.base_model import BaseHeteroSGAPModel
 from models.graph_operator import LaplacianGraphOp
-from models.message_operator import ProjectedConcatMessageOp
-from models.simple_models import OneDimConvolution, MultiLayerPerceptron
+from models.message_operator import ProjectedConcatMessageOp, LearnableWeightedMessageOp
+from models.simple_models import OneDimConvolution, MultiLayerPerceptron, OneDimConvolutionWeightSharedAcrossFeatures
 
 
 class NARS_SIGN(BaseHeteroSGAPModel):
