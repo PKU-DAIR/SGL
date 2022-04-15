@@ -26,7 +26,7 @@ class NARS_SIGN_WeightSharedAcrossFeatures(BaseHeteroSGAPModel):
             0, prop_steps + 1, feat_dim, hidden_dim, num_layers)
 
         self._aggregator = OneDimConvolutionWeightSharedAcrossFeatures(
-            random_subgraph_num, prop_steps + 1, feat_dim)
+            random_subgraph_num, prop_steps + 1)
         self._base_model = MultiLayerPerceptron(
             hidden_dim * (prop_steps + 1), hidden_dim, num_layers, num_classes)
         
@@ -41,7 +41,7 @@ class NARS_SGC_WithLearnableWeights(BaseHeteroSGAPModel):
         self._pre_msg_op = LearnableWeightedMessageOp(0, prop_steps + 1, 'simple', prop_steps)
 
         self._aggregator = OneDimConvolutionWeightSharedAcrossFeatures(
-            random_subgraph_num, prop_steps + 1, feat_dim)
+            random_subgraph_num, prop_steps + 1)
         self._base_model = MultiLayerPerceptron(
             feat_dim, hidden_dim, num_layers, num_classes)
         
