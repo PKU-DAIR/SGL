@@ -31,7 +31,7 @@ class OneDimConvolution(nn.Module):
     
 
 class OneDimConvolutionWeightSharedAcrossFeatures(nn.Module):
-    def __init__(self, num_subgraphs, prop_steps, feat_dim):
+    def __init__(self, num_subgraphs, prop_steps):
         super(OneDimConvolutionWeightSharedAcrossFeatures, self).__init__()
         self.__hop_num = prop_steps
 
