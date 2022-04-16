@@ -32,6 +32,10 @@ class OgbnMag(HeteroNodeDataset):
         filename = "graph"
         return osp.join(self._processed_dir, "{}.{}".format(self._name, filename))
 
+    @property
+    def EDGE_TYPES(self):
+        return self._data.edge_types
+
     def _download(self):
         dataset = PygNodePropPredDataset("ogbn-" + self._name, self._raw_dir)
 
