@@ -80,7 +80,7 @@ class BaseHeteroSGAPModel(nn.Module):
         self._processed_feature_list = None
         self._pre_msg_learnable = False
 
-    def preprocess(self, dataset, predict_class):
+    def preprocess(self, dataset, predict_class, subgraph_dict=None):
         if not isinstance(dataset, HeteroNodeDataset):
             raise TypeError(
                 "Dataset must be an instance of HeteroNodeDataset!")
@@ -88,8 +88,9 @@ class BaseHeteroSGAPModel(nn.Module):
             raise ValueError("Please input valid node class for prediction!")
         predict_idx = dataset.data.node_id_dict[predict_class]
 
-        subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class, self._random_subgraph_num,
-                                                                      self._subgraph_edge_type_num)
+        if subgraph_dict is None:
+            subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class, self._random_subgraph_num,
+                                                    self._subgraph_edge_type_num)
         self._random_subgraph_num = len(subgraph_dict.keys())
 
         self._propagated_feat_list_list = []
@@ -147,7 +148,7 @@ class FastBaseHeteroSGAPModel(nn.Module):
         self._processed_feature_list = None
         self._pre_msg_learnable = False
 
-    def preprocess(self, dataset, predict_class):
+    def preprocess(self, dataset, predict_class, subgraph_dict=None):
         if not isinstance(dataset, HeteroNodeDataset):
             raise TypeError(
                 "Dataset must be an instance of HeteroNodeDataset!")
@@ -155,8 +156,9 @@ class FastBaseHeteroSGAPModel(nn.Module):
             raise ValueError("Please input valid node class for prediction!")
         predict_idx = dataset.data.node_id_dict[predict_class]
 
-        subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class, self._random_subgraph_num,
-                                                self._subgraph_edge_type_num)
+        if subgraph_dict is None:
+            subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class, self._random_subgraph_num,
+                                                    self._subgraph_edge_type_num)
         self._random_subgraph_num = len(subgraph_dict.keys())
 
         self._propagated_feat_list_list = []
