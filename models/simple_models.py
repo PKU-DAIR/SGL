@@ -10,7 +10,8 @@ class OneDimConvolution(nn.Module):
 
         self.__learnable_weight = nn.ParameterList()
         for _ in range(prop_steps):
-            self.__learnable_weight.append(nn.Parameter(torch.FloatTensor(feat_dim, num_subgraphs)))
+            self.__learnable_weight.append(nn.Parameter(
+                torch.FloatTensor(feat_dim, num_subgraphs)))
 
         self.reset_parameters()
 
@@ -23,12 +24,13 @@ class OneDimConvolution(nn.Module):
         aggregated_feat_list = []
         for i in range(self.__hop_num):
             adopted_feat = torch.stack(feat_list_list[i], dim=2)
-            intermediate_feat = (adopted_feat * (self.__learnable_weight[i].unsqueeze(dim=0))).mean(dim=2)
+            intermediate_feat = (
+                adopted_feat * (self.__learnable_weight[i].unsqueeze(dim=0))).mean(dim=2)
 
             aggregated_feat_list.append(intermediate_feat)
 
         return aggregated_feat_list
-    
+
 
 class OneDimConvolutionWeightSharedAcrossFeatures(nn.Module):
     def __init__(self, num_subgraphs, prop_steps):
@@ -58,6 +60,23 @@ class OneDimConvolutionWeightSharedAcrossFeatures(nn.Module):
             aggregated_feat_list.append(intermediate_feat)
 
         return aggregated_feat_list
+
+
+class FastOneDimConvolution(nn.Module):
+    def __init__(self, num_subgraphs, prop_steps):
+        super(FastOneDimConvolution, self).__init__()
+
+        self.__learnable_weight = nn.Parameter(
+            torch.FloatTensor(num_subgraphs * prop_steps, 1))
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.__learnable_weight)
+
+    # feat_list_list: 3-d tensor (num_node, feat_dim, num_subgraphs * prop_steps)
+    def forward(self, feat_list_list):
+        return (feat_list_list @ self.__learnable_weight).squeeze(dim=2)
 
 
 class LogisticRegression(nn.Module):
