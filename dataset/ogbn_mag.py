@@ -11,7 +11,10 @@ from dataset.utils import pkl_read_file, to_undirected
 
 
 class OgbnMag(HeteroNodeDataset):
-    def __init__(self, name="mag", root="./", split="official"):
+
+    TYPE_OF_NODE_TO_PREDICT = 'paper'
+
+    def __init__(self, name="mag", root=".", split="official"):
         if name not in ["mag"]:
             raise ValueError("Dataset name not found!")
         super(OgbnMag, self).__init__(root + "ogbn/", name)
