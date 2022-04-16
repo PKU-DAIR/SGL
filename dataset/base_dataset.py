@@ -416,4 +416,4 @@ class HeteroNodeDataset:
             print(chosen_edge_type)
             subgraph_dict[chosen_edge_type] = self.sample_by_edge_type(chosen_edge_type)
 
-        return subgraph_dict, random_subgraph_num
+        return subgraph_dict
