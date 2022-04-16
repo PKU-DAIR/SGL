@@ -65,6 +65,9 @@ class FastOneDimConvolution(nn.Module):
     def __init__(self, num_subgraphs, prop_steps):
         super(FastOneDimConvolution, self).__init__()
 
+        self.__num_subgraphs = num_subgraphs
+        self.__prop_steps = prop_steps
+
         self.__learnable_weight = nn.Parameter(
             torch.FloatTensor(num_subgraphs * prop_steps, 1))
 
@@ -76,6 +79,11 @@ class FastOneDimConvolution(nn.Module):
     # feat_list_list: 3-d tensor (num_node, feat_dim, num_subgraphs * prop_steps)
     def forward(self, feat_list_list):
         return (feat_list_list @ self.__learnable_weight).squeeze(dim=2)
+
+    @property
+    def subgraph_weight(self):
+        return self.__learnable_weight.view(
+            self.__num_subgraphs, self.__prop_steps).sum(dim=1)
 
 
 class LogisticRegression(nn.Module):
