@@ -65,3 +65,7 @@ class Fast_NARS_SGC_WithLearnableWeights(FastBaseHeteroSGAPModel):
             random_subgraph_num, prop_steps + 1)
         self._base_model = MultiLayerPerceptron(
             feat_dim, hidden_dim, num_layers, num_classes)
+
+    @property
+    def subgraph_weight(self):
+        return self._aggregator.subgraph_weight
