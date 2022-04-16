@@ -24,7 +24,8 @@ class BaseSGAPModel(nn.Module):
         if self._pre_graph_op is not None:
             self._processed_feat_list = self._pre_graph_op.propagate(
                 adj, feature)
-            if self._pre_msg_op.aggr_type in ["proj_concat", "learnable_weighted", "iterate_learnable_weighted"]:
+            if self._pre_msg_op.aggr_type in [
+                    "proj_concat", "learnable_weighted", "iterate_learnable_weighted"]:
                 self._pre_msg_learnable = True
             else:
                 self._pre_msg_learnable = False
@@ -37,7 +38,8 @@ class BaseSGAPModel(nn.Module):
 
     def postprocess(self, output):
         if self._post_graph_op is not None:
-            if self._post_msg_op.aggr_type in ["proj_concat", "learnable_weighted", "iterate_learnable_weighted"]:
+            if self._post_msg_op.aggr_type in [
+                    "proj_concat", "learnable_weighted", "iterate_learnable_weighted"]:
                 raise ValueError(
                     "Learnable weighted message operator is not supported in the post-processing phase!")
             output = F.softmax(output, dim=1)
@@ -64,7 +66,8 @@ class BaseSGAPModel(nn.Module):
 
 
 class BaseHeteroSGAPModel(nn.Module):
-    def __init__(self, prop_steps, feat_dim, num_classes, random_subgraph_num, subgraph_edge_type_num):
+    def __init__(self, prop_steps, feat_dim, num_classes,
+                 random_subgraph_num, subgraph_edge_type_num):
         super(BaseHeteroSGAPModel, self).__init__()
         self._prop_steps = prop_steps
         self._feat_dim = feat_dim
@@ -89,14 +92,14 @@ class BaseHeteroSGAPModel(nn.Module):
         predict_idx = dataset.data.node_id_dict[predict_class]
 
         if subgraph_dict is None:
-            subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class, self._random_subgraph_num,
+            subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class,
+                                                    self._random_subgraph_num,
                                                     self._subgraph_edge_type_num)
         self._random_subgraph_num = len(subgraph_dict.keys())
 
-        self._propagated_feat_list_list = []
-        for _ in range(self._prop_steps + 1):
-            self._propagated_feat_list_list.append([])
-        # subgraph = adj, feature, node_id
+        self._propagated_feat_list_list = [[]
+                                           for _ in range(self._prop_steps + 1)]
+
         for key in subgraph_dict.keys():
             edge_type_list = []
             for edge_type in key:
@@ -132,7 +135,8 @@ class BaseHeteroSGAPModel(nn.Module):
 
 
 class FastBaseHeteroSGAPModel(nn.Module):
-    def __init__(self, prop_steps, feat_dim, num_classes, random_subgraph_num, subgraph_edge_type_num):
+    def __init__(self, prop_steps, feat_dim, num_classes,
+                 random_subgraph_num, subgraph_edge_type_num):
         super(FastBaseHeteroSGAPModel, self).__init__()
         self._prop_steps = prop_steps
         self._feat_dim = feat_dim
@@ -157,14 +161,14 @@ class FastBaseHeteroSGAPModel(nn.Module):
         predict_idx = dataset.data.node_id_dict[predict_class]
 
         if subgraph_dict is None:
-            subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class, self._random_subgraph_num,
+            subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class,
+                                                    self._random_subgraph_num,
                                                     self._subgraph_edge_type_num)
         self._random_subgraph_num = len(subgraph_dict.keys())
 
-        self._propagated_feat_list_list = []
-        for _ in range(self._prop_steps + 1):
-            self._propagated_feat_list_list.append([])
-        # subgraph = adj, feature, node_id
+        self._propagated_feat_list_list = [[]
+                                           for _ in range(self._prop_steps + 1)]
+
         for key in subgraph_dict.keys():
             edge_type_list = []
             for edge_type in key:
