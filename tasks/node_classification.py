@@ -17,7 +17,8 @@ class NodeClassification(BaseTask):
         self.__labels = self.__dataset.y
 
         self.__model = model
-        self.__optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        self.__optimizer = Adam(model.parameters(), lr=lr,
+                                weight_decay=weight_decay)
         self.__epochs = epochs
         self.__loss_fn = loss_fn
         self.__device = device
@@ -92,7 +93,8 @@ class NodeClassification(BaseTask):
     def _postprocess(self):
         self.__model.eval()
         if self.__mini_batch is False:
-            outputs = self.__model.model_forward(range(self.__dataset.num_node), self.__device).to("cpu")
+            outputs = self.__model.model_forward(
+                range(self.__dataset.num_node), self.__device).to("cpu")
         else:
             outputs = None
             for batch in self.__all_eval_loader:
@@ -103,14 +105,17 @@ class NodeClassification(BaseTask):
                     outputs = torch.vstack((outputs, output))
 
         final_output = self.__model.postprocess(outputs)
-        acc_val = accuracy(final_output[self.__dataset.val_idx], self.__labels[self.__dataset.val_idx])
-        acc_test = accuracy(final_output[self.__dataset.test_idx], self.__labels[self.__dataset.test_idx])
+        acc_val = accuracy(
+            final_output[self.__dataset.val_idx], self.__labels[self.__dataset.val_idx])
+        acc_test = accuracy(
+            final_output[self.__dataset.test_idx], self.__labels[self.__dataset.test_idx])
         return acc_val, acc_test
 
 
 class HeteroNodeClassification(BaseTask):
     def __init__(self, dataset, predict_class, model, lr, weight_decay, epochs,
-                 device, loss_fn=nn.CrossEntropyLoss(), seed=42, train_batch_size=None, eval_batch_size=None):
+                 device, loss_fn=nn.CrossEntropyLoss(), seed=42,
+                 train_batch_size=None, eval_batch_size=None, subgraph_dict=None):
         super(HeteroNodeClassification, self).__init__()
 
         self.__dataset = dataset
@@ -118,7 +123,8 @@ class HeteroNodeClassification(BaseTask):
         self.__labels = self.__dataset.data[self.__predict_class].y.squeeze(-1)
 
         self.__model = model
-        self.__optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        self.__optimizer = Adam(model.parameters(), lr=lr,
+                                weight_decay=weight_decay)
         self.__epochs = epochs
         self.__loss_fn = loss_fn
         self.__device = device
@@ -134,17 +140,18 @@ class HeteroNodeClassification(BaseTask):
             self.__test_loader = DataLoader(
                 self.__dataset.test_idx, batch_size=eval_batch_size, shuffle=False, drop_last=False)
 
-        self.__test_acc = self._execute()
+        self.__test_acc = self._execute(subgraph_dict)
 
     @property
     def test_acc(self):
         return self.__test_acc
 
-    def _execute(self):
+    def _execute(self, subgraph_dict=None):
         set_seed(self.__seed)
 
         pre_time_st = time.time()
-        self.__model.preprocess(self.__dataset, self.__predict_class)
+        self.__model.preprocess(
+            self.__dataset, self.__predict_class, subgraph_dict)
         pre_time_ed = time.time()
         print(f"Preprocessing done in {(pre_time_ed - pre_time_st):.4f}s")
 
