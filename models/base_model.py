@@ -88,9 +88,9 @@ class BaseHeteroSGAPModel(nn.Module):
             raise ValueError("Please input valid node class for prediction!")
         predict_idx = dataset.data.node_id_dict[predict_class]
 
-        subgraph_dict, adopted_subgraph_num = dataset.nars_preprocess(dataset.edge_types, predict_class, self._random_subgraph_num,
+        subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class, self._random_subgraph_num,
                                                                       self._subgraph_edge_type_num)
-        self._random_subgraph_num = adopted_subgraph_num
+        self._random_subgraph_num = len(subgraph_dict.keys())
 
         self._propagated_feat_list_list = []
         for _ in range(self._prop_steps + 1):
@@ -155,9 +155,9 @@ class FastBaseHeteroSGAPModel(nn.Module):
             raise ValueError("Please input valid node class for prediction!")
         predict_idx = dataset.data.node_id_dict[predict_class]
 
-        subgraph_dict, adopted_subgraph_num = dataset.nars_preprocess(dataset.edge_types, predict_class, self._random_subgraph_num,
-                                                                      self._subgraph_edge_type_num)
-        self._random_subgraph_num = adopted_subgraph_num
+        subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class, self._random_subgraph_num,
+                                                self._subgraph_edge_type_num)
+        self._random_subgraph_num = len(subgraph_dict.keys())
 
         self._propagated_feat_list_list = []
         for _ in range(self._prop_steps + 1):
