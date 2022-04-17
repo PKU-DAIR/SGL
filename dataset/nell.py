@@ -4,16 +4,14 @@ import pickle as pkl
 import shutil
 
 import networkx as nx
-import numpy as np
 import scipy.sparse as sp
 import torch
 
 from dataset.base_data import Graph
 from dataset.base_dataset import NodeDataset
 from dataset.utils import pkl_read_file, download_to
-from torch_geometric.data import extract_zip, extract_tar
+from torch_geometric.data import extract_tar
 from torch_geometric.io import read_txt_array
-from torch_sparse import SparseTensor
 
 class Nell(NodeDataset):
     def __init__(self, name="nell.0.001", root='./', split="official"):
