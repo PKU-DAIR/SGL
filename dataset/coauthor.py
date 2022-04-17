@@ -54,7 +54,3 @@ class Coauthor(NodeDataset):
             raise ValueError("Please input valid split pattern!")
 
         return train_idx, val_idx, test_idx
-
-
-# for test
-# dataset = Coauthor(name="cs", root="./")
