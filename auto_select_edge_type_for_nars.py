@@ -122,7 +122,7 @@ def OneTrialWithSubgraphListTopK(dataset, subgraph_config: List, k: int,
                                  num_epochs_to_find_weight: int, num_epochs_to_train: int) -> float:
     original_test_acc, subgraph_list, normalized_weight = OneTrialWithSubgraphConfig(
         dataset, subgraph_config, num_epochs_to_find_weight)
-    if k < len(subgraph_list):
+    if k > len(subgraph_list):
         k = len(subgraph_list)
         warnings.warn('k is larger than the number of subgraphs,'
                       'k is set to the number of subgraphs',
