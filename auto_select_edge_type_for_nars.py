@@ -116,36 +116,6 @@ def OneTrialWithSubgraphList(dataset, subgraph_list: List, num_epochs: int) -> T
 
 # Input format: [(random_subgraph_num, subgraph_edge_type_num), ...]
 # Each element is a tuple of (random_subgraph_num, subgraph_edge_type_num)
-def OneTrialWithSubgraphConfig(dataset, subgraph_config: List, num_epochs: int) -> Tuple[
-        float, List, torch.torch.Tensor]:
-    subgraph_list = GenerateSubgraphList(dataset, subgraph_config)
-    predict_class = dataset.TYPE_OF_NODE_TO_PREDICT
-
-    model = Fast_NARS_SGC_WithLearnableWeights(prop_steps=PROP_STEPS,
-                                               feat_dim=dataset.data.num_features[predict_class],
-                                               num_classes=dataset.data.num_classes[predict_class],
-                                               hidden_dim=HIDDEN_DIM, num_layers=NUM_LAYERS,
-                                               random_subgraph_num=len(subgraph_list))
-
-    device = torch.device(
-        f"cuda:{GpuWithMaxFreeMem()}" if torch.cuda.is_available() else "cpu")
-    classification = HeteroNodeClassification(dataset, predict_class, model,
-                                              lr=LR, weight_decay=WEIGHT_DECAY,
-                                              epochs=num_epochs, device=device,
-                                              train_batch_size=BATCH_SIZE,
-                                              eval_batch_size=BATCH_SIZE,
-                                              subgraph_list=subgraph_list,
-                                              seed=int(time.time()))
-    test_acc = classification.test_acc
-    raw_weight = classification.subgraph_weight
-    weight_sum = raw_weight.sum()
-    normalized_weight = raw_weight/weight_sum
-
-    return test_acc, subgraph_list, normalized_weight
-
-
-# Input format: [(random_subgraph_num, subgraph_edge_type_num), ...]
-# Each element is a tuple of (random_subgraph_num, subgraph_edge_type_num)
 # Only top k subgraphs with highest weights are retained
 def OneTrialWithSubgraphListTopK(dataset, subgraph_config: List, k: int,
                                  num_epochs_to_find_weight: int, num_epochs_to_train: int) -> float:
