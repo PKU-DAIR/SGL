@@ -16,8 +16,8 @@ from auto_choose_gpu import GpuWithMaxFreeMem
 PROP_STEPS = 3
 HIDDEN_DIM = 256
 NUM_LAYERS = 2
-NUM_EPOCHS = 50
-SMALL_NUM_EPOCHS = 10
+NUM_EPOCHS_TO_TRAIN = 50
+NUM_EPOCHS_TO_FIND_WEIGHT = 20
 LR = 0.01
 WEIGHT_DECAY = 0.0
 BATCH_SIZE = 10000
@@ -169,9 +169,11 @@ def OneTrialWithSubgraphListTopK(dataset, subgraph_config: List, k: int,
 def main():
     dataset = Dblp(root='.', path_of_zip='./dataset/DBLP_processed.zip')
 
+    SUBGRAPH_CONFIG=[(1,1),(3,2),(3,3),(4,1)]
     test_acc, original_test_acc = OneTrialWithSubgraphListTopK(dataset,
-                                                               [(1, 2), (1, 3)], 2,
-                                                               SMALL_NUM_EPOCHS, NUM_EPOCHS)
+                                                               SUBGRAPH_CONFIG, 2,
+                                                               num_epochs_to_train=NUM_EPOCHS_TO_TRAIN,
+                                                               num_epochs_to_find_weight=NUM_EPOCHS_TO_FIND_WEIGHT)
 
     print('test_acc:', test_acc)
     print('original_test_acc:', original_test_acc)
