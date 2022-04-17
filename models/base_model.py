@@ -87,6 +87,10 @@ class BaseHeteroSGAPModel(nn.Module):
         if subgraph_list is None and (random_subgraph_num == -1 or subgraph_edge_type_num == -1):
             raise ValueError(
                 "Either subgraph_list or (random_subgraph_num, subgraph_edge_type_num) should be provided!")
+        if subgraph_list is not None and (random_subgraph_num != -1 or subgraph_edge_type_num != -1):
+            raise ValueError(
+                "subgraph_list is provided, random_subgraph_num and subgraph_edge_type_num will be ignored!")
+
         if not isinstance(dataset, HeteroNodeDataset):
             raise TypeError(
                 "Dataset must be an instance of HeteroNodeDataset!")
@@ -160,6 +164,10 @@ class FastBaseHeteroSGAPModel(nn.Module):
         if subgraph_list is None and (random_subgraph_num == -1 or subgraph_edge_type_num == -1):
             raise ValueError(
                 "Either subgraph_list or (random_subgraph_num, subgraph_edge_type_num) should be provided!")
+        if subgraph_list is not None and (random_subgraph_num != -1 or subgraph_edge_type_num != -1):
+            raise ValueError(
+                "subgraph_list is provided, random_subgraph_num and subgraph_edge_type_num will be ignored!")
+                                
         if not isinstance(dataset, HeteroNodeDataset):
             raise TypeError(
                 "Dataset must be an instance of HeteroNodeDataset!")
