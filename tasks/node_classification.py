@@ -115,7 +115,13 @@ class NodeClassification(BaseTask):
 class HeteroNodeClassification(BaseTask):
     def __init__(self, dataset, predict_class, model, lr, weight_decay, epochs,
                  device, loss_fn=nn.CrossEntropyLoss(), seed=42,
-                 train_batch_size=None, eval_batch_size=None, subgraph_list=None):
+                 train_batch_size=None, eval_batch_size=None,
+                 random_subgraph_num=-1, subgraph_edge_type_num=-1,
+                 subgraph_list=None):
+
+        if subgraph_list is None and (random_subgraph_num == -1 or subgraph_edge_type_num == -1):
+            raise ValueError("Either subgraph_list or (random_subgraph_num, subgraph_edge_type_num) should be provided!")
+
         super(HeteroNodeClassification, self).__init__()
 
         self.__dataset = dataset
@@ -140,18 +146,21 @@ class HeteroNodeClassification(BaseTask):
             self.__test_loader = DataLoader(
                 self.__dataset.test_idx, batch_size=eval_batch_size, shuffle=False, drop_last=False)
 
-        self.__test_acc = self._execute(subgraph_list)
+        self.__test_acc = self._execute(
+            random_subgraph_num, subgraph_edge_type_num, subgraph_list)
 
     @property
     def test_acc(self):
         return self.__test_acc
 
-    def _execute(self, subgraph_list=None):
+    def _execute(self, random_subgraph_num=-1, subgraph_edge_type_num=-1,
+                 subgraph_list=None):
         set_seed(self.__seed)
 
         pre_time_st = time.time()
         self.__model.preprocess(
-            self.__dataset, self.__predict_class, subgraph_list)
+            self.__dataset, self.__predict_class, 
+            random_subgraph_num, subgraph_edge_type_num, subgraph_list)
         pre_time_ed = time.time()
         print(f"Preprocessing done in {(pre_time_ed - pre_time_st):.4f}s")
 
