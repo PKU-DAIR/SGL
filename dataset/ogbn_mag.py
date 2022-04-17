@@ -1,4 +1,3 @@
-import time
 import os.path as osp
 import pickle as pkl
 import torch
