@@ -68,13 +68,9 @@ class FastOneDimConvolution(nn.Module):
         self.__num_subgraphs = num_subgraphs
         self.__prop_steps = prop_steps
 
+        # How to initialize the weight is extremely important.
         self.__learnable_weight = nn.Parameter(
-            torch.FloatTensor(num_subgraphs * prop_steps, 1))
-
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        nn.init.xavier_uniform_(self.__learnable_weight)
+            torch.ones(num_subgraphs * prop_steps, 1))
 
     # feat_list_list: 3-d tensor (num_node, feat_dim, num_subgraphs * prop_steps)
     def forward(self, feat_list_list):
