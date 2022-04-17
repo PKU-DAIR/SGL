@@ -130,6 +130,7 @@ def OneTrialWithSubgraphList(subgraph_list: List, num_epochs: int) -> Tuple[
 
     return test_acc, subgraph_list, normalized_weight
 
+
 # Input format: [(random_subgraph_num, subgraph_edge_type_num), ...]
 # Each element is a tuple of (random_subgraph_num, subgraph_edge_type_num)
 # Only top k subgraphs with highest weights are retained
