@@ -117,7 +117,7 @@ class HeteroNodeClassification(BaseTask):
                  device, loss_fn=nn.CrossEntropyLoss(), seed=42,
                  train_batch_size=None, eval_batch_size=None,
                  random_subgraph_num=-1, subgraph_edge_type_num=-1,
-                 subgraph_list=None):
+                 subgraph_list=None, record_subgraph_weight=False):
 
         if subgraph_list is None and (random_subgraph_num == -1 or subgraph_edge_type_num == -1):
             raise ValueError(
@@ -151,18 +151,19 @@ class HeteroNodeClassification(BaseTask):
                 self.__dataset.test_idx, batch_size=eval_batch_size, shuffle=False, drop_last=False)
 
         self.__test_acc, self.__subgraph_weight = self._execute(
-            random_subgraph_num, subgraph_edge_type_num, subgraph_list)
+            random_subgraph_num, subgraph_edge_type_num,
+            subgraph_list, record_subgraph_weight)
 
     @property
     def test_acc(self):
         return self.__test_acc
 
-    @property 
+    @property
     def subgraph_weight(self):
         return self.__subgraph_weight
 
     def _execute(self, random_subgraph_num=-1, subgraph_edge_type_num=-1,
-                 subgraph_list=None):
+                 subgraph_list=None, record_subgraph_weight=False):
         set_seed(self.__seed)
 
         pre_time_st = time.time()
@@ -178,7 +179,8 @@ class HeteroNodeClassification(BaseTask):
         t_total = time.time()
         best_val = 0.
         best_test = 0.
-        best_subgraph_weight = self.__model.subgraph_weight.clone()
+        if record_subgraph_weight:
+            best_subgraph_weight = self.__model.subgraph_weight.clone()
         for epoch in range(self.__epochs):
             t = time.time()
             if self.__mini_batch is False:
@@ -202,9 +204,14 @@ class HeteroNodeClassification(BaseTask):
             if acc_val > best_val:
                 best_val = acc_val
                 best_test = acc_test
-                best_subgraph_weight = self.__model.subgraph_weight.clone()
+                if record_subgraph_weight:
+                    best_subgraph_weight = self.__model.subgraph_weight.clone()
 
         print("Optimization Finished!")
         print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
         print(f'Best val: {best_val:.4f}, best test: {best_test:.4f}')
-        return best_test, best_subgraph_weight
+
+        if record_subgraph_weight:
+            return best_test, best_subgraph_weight
+        else:
+            return best_test, None
