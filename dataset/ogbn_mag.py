@@ -144,17 +144,3 @@ class OgbnMag(HeteroNodeDataset):
             raise ValueError("Please input valid split pattern!")
 
         return train_idx, val_idx, test_idx
-
-
-# test
-'''dataset = OgbnMag(name="mag", root="./")
-print(dataset.node_types)
-print(dataset.edge_types)
-
-subgraph_dict = dataset.nars_preprocess(['author__to__institution', 'author__to__paper', 'paper__to__paper'], 2)
-print(subgraph_dict)'''
-
-'''adj, feature, node_id = dataset.sample_by_meta_path("paper__to__author__to__paper__to__field_of_study")
-print(adj, adj.shape, adj.sum())
-print(feature, feature.shape)
-print(node_id)'''
