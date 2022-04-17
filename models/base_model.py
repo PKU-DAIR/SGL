@@ -83,7 +83,7 @@ class BaseHeteroSGAPModel(nn.Module):
         self._processed_feature_list = None
         self._pre_msg_learnable = False
 
-    def preprocess(self, dataset, predict_class, subgraph_dict=None):
+    def preprocess(self, dataset, predict_class, subgraph_list=None):
         if not isinstance(dataset, HeteroNodeDataset):
             raise TypeError(
                 "Dataset must be an instance of HeteroNodeDataset!")
@@ -91,22 +91,25 @@ class BaseHeteroSGAPModel(nn.Module):
             raise ValueError("Please input valid node class for prediction!")
         predict_idx = dataset.data.node_id_dict[predict_class]
 
-        if subgraph_dict is None:
+        if subgraph_list is None:
             subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class,
                                                     self._random_subgraph_num,
                                                     self._subgraph_edge_type_num)
-        self._random_subgraph_num = len(subgraph_dict.keys())
+            subgraph_list = [(key, subgraph_dict[key])
+                             for key in subgraph_dict]
+
+        self._random_subgraph_num = len(subgraph_list)
 
         self._propagated_feat_list_list = [[]
                                            for _ in range(self._prop_steps + 1)]
 
-        for key in subgraph_dict.keys():
+        for key, value in subgraph_list:
             edge_type_list = []
             for edge_type in key:
                 edge_type_list.append(edge_type.split("__")[0])
                 edge_type_list.append(edge_type.split("__")[2])
             if predict_class in edge_type_list:
-                adj, feature, node_id = subgraph_dict[key]
+                adj, feature, node_id = value
                 propagated_feature = self._pre_graph_op.propagate(adj, feature)
 
                 start_pos = list(node_id).index(predict_idx[0])
@@ -152,7 +155,7 @@ class FastBaseHeteroSGAPModel(nn.Module):
         self._processed_feature_list = None
         self._pre_msg_learnable = False
 
-    def preprocess(self, dataset, predict_class, subgraph_dict=None):
+    def preprocess(self, dataset, predict_class, subgraph_list=None):
         if not isinstance(dataset, HeteroNodeDataset):
             raise TypeError(
                 "Dataset must be an instance of HeteroNodeDataset!")
@@ -160,22 +163,25 @@ class FastBaseHeteroSGAPModel(nn.Module):
             raise ValueError("Please input valid node class for prediction!")
         predict_idx = dataset.data.node_id_dict[predict_class]
 
-        if subgraph_dict is None:
+        if subgraph_list is None:
             subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class,
                                                     self._random_subgraph_num,
                                                     self._subgraph_edge_type_num)
-        self._random_subgraph_num = len(subgraph_dict.keys())
+            subgraph_list = [(key, subgraph_dict[key])
+                             for key in subgraph_dict]
+
+        self._random_subgraph_num = len(subgraph_list)
 
         self._propagated_feat_list_list = [[]
                                            for _ in range(self._prop_steps + 1)]
 
-        for key in subgraph_dict.keys():
+        for key, value in subgraph_list:
             edge_type_list = []
             for edge_type in key:
                 edge_type_list.append(edge_type.split("__")[0])
                 edge_type_list.append(edge_type.split("__")[2])
             if predict_class in edge_type_list:
-                adj, feature, node_id = subgraph_dict[key]
+                adj, feature, node_id = value
                 propagated_feature = self._pre_graph_op.propagate(adj, feature)
 
                 start_pos = list(node_id).index(predict_idx[0])
