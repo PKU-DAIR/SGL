@@ -66,14 +66,11 @@ class BaseSGAPModel(nn.Module):
 
 
 class BaseHeteroSGAPModel(nn.Module):
-    def __init__(self, prop_steps, feat_dim, num_classes,
-                 random_subgraph_num, subgraph_edge_type_num):
+    def __init__(self, prop_steps, feat_dim, num_classes):
         super(BaseHeteroSGAPModel, self).__init__()
         self._prop_steps = prop_steps
         self._feat_dim = feat_dim
         self._num_classes = num_classes
-        self._random_subgraph_num = random_subgraph_num
-        self._subgraph_edge_type_num = subgraph_edge_type_num
 
         self._pre_graph_op, self._pre_msg_op = None, None
         self._aggregator = None
@@ -83,7 +80,13 @@ class BaseHeteroSGAPModel(nn.Module):
         self._processed_feature_list = None
         self._pre_msg_learnable = False
 
-    def preprocess(self, dataset, predict_class, subgraph_list=None):
+    # Either subgraph_list or (random_subgraph_num, subgraph_edge_type_num) should be provided.
+    def preprocess(self, dataset, predict_class, 
+                   random_subgraph_num=-1, subgraph_edge_type_num=-1,
+                   subgraph_list=None):
+        if subgraph_list is None and (random_subgraph_num == -1 or subgraph_edge_type_num == -1):
+            raise ValueError(
+                "Either subgraph_list or (random_subgraph_num, subgraph_edge_type_num) should be provided!")
         if not isinstance(dataset, HeteroNodeDataset):
             raise TypeError(
                 "Dataset must be an instance of HeteroNodeDataset!")
@@ -93,12 +96,10 @@ class BaseHeteroSGAPModel(nn.Module):
 
         if subgraph_list is None:
             subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class,
-                                                    self._random_subgraph_num,
-                                                    self._subgraph_edge_type_num)
+                                                    random_subgraph_num,
+                                                    subgraph_edge_type_num)
             subgraph_list = [(key, subgraph_dict[key])
                              for key in subgraph_dict]
-
-        self._random_subgraph_num = len(subgraph_list)
 
         self._propagated_feat_list_list = [[]
                                            for _ in range(self._prop_steps + 1)]
@@ -138,14 +139,11 @@ class BaseHeteroSGAPModel(nn.Module):
 
 
 class FastBaseHeteroSGAPModel(nn.Module):
-    def __init__(self, prop_steps, feat_dim, num_classes,
-                 random_subgraph_num, subgraph_edge_type_num):
+    def __init__(self, prop_steps, feat_dim, num_classes):
         super(FastBaseHeteroSGAPModel, self).__init__()
         self._prop_steps = prop_steps
         self._feat_dim = feat_dim
         self._num_classes = num_classes
-        self._random_subgraph_num = random_subgraph_num
-        self._subgraph_edge_type_num = subgraph_edge_type_num
 
         self._pre_graph_op = None
         self._aggregator = None
@@ -155,7 +153,13 @@ class FastBaseHeteroSGAPModel(nn.Module):
         self._processed_feature_list = None
         self._pre_msg_learnable = False
 
-    def preprocess(self, dataset, predict_class, subgraph_list=None):
+    # Either subgraph_list or (random_subgraph_num, subgraph_edge_type_num) should be provided.
+    def preprocess(self, dataset, predict_class, 
+                   random_subgraph_num=-1, subgraph_edge_type_num=-1,
+                   subgraph_list=None):
+        if subgraph_list is None and (random_subgraph_num == -1 or subgraph_edge_type_num == -1):
+            raise ValueError(
+                "Either subgraph_list or (random_subgraph_num, subgraph_edge_type_num) should be provided!")
         if not isinstance(dataset, HeteroNodeDataset):
             raise TypeError(
                 "Dataset must be an instance of HeteroNodeDataset!")
@@ -165,12 +169,10 @@ class FastBaseHeteroSGAPModel(nn.Module):
 
         if subgraph_list is None:
             subgraph_dict = dataset.nars_preprocess(dataset.edge_types, predict_class,
-                                                    self._random_subgraph_num,
-                                                    self._subgraph_edge_type_num)
+                                                    random_subgraph_num,
+                                                    subgraph_edge_type_num)
             subgraph_list = [(key, subgraph_dict[key])
                              for key in subgraph_dict]
-
-        self._random_subgraph_num = len(subgraph_list)
 
         self._propagated_feat_list_list = [[]
                                            for _ in range(self._prop_steps + 1)]
