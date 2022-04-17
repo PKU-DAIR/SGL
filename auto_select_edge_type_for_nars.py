@@ -55,7 +55,7 @@ def GenerateSubgraphList(dataset, subgraph_config: List) -> List:
 # Each element is a tuple of (random_subgraph_num, subgraph_edge_type_num)
 def OneTrialWithSubgraphConfig(dataset, subgraph_config: List, num_epochs: int) -> Tuple[
         float, List, torch.torch.Tensor]:
-    subgraph_list = GenerateSubgraphList(subgraph_config)
+    subgraph_list = GenerateSubgraphList(dataset, subgraph_config)
 
     predict_class = dataset.TYPE_OF_NODE_TO_PREDICT
 
