@@ -7,8 +7,7 @@ import time
 import torch
 
 from dataset.dblp import Dblp
-from models.hetero_SGAP_models import NARS_SIGN, NARS_SIGN_WeightSharedAcrossFeatures,\
-    NARS_SGC_WithLearnableWeights, Fast_NARS_SGC_WithLearnableWeights
+from models.hetero_SGAP_models import NARS_SIGN, Fast_NARS_SGC_WithLearnableWeights
 from tasks.node_classification import HeteroNodeClassification
 from auto_choose_gpu import GpuWithMaxFreeMem
 
@@ -73,7 +72,8 @@ def OneTrialWithSubgraphConfig(dataset, subgraph_config: List, num_epochs: int) 
                                               train_batch_size=BATCH_SIZE,
                                               eval_batch_size=BATCH_SIZE,
                                               subgraph_list=subgraph_list,
-                                              seed=int(time.time()))
+                                              seed=int(time.time()),
+                                              record_subgraph_weight=True)
     test_acc = classification.test_acc
     raw_weight = classification.subgraph_weight
     weight_sum = raw_weight.sum()
@@ -104,7 +104,8 @@ def OneTrialWithSubgraphList(dataset, subgraph_list: List, num_epochs: int) -> T
                                               train_batch_size=BATCH_SIZE,
                                               eval_batch_size=BATCH_SIZE,
                                               subgraph_list=subgraph_list,
-                                              seed=int(time.time()))
+                                              seed=int(time.time()),
+                                              record_subgraph_weight=True)
 
     test_acc = classification.test_acc
     raw_weight = classification.subgraph_weight
@@ -139,7 +140,7 @@ def OneTrialWithSubgraphListTopK(dataset, subgraph_config: List, k: int,
 def main():
     dataset = Dblp(root='.', path_of_zip='./dataset/DBLP_processed.zip')
 
-    SUBGRAPH_CONFIG=[(1,1),(3,2),(3,3),(4,1)]
+    SUBGRAPH_CONFIG = [(3, 2), (3, 3)]
     test_acc, original_test_acc = OneTrialWithSubgraphListTopK(dataset,
                                                                SUBGRAPH_CONFIG, 2,
                                                                num_epochs_to_train=NUM_EPOCHS_TO_TRAIN,
