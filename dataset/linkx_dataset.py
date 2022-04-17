@@ -8,7 +8,7 @@ from scipy.io import loadmat
 
 from dataset.base_data import Graph
 from dataset.base_dataset import NodeDataset
-from dataset.utils import pkl_read_file, download_to, random_split_dataset
+from dataset.utils import pkl_read_file, download_to
 
 # A variety of non-homophilous graph datasets
 # Note that only "penn94" has official split_mask, split_id in [0, 9] to identify different 
