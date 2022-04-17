@@ -1,7 +1,8 @@
 import torch
 
 from dataset.dblp import Dblp
-from models.hetero_SGAP_models import NARS_SIGN, NARS_SIGN_WeightSharedAcrossFeatures, NARS_SGC_WithLearnableWeights, Fast_NARS_SGC_WithLearnableWeights
+from models.hetero_SGAP_models import NARS_SIGN, NARS_SIGN_WeightSharedAcrossFeatures, \
+    NARS_SGC_WithLearnableWeights, Fast_NARS_SGC_WithLearnableWeights
 from tasks.node_classification import HeteroNodeClassification
 from auto_choose_gpu import GpuWithMaxFreeMem
 
@@ -14,11 +15,9 @@ LR = 0.01
 WEIGHT_DECAY = 0.0
 BATCH_SIZE = 10000
 
-dataset = Dblp(root='.', path_of_zip='./dataset/DBLP_processed.zip')
-predict_class = dataset.TYPE_OF_NODE_TO_PREDICT
 
-
-def OneTrial(random_subgraph_num: int, subgraph_edge_type_num: int) -> float:
+def OneTrial(dataset, random_subgraph_num: int, subgraph_edge_type_num: int) -> float:
+    predict_class = dataset.TYPE_OF_NODE_TO_PREDICT
     model = Fast_NARS_SGC_WithLearnableWeights(prop_steps=PROP_STEPS,
                                                feat_dim=dataset.data.num_features[predict_class],
                                                num_classes=dataset.data.num_classes[predict_class],
@@ -28,14 +27,14 @@ def OneTrial(random_subgraph_num: int, subgraph_edge_type_num: int) -> float:
     device = torch.device(
         f"cuda:{GpuWithMaxFreeMem()}" if torch.cuda.is_available() else "cpu")
     classification = HeteroNodeClassification(dataset, predict_class, model,
-                                        lr=LR, weight_decay=WEIGHT_DECAY,
-                                        epochs=NUM_EPOCHS, device=device,
-                                        train_batch_size=BATCH_SIZE,
-                                        eval_batch_size=BATCH_SIZE,
-                                        random_subgraph_num=random_subgraph_num,
-                                        subgraph_edge_type_num=subgraph_edge_type_num)
+                                              lr=LR, weight_decay=WEIGHT_DECAY,
+                                              epochs=NUM_EPOCHS, device=device,
+                                              train_batch_size=BATCH_SIZE,
+                                              eval_batch_size=BATCH_SIZE,
+                                              random_subgraph_num=random_subgraph_num,
+                                              subgraph_edge_type_num=subgraph_edge_type_num)
 
-    test_acc=classification.test_acc
+    test_acc = classification.test_acc
     raw_weight = classification.subgraph_weight
     weight_sum = raw_weight.sum()
     normalized_weight = raw_weight/weight_sum
@@ -44,15 +43,22 @@ def OneTrial(random_subgraph_num: int, subgraph_edge_type_num: int) -> float:
     return test_acc
 
 
-with open('search_result.txt', 'w') as output:
-    for random_subgraph_num in range(2, 20):
-        for subgraph_edge_type_num in range(2, dataset.edge_type_cnt):
-            for iteration in range(3):
-                output.writelines(
-                    f'''random_subgraph_num: {random_subgraph_num}, ''' +
-                    f'''subgraph_edge_type_num: {subgraph_edge_type_num}, ''' +
-                    f'''iteration:{iteration}''' + '\t')
-                test_acc = OneTrial(random_subgraph_num,
-                                    subgraph_edge_type_num)
-                output.writelines(f'test accuracy: {test_acc}\n')
-                output.flush()
+def main():
+    dataset = Dblp(root='.', path_of_zip='./dataset/DBLP_processed.zip')
+
+    with open('search_result.txt', 'w') as output:
+        for random_subgraph_num in range(2, 20):
+            for subgraph_edge_type_num in range(2, dataset.edge_type_cnt):
+                for iteration in range(3):
+                    output.writelines(
+                        f'''random_subgraph_num: {random_subgraph_num}, ''' +
+                        f'''subgraph_edge_type_num: {subgraph_edge_type_num}, ''' +
+                        f'''iteration:{iteration}''' + '\t')
+                    test_acc = OneTrial(
+                        dataset, random_subgraph_num, subgraph_edge_type_num)
+                    output.writelines(f'test accuracy: {test_acc}\n')
+                    output.flush()
+
+
+if __name__ == '__main__':
+    main()
