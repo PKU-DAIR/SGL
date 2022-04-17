@@ -3,12 +3,11 @@ import pickle as pkl
 
 import networkx as nx
 import numpy as np
-import scipy.sparse as sp
 import torch
 
 from dataset.base_data import Graph
 from dataset.base_dataset import NodeDataset
-from dataset.utils import pkl_read_file, download_to
+from dataset.utils import pkl_read_file
 
 class KarateClub(NodeDataset):
     def __init__(self, name="karateclub", root="./", split="official", num_train_per_class=1, num_valid_per_class=1):
