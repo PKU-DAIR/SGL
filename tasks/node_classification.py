@@ -115,7 +115,7 @@ class NodeClassification(BaseTask):
 class HeteroNodeClassification(BaseTask):
     def __init__(self, dataset, predict_class, model, lr, weight_decay, epochs,
                  device, loss_fn=nn.CrossEntropyLoss(), seed=42,
-                 train_batch_size=None, eval_batch_size=None, subgraph_dict=None):
+                 train_batch_size=None, eval_batch_size=None, subgraph_list=None):
         super(HeteroNodeClassification, self).__init__()
 
         self.__dataset = dataset
@@ -140,18 +140,18 @@ class HeteroNodeClassification(BaseTask):
             self.__test_loader = DataLoader(
                 self.__dataset.test_idx, batch_size=eval_batch_size, shuffle=False, drop_last=False)
 
-        self.__test_acc = self._execute(subgraph_dict)
+        self.__test_acc = self._execute(subgraph_list)
 
     @property
     def test_acc(self):
         return self.__test_acc
 
-    def _execute(self, subgraph_dict=None):
+    def _execute(self, subgraph_list=None):
         set_seed(self.__seed)
 
         pre_time_st = time.time()
         self.__model.preprocess(
-            self.__dataset, self.__predict_class, subgraph_dict)
+            self.__dataset, self.__predict_class, subgraph_list)
         pre_time_ed = time.time()
         print(f"Preprocessing done in {(pre_time_ed - pre_time_st):.4f}s")
 
