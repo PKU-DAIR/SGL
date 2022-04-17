@@ -1,30 +1,37 @@
 import torch
 
-from dataset.ogbn_mag import OgbnMag
 from dataset.dblp import Dblp
 from models.hetero_SGAP_models import NARS_SIGN, NARS_SIGN_WeightSharedAcrossFeatures, NARS_SGC_WithLearnableWeights, Fast_NARS_SGC_WithLearnableWeights
 from tasks.node_classification import HeteroNodeClassification
 from auto_choose_gpu import GpuWithMaxFreeMem
 
+# Hyperparameters
+PROP_STEPS = 3
+HIDDEN_DIM = 256
+NUM_LAYERS = 2
 NUM_EPOCHS = 100
+LR = 0.01
+WEIGHT_DECAY = 0.0
+BATCH_SIZE = 10000
 
 dataset = Dblp(root='.', path_of_zip='./dataset/DBLP_processed.zip')
-#dataset = OgbnMag(name="mag", root="./")
 predict_class = dataset.TYPE_OF_NODE_TO_PREDICT
 
 
 def OneTrial(random_subgraph_num: int, subgraph_edge_type_num: int) -> float:
-    model = Fast_NARS_SGC_WithLearnableWeights(prop_steps=3,
+    model = Fast_NARS_SGC_WithLearnableWeights(prop_steps=PROP_STEPS,
                                                feat_dim=dataset.data.num_features[predict_class],
                                                num_classes=dataset.data.num_classes[predict_class],
-                                               hidden_dim=256, num_layers=2,
+                                               hidden_dim=HIDDEN_DIM, num_layers=NUM_LAYERS,
                                                random_subgraph_num=random_subgraph_num)
 
     device = torch.device(
         f"cuda:{GpuWithMaxFreeMem()}" if torch.cuda.is_available() else "cpu")
     test_acc = HeteroNodeClassification(dataset, predict_class, model,
-                                        lr=0.01, weight_decay=0, epochs=NUM_EPOCHS, device=device,
-                                        train_batch_size=10000, eval_batch_size=10000,
+                                        lr=LR, weight_decay=WEIGHT_DECAY,
+                                        epochs=NUM_EPOCHS, device=device,
+                                        train_batch_size=BATCH_SIZE,
+                                        eval_batch_size=BATCH_SIZE,
                                         random_subgraph_num=random_subgraph_num,
                                         subgraph_edge_type_num=subgraph_edge_type_num).test_acc
 
