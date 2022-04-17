@@ -13,8 +13,8 @@ from auto_choose_gpu import GpuWithMaxFreeMem
 PROP_STEPS = 3
 HIDDEN_DIM = 256
 NUM_LAYERS = 2
-NUM_EPOCHS = 50
-SMALL_NUM_EPOCHS = 20
+NUM_EPOCHS = 5
+SMALL_NUM_EPOCHS = 2
 LR = 0.01
 WEIGHT_DECAY = 0.0
 BATCH_SIZE = 10000
@@ -65,14 +65,14 @@ def OneTrialWithSubgraphConfig(subgraph_num_edge_type_num: List, num_epochs: int
 
     device = torch.device(
         f"cuda:{GpuWithMaxFreeMem()}" if torch.cuda.is_available() else "cpu")
-    test_acc = HeteroNodeClassification(dataset, predict_class, model,
+    classification = HeteroNodeClassification(dataset, predict_class, model,
                                         lr=LR, weight_decay=WEIGHT_DECAY,
                                         epochs=num_epochs, device=device,
                                         train_batch_size=BATCH_SIZE,
                                         eval_batch_size=BATCH_SIZE,
-                                        subgraph_list=subgraph_list).test_acc
-
-    raw_weight = model.subgraph_weight
+                                        subgraph_list=subgraph_list)
+    test_acc=classification.test_acc
+    raw_weight = classification.subgraph_weight
     weight_sum = raw_weight.sum()
     normalized_weight = raw_weight/weight_sum
     print(normalized_weight)
