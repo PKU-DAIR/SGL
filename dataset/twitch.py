@@ -1,9 +1,7 @@
 import os.path as osp
 import pickle as pkl
 
-import networkx as nx
 import numpy as np
-import scipy.sparse as sp
 import torch
 
 from dataset.base_data import Graph
