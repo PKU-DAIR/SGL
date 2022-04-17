@@ -120,7 +120,11 @@ class HeteroNodeClassification(BaseTask):
                  subgraph_list=None):
 
         if subgraph_list is None and (random_subgraph_num == -1 or subgraph_edge_type_num == -1):
-            raise ValueError("Either subgraph_list or (random_subgraph_num, subgraph_edge_type_num) should be provided!")
+            raise ValueError(
+                "Either subgraph_list or (random_subgraph_num, subgraph_edge_type_num) should be provided!")
+        if subgraph_list is not None and (random_subgraph_num != -1 or subgraph_edge_type_num != -1):
+            raise ValueError(
+                "subgraph_list is provided, random_subgraph_num and subgraph_edge_type_num will be ignored!")
 
         super(HeteroNodeClassification, self).__init__()
 
@@ -159,7 +163,7 @@ class HeteroNodeClassification(BaseTask):
 
         pre_time_st = time.time()
         self.__model.preprocess(
-            self.__dataset, self.__predict_class, 
+            self.__dataset, self.__predict_class,
             random_subgraph_num, subgraph_edge_type_num, subgraph_list)
         pre_time_ed = time.time()
         print(f"Preprocessing done in {(pre_time_ed - pre_time_st):.4f}s")
