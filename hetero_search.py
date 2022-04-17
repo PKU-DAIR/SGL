@@ -27,15 +27,16 @@ def OneTrial(random_subgraph_num: int, subgraph_edge_type_num: int) -> float:
 
     device = torch.device(
         f"cuda:{GpuWithMaxFreeMem()}" if torch.cuda.is_available() else "cpu")
-    test_acc = HeteroNodeClassification(dataset, predict_class, model,
+    classification = HeteroNodeClassification(dataset, predict_class, model,
                                         lr=LR, weight_decay=WEIGHT_DECAY,
                                         epochs=NUM_EPOCHS, device=device,
                                         train_batch_size=BATCH_SIZE,
                                         eval_batch_size=BATCH_SIZE,
                                         random_subgraph_num=random_subgraph_num,
-                                        subgraph_edge_type_num=subgraph_edge_type_num).test_acc
+                                        subgraph_edge_type_num=subgraph_edge_type_num)
 
-    raw_weight = model.subgraph_weight
+    test_acc=classification.test_acc
+    raw_weight = classification.subgraph_weight
     weight_sum = raw_weight.sum()
     normalized_weight = raw_weight/weight_sum
     print(normalized_weight)
