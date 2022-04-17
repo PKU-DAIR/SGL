@@ -101,6 +101,3 @@ class Planetoid(NodeDataset):
             raise ValueError("Please input valid split pattern!")
 
         return train_idx, val_idx, test_idx
-
-# for test
-# dataset = Planetoid(name="citeseer", root="./")
