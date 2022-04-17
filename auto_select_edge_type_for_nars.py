@@ -1,6 +1,7 @@
 from typing import Dict, List, Tuple
 from functools import reduce
 import heapq
+import warnings
 
 import torch
 
@@ -13,8 +14,8 @@ from auto_choose_gpu import GpuWithMaxFreeMem
 PROP_STEPS = 3
 HIDDEN_DIM = 256
 NUM_LAYERS = 2
-NUM_EPOCHS = 5
-SMALL_NUM_EPOCHS = 2
+NUM_EPOCHS = 50
+SMALL_NUM_EPOCHS = 10
 LR = 0.01
 WEIGHT_DECAY = 0.0
 BATCH_SIZE = 10000
@@ -32,11 +33,11 @@ def GenerateSubgraphsWithSameEdgeTypeNum(random_subgraph_num: int, subgraph_edge
 
 # Input format: [(random_subgraph_num, subgraph_edge_type_num), ...]
 # Each element is a tuple of (random_subgraph_num, subgraph_edge_type_num)
-def GenerateSubgraphDict(subgraph_num_edge_type_num: List) -> Dict:
+def GenerateSubgraphDict(subgraph_config: List) -> Dict:
     subgraph_list = [GenerateSubgraphsWithSameEdgeTypeNum(
         random_subgraph_num, subgraph_edge_type_num)
         for random_subgraph_num, subgraph_edge_type_num
-        in subgraph_num_edge_type_num]
+        in subgraph_config]
 
     return reduce(lambda x, y: {**x, **y}, subgraph_list)
 
@@ -47,15 +48,15 @@ def Dict2List(dict: Dict) -> List:
 
 # Input format: [(random_subgraph_num, subgraph_edge_type_num), ...]
 # Each element is a tuple of (random_subgraph_num, subgraph_edge_type_num)
-def GenerateSubgraphList(subgraph_num_edge_type_num: List) -> List:
-    return Dict2List(GenerateSubgraphDict(subgraph_num_edge_type_num))
+def GenerateSubgraphList(subgraph_config: List) -> List:
+    return Dict2List(GenerateSubgraphDict(subgraph_config))
 
 
 # Input format: [(random_subgraph_num, subgraph_edge_type_num), ...]
 # Each element is a tuple of (random_subgraph_num, subgraph_edge_type_num)
-def OneTrialWithSubgraphConfig(subgraph_num_edge_type_num: List, num_epochs: int) -> Tuple[
+def OneTrialWithSubgraphConfig(subgraph_config: List, num_epochs: int) -> Tuple[
         float, List, torch.torch.Tensor]:
-    subgraph_list = GenerateSubgraphList(subgraph_num_edge_type_num)
+    subgraph_list = GenerateSubgraphList(subgraph_config)
 
     model = Fast_NARS_SGC_WithLearnableWeights(prop_steps=PROP_STEPS,
                                                feat_dim=dataset.data.num_features[predict_class],
@@ -66,12 +67,12 @@ def OneTrialWithSubgraphConfig(subgraph_num_edge_type_num: List, num_epochs: int
     device = torch.device(
         f"cuda:{GpuWithMaxFreeMem()}" if torch.cuda.is_available() else "cpu")
     classification = HeteroNodeClassification(dataset, predict_class, model,
-                                        lr=LR, weight_decay=WEIGHT_DECAY,
-                                        epochs=num_epochs, device=device,
-                                        train_batch_size=BATCH_SIZE,
-                                        eval_batch_size=BATCH_SIZE,
-                                        subgraph_list=subgraph_list)
-    test_acc=classification.test_acc
+                                              lr=LR, weight_decay=WEIGHT_DECAY,
+                                              epochs=num_epochs, device=device,
+                                              train_batch_size=BATCH_SIZE,
+                                              eval_batch_size=BATCH_SIZE,
+                                              subgraph_list=subgraph_list)
+    test_acc = classification.test_acc
     raw_weight = classification.subgraph_weight
     weight_sum = raw_weight.sum()
     normalized_weight = raw_weight/weight_sum
@@ -86,11 +87,11 @@ def TopKIndex(k: int, tensor: torch.Tensor) -> List:
 
 # Input format: [(random_subgraph_num, subgraph_edge_type_num), ...]
 # Each element is a tuple of (random_subgraph_num, subgraph_edge_type_num)
-def GenerateSubgraphDict(subgraph_num_edge_type_num: List) -> Dict:
+def GenerateSubgraphDict(subgraph_config: List) -> Dict:
     subgraph_list = [GenerateSubgraphsWithSameEdgeTypeNum(
         random_subgraph_num, subgraph_edge_type_num)
         for random_subgraph_num, subgraph_edge_type_num
-        in subgraph_num_edge_type_num]
+        in subgraph_config]
 
     return reduce(lambda x, y: {**x, **y}, subgraph_list)
 
@@ -101,12 +102,12 @@ def Dict2List(dict: Dict) -> List:
 
 # Input format: [(random_subgraph_num, subgraph_edge_type_num), ...]
 # Each element is a tuple of (random_subgraph_num, subgraph_edge_type_num)
-def GenerateSubgraphList(subgraph_num_edge_type_num: List) -> List:
-    return Dict2List(GenerateSubgraphDict(subgraph_num_edge_type_num))
+def GenerateSubgraphList(subgraph_config: List) -> List:
+    return Dict2List(GenerateSubgraphDict(subgraph_config))
 
 
 def OneTrialWithSubgraphList(subgraph_list: List, num_epochs: int) -> Tuple[
-        float, List, torch.torch.Tensor]:
+        float, List, torch.Tensor]:
 
     model = Fast_NARS_SGC_WithLearnableWeights(prop_steps=PROP_STEPS,
                                                feat_dim=dataset.data.num_features[predict_class],
@@ -134,9 +135,15 @@ def OneTrialWithSubgraphList(subgraph_list: List, num_epochs: int) -> Tuple[
 # Input format: [(random_subgraph_num, subgraph_edge_type_num), ...]
 # Each element is a tuple of (random_subgraph_num, subgraph_edge_type_num)
 # Only top k subgraphs with highest weights are retained
-def OneTrialWithSubgraphListTopK(subgraph_num_edge_type_num: List, k: int) -> float:
+def OneTrialWithSubgraphListTopK(subgraph_config: List, k: int) -> float:
     original_test_acc, subgraph_list, normalized_weight = OneTrialWithSubgraphConfig(
-        subgraph_num_edge_type_num, SMALL_NUM_EPOCHS)
+        subgraph_config, SMALL_NUM_EPOCHS)
+    if k < len(subgraph_list):
+        k = len(subgraph_list)
+        warnings.warn('k is larger than the number of subgraphs,'
+                      'k is set to the number of subgraphs',
+                      UserWarning)
+
     top_k_index = TopKIndex(k, normalized_weight.abs())
     retained_subgraph_list = [subgraph_list[i] for i in top_k_index]
 
@@ -148,4 +155,4 @@ def OneTrialWithSubgraphListTopK(subgraph_num_edge_type_num: List, k: int) -> fl
     return test_acc
 
 
-OneTrialWithSubgraphListTopK([(1, 1), (3, 2), (3, 3), (1, 4)], 3)
+#OneTrialWithSubgraphListTopK([(1, 1), (3, 2), (3, 3), (1, 4)], 3)
