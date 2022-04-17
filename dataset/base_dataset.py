@@ -400,7 +400,7 @@ class HeteroNodeDataset:
             for edge_type in combination:
                 if edge_type.find(predict_class) != -1:
                     adopted_edge_type_combinations.append(combination.tolist())
-                    continue
+                    break
 
         if random_subgraph_num > len(adopted_edge_type_combinations):
             random_subgraph_num = len(adopted_edge_type_combinations)
