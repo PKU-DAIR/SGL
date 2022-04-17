@@ -1,3 +1,5 @@
+import time
+
 import torch
 
 from dataset.dblp import Dblp
@@ -32,7 +34,8 @@ def OneTrial(dataset, random_subgraph_num: int, subgraph_edge_type_num: int) -> 
                                               train_batch_size=BATCH_SIZE,
                                               eval_batch_size=BATCH_SIZE,
                                               random_subgraph_num=random_subgraph_num,
-                                              subgraph_edge_type_num=subgraph_edge_type_num)
+                                              subgraph_edge_type_num=subgraph_edge_type_num,
+                                              seed=int(time.time()))
 
     test_acc = classification.test_acc
     raw_weight = classification.subgraph_weight
