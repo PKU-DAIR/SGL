@@ -9,7 +9,7 @@ from auto_choose_gpu import GpuWithMaxFreeMem
 PROP_STEPS = 3
 HIDDEN_DIM = 256
 NUM_LAYERS = 2
-NUM_EPOCHS = 100
+NUM_EPOCHS = 10
 LR = 0.01
 WEIGHT_DECAY = 0.0
 BATCH_SIZE = 10000
@@ -35,7 +35,10 @@ def OneTrial(random_subgraph_num: int, subgraph_edge_type_num: int) -> float:
                                         random_subgraph_num=random_subgraph_num,
                                         subgraph_edge_type_num=subgraph_edge_type_num).test_acc
 
-    print(model.subgraph_weight)
+    raw_weight = model.subgraph_weight
+    weight_sum = raw_weight.sum()
+    normalized_weight = raw_weight/weight_sum
+    print(normalized_weight)
 
     return test_acc
 
