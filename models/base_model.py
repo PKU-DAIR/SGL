@@ -34,7 +34,6 @@ class BaseSGAPModel(nn.Module):
         else:
             self._pre_msg_learnable = False
             self._processed_feature = feature
-        return self._processed_feature
 
     def postprocess(self, output):
         if self._post_graph_op is not None:
@@ -81,7 +80,7 @@ class BaseHeteroSGAPModel(nn.Module):
         self._pre_msg_learnable = False
 
     # Either subgraph_list or (random_subgraph_num, subgraph_edge_type_num) should be provided.
-    def preprocess(self, dataset, predict_class, 
+    def preprocess(self, dataset, predict_class,
                    random_subgraph_num=-1, subgraph_edge_type_num=-1,
                    subgraph_list=None):
         if subgraph_list is None and (random_subgraph_num == -1 or subgraph_edge_type_num == -1):
@@ -122,8 +121,6 @@ class BaseHeteroSGAPModel(nn.Module):
                     self._propagated_feat_list_list[i].append(
                         feature[start_pos:start_pos + dataset.data.num_node[predict_class]])
 
-        return self._propagated_feat_list_list
-
     # a wrapper of the forward function
     def model_forward(self, idx, device):
         return self.forward(idx, device)
@@ -158,7 +155,7 @@ class FastBaseHeteroSGAPModel(nn.Module):
         self._pre_msg_learnable = False
 
     # Either subgraph_list or (random_subgraph_num, subgraph_edge_type_num) should be provided.
-    def preprocess(self, dataset, predict_class, 
+    def preprocess(self, dataset, predict_class,
                    random_subgraph_num=-1, subgraph_edge_type_num=-1,
                    subgraph_list=None):
         if subgraph_list is None and (random_subgraph_num == -1 or subgraph_edge_type_num == -1):
@@ -167,7 +164,7 @@ class FastBaseHeteroSGAPModel(nn.Module):
         if subgraph_list is not None and (random_subgraph_num != -1 or subgraph_edge_type_num != -1):
             raise ValueError(
                 "subgraph_list is provided, random_subgraph_num and subgraph_edge_type_num will be ignored!")
-                                
+
         if not isinstance(dataset, HeteroNodeDataset):
             raise TypeError(
                 "Dataset must be an instance of HeteroNodeDataset!")
@@ -209,8 +206,6 @@ class FastBaseHeteroSGAPModel(nn.Module):
         shape = self._propagated_feat_list_list.size()
         self._propagated_feat_list_list = self._propagated_feat_list_list.view(
             shape[0], shape[1], shape[2]*shape[3])
-
-        return self._propagated_feat_list_list
 
     # a wrapper of the forward function
     def model_forward(self, idx, device):
