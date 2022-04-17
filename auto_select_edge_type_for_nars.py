@@ -166,7 +166,7 @@ def main():
     dataset = Dblp(root='.', path_of_zip='./dataset/DBLP_processed.zip')
 
     test_acc, original_test_acc = OneTrialWithSubgraphListTopK(dataset,
-                                                               [(1, 2), (1, 3)], 2,
+                                                               [(1, 1), (3, 2), (3, 3), (4, 1)], 4,
                                                                SMALL_NUM_EPOCHS, NUM_EPOCHS)
 
     print('test_acc:', test_acc)
