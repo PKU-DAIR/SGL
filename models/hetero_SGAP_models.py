@@ -54,10 +54,8 @@ class NARS_SGC_WithLearnableWeights(BaseHeteroSGAPModel):
 
 
 class Fast_NARS_SGC_WithLearnableWeights(FastBaseHeteroSGAPModel):
-    def __init__(self, prop_steps, feat_dim, num_classes, hidden_dim, num_layers, random_subgraph_num,
-                 subgraph_edge_type_num):
-        super(Fast_NARS_SGC_WithLearnableWeights, self).__init__(prop_steps, feat_dim,
-                                                            num_classes, random_subgraph_num, subgraph_edge_type_num)
+    def __init__(self, prop_steps, feat_dim, num_classes, hidden_dim, num_layers, random_subgraph_num):
+        super(Fast_NARS_SGC_WithLearnableWeights, self).__init__(prop_steps, feat_dim, num_classes)
 
         self._pre_graph_op = LaplacianGraphOp(prop_steps, r=0.5)
 
