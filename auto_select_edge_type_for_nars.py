@@ -2,6 +2,7 @@ from typing import Dict, List, Tuple
 from functools import reduce
 import heapq
 import warnings
+import time
 
 import torch
 
@@ -71,7 +72,8 @@ def OneTrialWithSubgraphConfig(dataset, subgraph_config: List, num_epochs: int) 
                                               epochs=num_epochs, device=device,
                                               train_batch_size=BATCH_SIZE,
                                               eval_batch_size=BATCH_SIZE,
-                                              subgraph_list=subgraph_list)
+                                              subgraph_list=subgraph_list,
+                                              seed=int(time.time()))
     test_acc = classification.test_acc
     raw_weight = classification.subgraph_weight
     weight_sum = raw_weight.sum()
@@ -101,7 +103,8 @@ def OneTrialWithSubgraphList(dataset, subgraph_list: List, num_epochs: int) -> T
                                               epochs=num_epochs, device=device,
                                               train_batch_size=BATCH_SIZE,
                                               eval_batch_size=BATCH_SIZE,
-                                              subgraph_list=subgraph_list)
+                                              subgraph_list=subgraph_list,
+                                              seed=int(time.time()))
 
     test_acc = classification.test_acc
     raw_weight = classification.subgraph_weight
@@ -131,7 +134,8 @@ def OneTrialWithSubgraphConfig(dataset, subgraph_config: List, num_epochs: int) 
                                               epochs=num_epochs, device=device,
                                               train_batch_size=BATCH_SIZE,
                                               eval_batch_size=BATCH_SIZE,
-                                              subgraph_list=subgraph_list)
+                                              subgraph_list=subgraph_list,
+                                              seed=int(time.time()))
     test_acc = classification.test_acc
     raw_weight = classification.subgraph_weight
     weight_sum = raw_weight.sum()
@@ -166,7 +170,7 @@ def main():
     dataset = Dblp(root='.', path_of_zip='./dataset/DBLP_processed.zip')
 
     test_acc, original_test_acc = OneTrialWithSubgraphListTopK(dataset,
-                                                               [(1, 1), (3, 2), (3, 3), (4, 1)], 4,
+                                                               [(1, 2), (1, 3)], 2,
                                                                SMALL_NUM_EPOCHS, NUM_EPOCHS)
 
     print('test_acc:', test_acc)
