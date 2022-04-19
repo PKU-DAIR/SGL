@@ -8,6 +8,7 @@ from scipy.sparse import csr_matrix
 
 from dataset.base_data import Node, Edge
 from dataset.utils import file_exist, to_undirected
+from dataset.choose_edge_type import ChooseMultiSubgraphs
 
 
 # Base class for node-level tasks
@@ -85,7 +86,7 @@ class NodeDataset:
     @property
     def edge_type(self):
         return self._data.edge_type
-    
+
     @property
     def edge_type_cnt(self):
         return len(self.edge_types)
@@ -185,13 +186,15 @@ class HeteroNodeDataset:
             raise TypeError("Edge type or node type must be a string!")
         if key in self.data.edge_types:
             if not isinstance(value, Edge):
-                raise TypeError("Please organize the dataset using the Edge class!")
+                raise TypeError(
+                    "Please organize the dataset using the Edge class!")
             # more restrictions
 
             self.data.edges_dict[key] = value
         elif key in self.data.node_types:
             if not isinstance(value, Node):
-                raise TypeError("Please organize the dataset using the Node class!")
+                raise TypeError(
+                    "Please organize the dataset using the Node class!")
             # more restrictions
 
             self.data.nodes_dict[key] = value
@@ -213,7 +216,7 @@ class HeteroNodeDataset:
     @property
     def edge_types(self):
         return self._data.edge_types
-    
+
     @property
     def edge_type_cnt(self):
         return len(self.edge_types)
@@ -233,7 +236,8 @@ class HeteroNodeDataset:
     # return a sampled adjacency matrix containing edges of given edge types
     def sample_by_edge_type(self, edge_types, undirected=True):
         if not isinstance(edge_types, (str, list, tuple)):
-            raise TypeError("The given edge types must be a string or a list or a tuple!")
+            raise TypeError(
+                "The given edge types must be a string or a list or a tuple!")
         elif isinstance(edge_types, str):
             edge_types = [edge_types]
         elif isinstance(edge_types, (list, tuple)):
@@ -243,7 +247,8 @@ class HeteroNodeDataset:
 
         pre_sampled_node_types = []
         for edge_type in edge_types:
-            pre_sampled_node_types = pre_sampled_node_types + [edge_type.split('__')[0], edge_type.split('__')[2]]
+            pre_sampled_node_types = pre_sampled_node_types + \
+                [edge_type.split('__')[0], edge_type.split('__')[2]]
         pre_sampled_node_types = list(set(pre_sampled_node_types))
 
         sampled_node_types = []
@@ -266,7 +271,8 @@ class HeteroNodeDataset:
 
             current_feature = torch.from_numpy(self._data[node_type].x)
             if current_feature is None:
-                warnings.warn(f'{node_type} nodes have no features!', UserWarning)
+                warnings.warn(
+                    f'{node_type} nodes have no features!', UserWarning)
             if feature is None:
                 feature = current_feature
             else:
@@ -295,7 +301,8 @@ class HeteroNodeDataset:
                 cols = torch.hstack((cols, col_temp))
 
         edge_weight = torch.ones(len(rows))
-        adj = csr_matrix((edge_weight.numpy(), (rows.numpy(), cols.numpy())), shape=(num_node, num_node))
+        adj = csr_matrix((edge_weight.numpy(), (rows.numpy(),
+                         cols.numpy())), shape=(num_node, num_node))
 
         # remove previously existed undirected edges
         adj.data = torch.ones(len(adj.data)).numpy()
@@ -323,7 +330,8 @@ class HeteroNodeDataset:
         for node_type in sampled_node_types:
             current_feature = torch.from_numpy(self._data[node_type].x)
             if current_feature is None:
-                warnings.warn(f'{node_type} nodes have no features!', UserWarning)
+                warnings.warn(
+                    f'{node_type} nodes have no features!', UserWarning)
             if feature is None:
                 feature = current_feature
             else:
@@ -337,10 +345,12 @@ class HeteroNodeDataset:
         # two at a time
         adj = None
         for i in range(int((len(node_types) - 1) / 2)):
-            edge_type = "__".join([node_types[i * 2], "to", node_types[(i + 1) * 2]])
+            edge_type = "__".join(
+                [node_types[i * 2], "to", node_types[(i + 1) * 2]])
             row, col = self._data[edge_type].edge_index
             edge_weight = torch.ones(len(row))
-            adj_temp = csr_matrix((edge_weight.numpy(), (row.numpy(), col.numpy())))
+            adj_temp = csr_matrix(
+                (edge_weight.numpy(), (row.numpy(), col.numpy())))
 
             # extremely slow
             if adj is None:
@@ -349,9 +359,11 @@ class HeteroNodeDataset:
                 adj = adj * adj_temp
 
         adj = adj.tocoo()
-        row, col, data = torch.LongTensor(adj.row), torch.LongTensor(adj.col), torch.FloatTensor(adj.data)
+        row, col, data = torch.LongTensor(adj.row), torch.LongTensor(
+            adj.col), torch.FloatTensor(adj.data)
 
-        st_index, ed_index = self.node_types.index(node_type_st), self.node_types.index(node_type_ed)
+        st_index, ed_index = self.node_types.index(
+            node_type_st), self.node_types.index(node_type_ed)
         if st_index == ed_index:
             for node_type in self.node_types[:st_index]:
                 row = row - self._data.num_node[node_type]
@@ -376,7 +388,8 @@ class HeteroNodeDataset:
         if undirected is True:
             data = torch.ones(2 * len(data))
             row, col = to_undirected((row, col))
-        adj = csr_matrix((data.numpy(), (row.numpy(), col.numpy())), shape=(num_node, num_node))
+        adj = csr_matrix(
+            (data.numpy(), (row.numpy(), col.numpy())), shape=(num_node, num_node))
 
         # remove existed self loops
         adj.data = torch.ones(len(adj.data)).numpy()
@@ -385,7 +398,8 @@ class HeteroNodeDataset:
     # return a dict of sub-graphs that contain all the combinations of given edge types and sampled number
     def nars_preprocess(self, edge_types, predict_class, random_subgraph_num, subgraph_edge_type_num):
         if not isinstance(edge_types, (str, list, tuple)):
-            raise TypeError("The given edge types must be a string or a list or a tuple!")
+            raise TypeError(
+                "The given edge types must be a string or a list or a tuple!")
         elif isinstance(edge_types, str):
             edge_types = [edge_types]
         elif isinstance(edge_types, (list, tuple)):
@@ -393,14 +407,12 @@ class HeteroNodeDataset:
                 if not isinstance(edge_type, str):
                     raise TypeError("Edge type must be a string!")
 
-        edge_type_combinations = np.array(
-            [edge_type for edge_type in itertools.combinations(edge_types, subgraph_edge_type_num)])
-        adopted_edge_type_combinations = []
-        for combination in edge_type_combinations:
-            for edge_type in combination:
-                if edge_type.find(predict_class) != -1:
-                    adopted_edge_type_combinations.append(combination.tolist())
-                    break
+        adopted_edge_type_combinations = ChooseMultiSubgraphs(
+            subgraph_num=random_subgraph_num,
+            edge_type_num=subgraph_edge_type_num,
+            edge_types=edge_types,
+            predict_class=predict_class
+        )
 
         if random_subgraph_num > len(adopted_edge_type_combinations):
             random_subgraph_num = len(adopted_edge_type_combinations)
@@ -410,10 +422,12 @@ class HeteroNodeDataset:
 
         chosen_idx = np.random.choice(np.arange(len(adopted_edge_type_combinations)), size=random_subgraph_num,
                                       replace=False)
-        chosen_edge_types = [tuple(edge_type) for edge_type in np.array(adopted_edge_type_combinations)[chosen_idx]]
+        chosen_edge_types = [tuple(edge_type) for edge_type in np.array(
+            adopted_edge_type_combinations)[chosen_idx]]
         subgraph_dict = {}
         for chosen_edge_type in chosen_edge_types:
             print(chosen_edge_type)
-            subgraph_dict[chosen_edge_type] = self.sample_by_edge_type(chosen_edge_type)
+            subgraph_dict[chosen_edge_type] = self.sample_by_edge_type(
+                chosen_edge_type)
 
         return subgraph_dict
