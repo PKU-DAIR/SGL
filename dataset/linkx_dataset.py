@@ -134,7 +134,6 @@ class LINKXDataset(NodeDataset):
                 train_idx, val_idx, test_idx = np.empty(0), np.empty(0), np.empty(0)
                 for i in range(self.num_classes):
                     idx = np.nonzero(labels == i)[0]
-                #    print("class = ", i, "idx size: ", idx.shape)
                     train_idx = np.append(train_idx, idx[:num_train_per_class])
                     val_idx = np.append(val_idx, idx[num_train_per_class: num_train_per_class + num_val])
                     test_idx = np.append(test_idx, idx[num_train_per_class + num_val:])
