@@ -93,7 +93,7 @@ class NodeClustering(BaseTask):
                   "loss_train: {:.4f}".format(loss_train),
                   "acc: {:.4f}".format(acc),
                   "nmi: {:.4f}".format(nmi),
-                  "adjscore: {:.4f}".format(adj),
+                  "adjscore: {:.4f}".format(adjscore),
                   "time: {:.4f}s".format(time.time() - t)
                 )
             
@@ -105,7 +105,7 @@ class NodeClustering(BaseTask):
                 best_adjscore = adjscore
         
             # TODO: add postprocess
-            
+
             print("Optimization Finished!")
             print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
             print(f"Best acc: {best_acc:.4f}, best_nmi: {best_nmi:.4f}, best_adjscore: {best_adjscore:.4f}")
