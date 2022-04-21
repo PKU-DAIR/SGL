@@ -24,35 +24,41 @@ def RemoveDuplicateEdgeType(edge_types: List) -> List[str]:
     return unique_edge_types
 
 
+# There must be no duplicate elements in edge_types.
 def ChooseEdgeType(edge_type_num: int, edge_types: List, predict_class: str) -> Tuple[str]:
-    chosen_edge_types_list = []
+    # Chosen edge types should be connected to the predict_class.
+    # In other words, they should interset with explored_node_type_set.
     explored_node_type_set = {predict_class}
-    unique_edge_type = RemoveDuplicateEdgeType(edge_types)
-    remaining_edge_types = unique_edge_type.copy()
-
-    # Estimate by "coupon collector"
-    maximal_reasonable_steps = 10 * edge_type_num * \
-        int(math.log2(edge_type_num)+1)
-    step_cnt = 0
+    chosen_edge_types_list = []
+    candidate_edge_types_list = []
+    # Due to the lack of connection,
+    # these edge types cannot be chosen at the moment.
+    other_edge_types_list = edge_types.copy()
 
     for _ in range(edge_type_num):
-        while True:
-            # Avoid infinite loop.
-            step_cnt += 1
-            if step_cnt > maximal_reasonable_steps or len(remaining_edge_types) == 0:
-                warnings.warn(
-                    f"Can't find enough ({edge_type_num}) edge types!", UserWarning)
-                break
+        # Move edge types from other_edge_types_list to candidate_edge_types_list.
+        idx_to_rm = []
+        for idx, et in enumerate(other_edge_types_list):
+            et_tuple = EdgeTypeStr2Tuple(et)
+            if len(set(et_tuple) & explored_node_type_set) > 0:
+                candidate_edge_types_list.append(et)
+                idx_to_rm.append(idx)
+        # Since pop() will change the index of following elements,
+        # we need to reverse the order of idx_to_rm.
+        for idx in reversed(idx_to_rm):
+            other_edge_types_list.pop(idx)
 
-            edge_type_idx = random.randint(0, len(remaining_edge_types)-1)
-            new_edge_type = remaining_edge_types[edge_type_idx]
-            new_edge_type_tuple = EdgeTypeStr2Tuple(new_edge_type)
-            if len(set(new_edge_type_tuple) & explored_node_type_set) == 0:
-                continue
-            chosen_edge_types_list.append(new_edge_type)
-            explored_node_type_set |= set(new_edge_type_tuple)
-            remaining_edge_types.pop(edge_type_idx)
+        if len(candidate_edge_types_list) == 0:
+            warnings.warn(
+                f"Can't find enough ({edge_type_num}) edge types!", UserWarning)
             break
+        # Move edge types from candidate_edge_types_list to chosen_edge_types_list.
+        new_edge_type_idx = random.randint(0, len(candidate_edge_types_list)-1)
+        new_edge_type = candidate_edge_types_list[new_edge_type_idx]
+        chosen_edge_types_list.append(new_edge_type)
+        candidate_edge_types_list.pop(new_edge_type_idx)
+        explored_node_type_set |= set(EdgeTypeStr2Tuple(new_edge_type))
+
     return tuple(sorted(chosen_edge_types_list))
 
 
