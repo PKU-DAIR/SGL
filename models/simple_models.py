@@ -69,6 +69,8 @@ class FastOneDimConvolution(nn.Module):
         self.__prop_steps = prop_steps
 
         # How to initialize the weight is extremely important.
+        # Pure xavier will lead to extremely unstable accuracy.
+        # Initialized with ones will not perform as good as this one.        
         self.__learnable_weight = nn.Parameter(
             torch.ones(num_subgraphs * prop_steps, 1))
 
