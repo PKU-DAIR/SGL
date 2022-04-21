@@ -81,3 +81,26 @@ def mini_batch_train(model, train_idx, train_loader, labels, device, optimizer, 
     acc_train = correct_num / len(train_idx)
 
     return loss_train, acc_train.item()
+
+def clustering_train(model, train_idx, labels, device, optimizer, loss_fn, n_clusters, n_init):
+    model.train()
+    optimizer.zero_grad()
+
+    train_output = model.model_forward(train_idx, device)
+    
+    # calc loss
+    from sklearn.cluster import KMeans
+    kmeans = KMeans(n_clusters=n_clusters, n_init=n_init)
+    y_pred = kmeans.fit_predict(train_output.data.cpu().numpy()) # cluster_label
+    cluster_centers = torch.FloatTensor(kmeans.cluster_centers_).to(device)
+
+    loss_train = loss_fn(train_output, y_pred, cluster_centers)
+    loss_train.backward()
+    optimizer.step()
+
+    # calc acc, nmi, adj
+    from clustering_metrics import clustering_metrics
+    cm = clustering_metrics(labels, y_pred)
+    acc, nmi, adj = cm.evaluationClusterModelFromLabel()
+
+    return loss_train.item(), acc, nmi, adj
