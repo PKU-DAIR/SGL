@@ -7,15 +7,17 @@ import torch.nn as nn
 
 import numpy as np
 from tasks.base_task import BaseTask
-from tasks.utils import accuracy, set_seed, clustering_train, mini_batch_train, evaluate, mini_batch_evaluate
-from clustering_metrics import clustering_metrics
-from sklearn.cluster import KMeans
+from tasks.utils import accuracy, set_seed, clustering_train
 
 class NodeClustering(BaseTask):
     def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn=nn.CrossEntropyLoss(), seed=42,
                  train_batch_size=None, eval_batch_size=None, n_init=20):
         super(NodeClustering, self).__init()
 
+        # clustering task does not support batch training
+        if train_batch_size is not None:
+            raise ValueError("clustering task does not support batch training")
+        
         self.__dataset = dataset
         self.__labels = self.__dataset.y
 
@@ -27,7 +29,9 @@ class NodeClustering(BaseTask):
         self.__device = device
         self.__seed = seed
 
+        # clustering task does not need valid set
         self.__cluster_train_idx = torch.ones(dataset.num_node)
+        
         # params for Kmeans
         # note that the n_clusters should be equal to the number of different labels
         self.__n_clusters = dataset.num_classes
@@ -35,23 +39,19 @@ class NodeClustering(BaseTask):
 
         self.__mini_batch = False
 
-        # clustering task does not need valid set
-        if train_batch_size is not None:
-            self.__mini_batch = True
-            self.__train_loader = DataLoader(
-                self.__cluster_train_idx, batch_size=train_batch_size, shuffle=True, drop_last=False)
-            self.__val_loader = DataLoader(
-                self.__dataset.val_idx, batch_size=eval_batch_size, shuffle=False, drop_last=False)
-            self.__test_loader = DataLoader(
-                self.__dataset.test_idx, batch_size=eval_batch_size, shuffle=False, drop_last=False)
-            self.__all_eval_loader = DataLoader(
-                range(self.__dataset.data.num_node), batch_size=eval_batch_size, shuffle=False, drop_last=False)
-
-        self.__test_acc = self._execute()
+        self._acc, self._nmi, self._adjscore = self._execute()
 
     @property
-    def test_acc(self):
-        return self.__test_acc
+    def acc(self):
+        return self._acc
+    
+    @property
+    def nmi(self):
+        return self._nmi
+    
+    @property
+    def adjscore(self):
+        return self._adjscore
 
     def cluster_loss(self, train_output, y_pred, cluster_centers):
         dist = null
@@ -83,11 +83,9 @@ class NodeClustering(BaseTask):
 
         for epoch in range(self.__epochs):
             t = time.time()
-            if self.__mini_batch is False:
-                loss_train, acc, nmi, adjscore = clustering_train(self.__model, self.__cluster_train_idx, self.__labels,
-                self.__device, self.__optimizer, self.cluster_loss, self.__n_clusters, self.__n_init)
-            else:
-                pass
+
+            loss_train, acc, nmi, adjscore = clustering_train(self.__model, self.__cluster_train_idx, self.__labels,
+            self.__device, self.__optimizer, self.cluster_loss, self.__n_clusters, self.__n_init)
                 
             print("Epoch: {:03d}".format(epoch + 1),
                   "loss_train: {:.4f}".format(loss_train),
