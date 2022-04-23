@@ -85,17 +85,17 @@ def mini_batch_train(model, train_idx, train_loader, labels, device, optimizer, 
 
 def cluster_loss(train_output, y_pred, cluster_centers):
 
-        for i in range(len(cluster_centers)):
-            if i == 0:
-                dist = torch.norm(train_output - cluster_centers[i], p=2, dim=1, keepdim=True)
-            else:
-                dist = torch.cat((dist, torch.norm(train_output - cluster_centers[i], p=2, dim=1, keepdim=True)), 1)
-        
-        loss = 0.
-        loss_tmp = -dist.mean(1).sum()
-        loss_tmp += 2 * np.sum(dist[j, x] for j, x in zip(range(dist.shape[0]), y_pred))
-        loss = loss_tmp / dist.shape[0]
-        return loss
+    for i in range(len(cluster_centers)):
+        if i == 0:
+            dist = torch.norm(train_output - cluster_centers[i], p=2, dim=1, keepdim=True)
+        else:
+            dist = torch.cat((dist, torch.norm(train_output - cluster_centers[i], p=2, dim=1, keepdim=True)), 1)
+    
+    loss = 0.
+    loss_tmp = -dist.mean(1).sum()
+    loss_tmp += 2 * np.sum(dist[j, x] for j, x in zip(range(dist.shape[0]), y_pred))
+    loss = loss_tmp / dist.shape[0]
+    return loss
 
 def clustering_train(model, train_idx, labels, device, optimizer, loss_fn, n_clusters, n_init):
     model.train()
