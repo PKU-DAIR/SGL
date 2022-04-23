@@ -2,9 +2,7 @@ import time
 from sqlalchemy import null
 import torch
 from torch.optim import Adam
-import torch.nn as nn
 
-import numpy as np
 from tasks.base_task import BaseTask
 from tasks.utils import set_seed, clustering_train, cluster_loss
 from tasks.clustering_metrics import clustering_metrics
