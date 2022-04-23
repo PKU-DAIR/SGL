@@ -1,18 +1,19 @@
 import time
 from sqlalchemy import null
 import torch
-from torch.utils.data import DataLoader
 from torch.optim import Adam
 import torch.nn as nn
 
 import numpy as np
 from tasks.base_task import BaseTask
-from tasks.utils import accuracy, set_seed, clustering_train
+from tasks.utils import set_seed, clustering_train
+from tasks.clustering_metrics import clustering_metrics
+from sklearn.cluster import KMeans
 
 class NodeClustering(BaseTask):
     def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn=nn.CrossEntropyLoss(), seed=42,
                  train_batch_size=None, eval_batch_size=None, n_init=20):
-        super(NodeClustering, self).__init()
+        super(NodeClustering, self).__init__()
 
         # clustering task does not support batch training
         if train_batch_size is not None:
@@ -30,11 +31,11 @@ class NodeClustering(BaseTask):
         self.__seed = seed
 
         # clustering task does not need valid set
-        self.__cluster_train_idx = torch.ones(dataset.num_node)
+        self.__cluster_train_idx = torch.arange(0, self.__dataset.num_node, dtype=torch.long)
         
         # params for Kmeans
         # note that the n_clusters should be equal to the number of different labels
-        self.__n_clusters = dataset.num_classes
+        self.__n_clusters = self.__dataset.num_classes
         self.__n_init = n_init
 
         self.__mini_batch = False
@@ -55,19 +56,22 @@ class NodeClustering(BaseTask):
 
     def cluster_loss(self, train_output, y_pred, cluster_centers):
         dist = null
+
         for i in range(len(cluster_centers)):
             if i == 0:
-                dist = torch.norm(train_output - cluster_centers[i], p=2, dim=1, keep_dims=True)
+                dist = torch.norm(train_output - cluster_centers[i], p=2, dim=1, keepdim=True)
             else:
-                dist = torch.cat((dist, torch.norm(train_output - cluster_centers[i], p=2, dim=1, keep_dims=True)), 1)
+                dist = torch.cat((dist, torch.norm(train_output - cluster_centers[i], p=2, dim=1, keepdim=True)), 1)
+        
         loss = 0.
         loss_tmp = -dist.mean(1).sum()
         loss_tmp += 2 * np.sum(dist[j, x] for j, x in zip(range(dist.shape[0]), y_pred))
-        loss = loss_tmp / self.data.num_node
+        loss = loss_tmp / self.__dataset.num_node
         return loss
 
     def _execute(self):
         set_seed(self.__seed)
+
         pre_time_st = time.time()
         self.__model.preprocess(self.__dataset.adj, self.__dataset.x)
         pre_time_ed = time.time()
@@ -101,13 +105,35 @@ class NodeClustering(BaseTask):
                 best_nmi = nmi
             if adjscore > best_adjscore:
                 best_adjscore = adjscore
+
+        # postprocess
+        acc, nmi, adjscore = self._postprocess()
+        if acc > best_acc:
+            best_acc = acc
+        if nmi > best_nmi:
+            best_nmi = nmi
+        if adjscore > best_adjscore:
+            best_adjscore = adjscore
+
+        print("Optimization Finished!")
+        print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
+        print(f"Best acc: {best_acc:.4f}, best_nmi: {best_nmi:.4f}, best_adjscore: {best_adjscore:.4f}")
         
-            # TODO: add postprocess
+        return best_acc, best_nmi, best_adjscore
 
-            print("Optimization Finished!")
-            print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
-            print(f"Best acc: {best_acc:.4f}, best_nmi: {best_nmi:.4f}, best_adjscore: {best_adjscore:.4f}")
-            return best_acc, best_nmi, best_adjscore
+    def _postprocess(self):
+        self.__model.eval()
+        outputs = self.__model.model_forward(
+            range(self.__dataset.num_node), self.__device).to("cpu")
+        
+        final_output = self.__model.postprocess(outputs)
+        kmeans = KMeans(n_clusters=self.__n_clusters, n_init=self.__n_init)
+        y_pred = kmeans.fit_predict(final_output.data.cpu().numpy()) # cluster_label
+        
+        labels = self.__labels.cpu().numpy()
+        cm = clustering_metrics(labels, y_pred)
+        acc, nmi, adjscore = cm.evaluationClusterModelFromLabel()
 
+        return acc, nmi, adjscore
         
     

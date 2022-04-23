@@ -21,8 +21,10 @@ class clustering_metrics:
         l2 = list(set(self.pred_label))
         numclass2 = len(l2)
         
+#        print(f"self.true_label: {self.true_label}", f"self.pred_label: {self.pred_label}", sep='\n')
+#        print(f"numclass1: {numclass1}", f"numclass2: {numclass2}")
         if numclass1 != numclass2:
-            print('Class Not equal, Error!!!!')
+#            print('Class Not equal, Error!!!!')
             return 0
         
         cost = np.zeros((numclass1, numclass2), dtype=int)
@@ -55,6 +57,7 @@ class clustering_metrics:
         f1_micro = metrics.f1_score(self.true_label, new_predict, average='micro')
         precision_micro = metrics.precision_score(self.true_label, new_predict, average='micro')
         recall_micro = metrics.recall_score(self.true_label, new_predict, average='micro')
+
         return acc, f1_macro, precision_macro, recall_macro, f1_micro, precision_micro, recall_micro
 
     def evaluationClusterModelFromLabel(self):

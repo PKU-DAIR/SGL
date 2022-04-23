@@ -1,7 +1,8 @@
 import random
 import torch
 import numpy as np
-
+from tasks.clustering_metrics import clustering_metrics
+from sklearn.cluster import KMeans
 
 def accuracy(output, labels):
     pred = output.max(1)[1].type_as(labels)
@@ -89,7 +90,6 @@ def clustering_train(model, train_idx, labels, device, optimizer, loss_fn, n_clu
     train_output = model.model_forward(train_idx, device)
     
     # calc loss
-    from sklearn.cluster import KMeans
     kmeans = KMeans(n_clusters=n_clusters, n_init=n_init)
     y_pred = kmeans.fit_predict(train_output.data.cpu().numpy()) # cluster_label
     cluster_centers = torch.FloatTensor(kmeans.cluster_centers_).to(device)
@@ -99,8 +99,8 @@ def clustering_train(model, train_idx, labels, device, optimizer, loss_fn, n_clu
     optimizer.step()
 
     # calc acc, nmi, adj
-    from clustering_metrics import clustering_metrics
+    labels = labels.cpu().numpy()
     cm = clustering_metrics(labels, y_pred)
-    acc, nmi, adj = cm.evaluationClusterModelFromLabel()
+    acc, nmi, adjscore = cm.evaluationClusterModelFromLabel()
 
-    return loss_train.item(), acc, nmi, adj
+    return loss_train.item(), acc, nmi, adjscore
