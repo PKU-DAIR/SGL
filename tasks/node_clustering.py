@@ -6,12 +6,12 @@ import torch.nn as nn
 
 import numpy as np
 from tasks.base_task import BaseTask
-from tasks.utils import set_seed, clustering_train
+from tasks.utils import set_seed, clustering_train, cluster_loss
 from tasks.clustering_metrics import clustering_metrics
 from sklearn.cluster import KMeans
 
 class NodeClustering(BaseTask):
-    def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn=nn.CrossEntropyLoss(), seed=42,
+    def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn=cluster_loss, seed=42,
                  train_batch_size=None, eval_batch_size=None, n_init=20):
         super(NodeClustering, self).__init__()
 
@@ -54,21 +54,6 @@ class NodeClustering(BaseTask):
     def adjscore(self):
         return self._adjscore
 
-    def cluster_loss(self, train_output, y_pred, cluster_centers):
-        dist = null
-
-        for i in range(len(cluster_centers)):
-            if i == 0:
-                dist = torch.norm(train_output - cluster_centers[i], p=2, dim=1, keepdim=True)
-            else:
-                dist = torch.cat((dist, torch.norm(train_output - cluster_centers[i], p=2, dim=1, keepdim=True)), 1)
-        
-        loss = 0.
-        loss_tmp = -dist.mean(1).sum()
-        loss_tmp += 2 * np.sum(dist[j, x] for j, x in zip(range(dist.shape[0]), y_pred))
-        loss = loss_tmp / self.__dataset.num_node
-        return loss
-
     def _execute(self):
         set_seed(self.__seed)
 
@@ -89,7 +74,7 @@ class NodeClustering(BaseTask):
             t = time.time()
 
             loss_train, acc, nmi, adjscore = clustering_train(self.__model, self.__cluster_train_idx, self.__labels,
-            self.__device, self.__optimizer, self.cluster_loss, self.__n_clusters, self.__n_init)
+            self.__device, self.__optimizer, self.__loss_fn, self.__n_clusters, self.__n_init)
                 
             print("Epoch: {:03d}".format(epoch + 1),
                   "loss_train: {:.4f}".format(loss_train),
