@@ -21,8 +21,6 @@ class clustering_metrics:
         l2 = list(set(self.pred_label))
         numclass2 = len(l2)
         
-#        print(f"self.true_label: {self.true_label}", f"self.pred_label: {self.pred_label}", sep='\n')
-#        print(f"numclass1: {numclass1}", f"numclass2: {numclass2}")
         if numclass1 != numclass2:
 #            print('Class Not equal, Error!!!!')
             return 0
