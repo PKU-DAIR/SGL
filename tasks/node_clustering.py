@@ -16,7 +16,7 @@ class NodeClustering(BaseTask):
         super(NodeClustering, self).__init__()
 
         # clustering task does not support batch training
-        if train_batch_size is not None:
+        if train_batch_size is not None or eval_batch_size is not None:
             raise ValueError("clustering task does not support batch training")
         
         self.__dataset = dataset
@@ -37,8 +37,6 @@ class NodeClustering(BaseTask):
         # note that the n_clusters should be equal to the number of different labels
         self.__n_clusters = self.__dataset.num_classes
         self.__n_init = n_init
-
-        self.__mini_batch = False
 
         self._acc, self._nmi, self._adjscore = self._execute()
 
