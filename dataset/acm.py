@@ -3,8 +3,8 @@ import pickle as pkl
 import torch
 from typing import Tuple
 
-from dataset.base_data import HeteroGraph
-from dataset.base_dataset import HeteroNodeDataset
+from data.base_data import HeteroGraph
+from data.base_dataset import HeteroNodeDataset
 from dataset.utils import pkl_read_file
 from torch_geometric.datasets import HGBDataset
 

@@ -4,9 +4,9 @@ from torch import nn
 from torch.nn import Parameter, ModuleList, Linear
 import torch.nn.functional as F
 
-from models.base_op import MessageOp
+from operators.base_op import MessageOp
 from models.simple_models import MultiLayerPerceptron
-from models.utils import one_dim_weighted_add, two_dim_weighted_add
+from operators.utils import one_dim_weighted_add, two_dim_weighted_add
 
 
 class LastMessageOp(MessageOp):

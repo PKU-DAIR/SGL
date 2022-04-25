@@ -1,7 +1,7 @@
 import torch
 
 from dataset.ogbn_mag import OgbnMag
-from models.hetero_SGAP_models import NARS_SIGN
+from models.hetero.hetero_SGAP_models import NARS_SIGN
 from tasks.node_classification import HeteroNodeClassification
 from auto_choose_gpu import GpuWithMaxFreeMem
 

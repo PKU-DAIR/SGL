@@ -5,8 +5,8 @@ import numpy as np
 import torch
 from torch_sparse import coalesce
 
-from dataset.base_data import Graph
-from dataset.base_dataset import NodeDataset
+from data.base_data import Graph
+from data.base_dataset import NodeDataset
 from dataset.utils import pkl_read_file, download_to
 
 class WebKB(NodeDataset):

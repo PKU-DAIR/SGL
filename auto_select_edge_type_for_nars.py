@@ -7,7 +7,7 @@ import time
 import torch
 
 from dataset.dblp import Dblp
-from models.hetero_SGAP_models import NARS_SIGN, Fast_NARS_SGC_WithLearnableWeights
+from models.hetero.hetero_SGAP_models import NARS_SIGN, Fast_NARS_SGC_WithLearnableWeights
 from tasks.node_classification import HeteroNodeClassification
 from auto_choose_gpu import GpuWithMaxFreeMem
 

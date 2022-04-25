@@ -5,7 +5,7 @@ import scipy.sparse as sp
 import numpy as np
 import platform
 
-from models.utils import csr_sparse_dense_matmul, cuda_csr_sparse_dense_matmul
+from operators.utils import csr_sparse_dense_matmul, cuda_csr_sparse_dense_matmul
 
 
 class GraphOp:

@@ -6,8 +6,8 @@ import torch
 from itertools import chain
 import json
 
-from dataset.base_data import Graph
-from dataset.base_dataset import NodeDataset
+from data.base_data import Graph
+from data.base_dataset import NodeDataset
 from dataset.utils import pkl_read_file, download_to, to_undirected
 
 class Wikics(NodeDataset):

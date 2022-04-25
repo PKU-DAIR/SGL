@@ -6,8 +6,8 @@ import torch.nn.functional as F
 import torch
 from scipy.io import loadmat
 
-from dataset.base_data import Graph
-from dataset.base_dataset import NodeDataset
+from data.base_data import Graph
+from data.base_dataset import NodeDataset
 from dataset.utils import pkl_read_file, download_to
 
 # A variety of non-homophilous graph datasets

@@ -1,7 +1,7 @@
 from models.base_model import BaseSGAPModel
 
-from models.graph_operator import LaplacianGraphOp, PprGraphOp
-from models.message_operator import LastMessageOp, ConcatMessageOp, MeanMessageOp, SimpleWeightedMessageOp, \
+from operators.graph_operator import LaplacianGraphOp, PprGraphOp
+from operators.message_operator import LastMessageOp, ConcatMessageOp, MeanMessageOp, SimpleWeightedMessageOp, \
     LearnableWeightedMessageOp, IterateLearnableWeightedMessageOp, SumMessageOp, MaxMessageOp, MinMessageOp
 from models.simple_models import LogisticRegression, MultiLayerPerceptron
 

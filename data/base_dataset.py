@@ -6,8 +6,8 @@ import numpy as np
 import torch
 from scipy.sparse import csr_matrix
 
-from dataset.base_data import Node, Edge
-from dataset.utils import file_exist, to_undirected
+from data.base_data import Node, Edge
+from data.utils import file_exist, to_undirected
 from dataset.choose_edge_type import ChooseMultiSubgraphs
 
 

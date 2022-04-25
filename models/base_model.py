@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from dataset.base_dataset import HeteroNodeDataset
+from data.base_dataset import HeteroNodeDataset
 
 
 class BaseSGAPModel(nn.Module):

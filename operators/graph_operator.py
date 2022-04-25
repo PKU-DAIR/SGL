@@ -1,7 +1,7 @@
 import scipy.sparse as sp
 
-from models.base_op import GraphOp
-from models.utils import adj_to_symmetric_norm
+from operators.base_op import GraphOp
+from operators.utils import adj_to_symmetric_norm
 
 
 class LaplacianGraphOp(GraphOp):

@@ -4,8 +4,8 @@ import torch
 import scipy.sparse as sp
 from ogb.nodeproppred import PygNodePropPredDataset
 
-from dataset.base_data import HeteroGraph
-from dataset.base_dataset import HeteroNodeDataset
+from data.base_data import HeteroGraph
+from data.base_dataset import HeteroNodeDataset
 from dataset.utils import pkl_read_file, to_undirected
 
 

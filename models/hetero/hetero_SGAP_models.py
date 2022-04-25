@@ -1,6 +1,6 @@
 from models.base_model import BaseHeteroSGAPModel, FastBaseHeteroSGAPModel
-from models.graph_operator import LaplacianGraphOp
-from models.message_operator import ProjectedConcatMessageOp, LearnableWeightedMessageOp
+from operators.graph_operator import LaplacianGraphOp
+from operators.message_operator import ProjectedConcatMessageOp, LearnableWeightedMessageOp
 from models.simple_models import OneDimConvolution, MultiLayerPerceptron, \
     OneDimConvolutionWeightSharedAcrossFeatures, FastOneDimConvolution
 
