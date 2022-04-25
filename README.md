@@ -23,9 +23,28 @@
 
 
 ## Quick Start (TODO)
+**TODO**
+A quick start example is given by:
+```python
+import torch
 
+from SGL.dataset import Planetoid
+from SGL.models.homo import SGC
+from SGL.tasks import NodeClassification
 
+dataset = Planetoid("pubmed", "./", "official")
+model = SGC(prop_steps=3, feat_dim=dataset.num_features, num_classes=dataset.num_classes)
 
+device = "cuda:0"
+test_acc = NodeClassification(dataset, model, lr=0.1, weight_decay=5e-4, epochs=200, device=device).test_acc
+print(test_acc)
+```
+
+**TODO**
+An example of the auto neural network search functionality is as follows:
+```python
+
+```
 
 
 ## Related Publications
