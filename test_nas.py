@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from models.search_models import SearchModel
 from dataset.planetoid import Planetoid
-from tasks.auto_search import SearchManager
+from search.auto_search import SearchManager
 
 dataset = Planetoid("cora", "./", "official")
 
