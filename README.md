@@ -37,9 +37,3 @@
 ## License
 
 The entire codebase is under [MIT license](LICENSE).
-
-
-<<<<<<< HEAD
-=======
-> run the python file test_pasca.py
->>>>>>> parent of 2b6ac22 (Update README.md)
