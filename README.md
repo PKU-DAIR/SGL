@@ -21,4 +21,4 @@ Try to build scalable graph learning:
 
 Try to search scalable GNN models:
 
-> run the python file test_pasca.py
+> run the python file test_nas.py
