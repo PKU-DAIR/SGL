@@ -1,5 +1,9 @@
-torch==1.11.0
-scipy==1.5.2
-ogb==1.3.3
-numpy==1.22.3
-torch-geometric
+torch>=1.8
+networkx
+tqdm
+numpy>=1.21
+scipy
+gensim
+scikit_learn
+ogb
+openbox
