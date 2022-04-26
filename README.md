@@ -33,7 +33,7 @@ To install SGL from PyPI:
 pip install sgl-dair
 ```
 
-## Quick Start (TODO)
+## Quick Start
 
 A quick start example is given by:
 
