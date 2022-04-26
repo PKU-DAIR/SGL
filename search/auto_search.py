@@ -1,6 +1,6 @@
 import time
-from torch.optim import Adam
 import torch.nn as nn
+from torch.optim import Adam
 
 from search.base_search import BaseSearch
 from search.utils import accuracy, set_seed
@@ -17,7 +17,7 @@ class SearchManager(BaseSearch):
         self.__loss_fn = loss_fn
         self.__device = device
         self.__seed = seed
-    
+
     def _execute(self):
         set_seed(self.__seed)
         t_pre_start = time.time()

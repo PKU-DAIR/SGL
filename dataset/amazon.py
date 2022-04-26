@@ -1,6 +1,5 @@
 import os.path as osp
 import pickle as pkl
-
 import torch
 
 from data.base_data import Graph

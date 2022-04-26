@@ -24,7 +24,7 @@ class OneDimConvolution(nn.Module):
         for i in range(self.__hop_num):
             adopted_feat = torch.stack(feat_list_list[i], dim=2)
             intermediate_feat = (
-                adopted_feat * (self.__learnable_weight[i].unsqueeze(dim=0))).mean(dim=2)
+                    adopted_feat * (self.__learnable_weight[i].unsqueeze(dim=0))).mean(dim=2)
 
             aggregated_feat_list.append(intermediate_feat)
 
@@ -54,7 +54,7 @@ class OneDimConvolutionWeightSharedAcrossFeatures(nn.Module):
         for i in range(self.__hop_num):
             adopted_feat = torch.stack(feat_list_list[i], dim=2)
             intermediate_feat = (
-                adopted_feat * (self.__learnable_weight[i])).mean(dim=2)
+                    adopted_feat * (self.__learnable_weight[i])).mean(dim=2)
 
             aggregated_feat_list.append(intermediate_feat)
 

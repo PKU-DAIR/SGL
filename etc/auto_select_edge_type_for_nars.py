@@ -1,15 +1,14 @@
-from typing import Dict, List, Tuple
-from functools import reduce
 import heapq
-import warnings
 import time
-
 import torch
+import warnings
+from functools import reduce
+from typing import Dict, List, Tuple
 
 from dataset.dblp import Dblp
-from models.hetero.hetero_SGAP_models import NARS_SIGN, Fast_NARS_SGC_WithLearnableWeights
+from models.hetero import NARS_SIGN, Fast_NARS_SGC_WithLearnableWeights
 from tasks.node_classification import HeteroNodeClassification
-from auto_choose_gpu import GpuWithMaxFreeMem
+from utils import GpuWithMaxFreeMem
 
 # Hyperparameters
 PROP_STEPS = 3
@@ -53,7 +52,7 @@ def GenerateSubgraphList(dataset, subgraph_config: List) -> List:
 # Input format: [(random_subgraph_num, subgraph_edge_type_num), ...]
 # Each element is a tuple of (random_subgraph_num, subgraph_edge_type_num)
 def OneTrialWithSubgraphConfig(dataset, subgraph_config: List, num_epochs: int) -> Tuple[
-        float, List, torch.torch.Tensor]:
+    float, List, torch.torch.Tensor]:
     subgraph_list = GenerateSubgraphList(dataset, subgraph_config)
 
     predict_class = dataset.TYPE_OF_NODE_TO_PREDICT
@@ -77,7 +76,7 @@ def OneTrialWithSubgraphConfig(dataset, subgraph_config: List, num_epochs: int) 
     test_acc = classification.test_acc
     raw_weight = classification.subgraph_weight
     weight_sum = raw_weight.sum()
-    normalized_weight = raw_weight/weight_sum
+    normalized_weight = raw_weight / weight_sum
 
     return test_acc, subgraph_list, normalized_weight
 
@@ -87,8 +86,7 @@ def TopKIndex(k: int, tensor: torch.Tensor) -> List:
 
 
 def OneTrialWithSubgraphList(dataset, subgraph_list: List, num_epochs: int) -> Tuple[
-        float, List, torch.Tensor]:
-
+    float, List, torch.Tensor]:
     predict_class = dataset.TYPE_OF_NODE_TO_PREDICT
     model = Fast_NARS_SGC_WithLearnableWeights(prop_steps=PROP_STEPS,
                                                feat_dim=dataset.data.num_features[predict_class],
@@ -110,7 +108,7 @@ def OneTrialWithSubgraphList(dataset, subgraph_list: List, num_epochs: int) -> T
     test_acc = classification.test_acc
     raw_weight = classification.subgraph_weight
     weight_sum = raw_weight.sum()
-    normalized_weight = raw_weight/weight_sum
+    normalized_weight = raw_weight / weight_sum
 
     return test_acc, subgraph_list, normalized_weight
 

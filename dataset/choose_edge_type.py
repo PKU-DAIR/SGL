@@ -1,7 +1,7 @@
-from typing import List, Tuple
-import random
 import math
+import random
 import warnings
+from typing import List, Tuple
 
 EDGE_TYPE_DELIMITER = '__to__'
 
@@ -18,7 +18,7 @@ def RemoveDuplicateEdgeType(edge_types: List) -> List[str]:
     unique_edge_types = []
     for et in edge_types:
         et_tuple = EdgeTypeStr2Tuple(et)
-        reversed_et = et_tuple[1]+EDGE_TYPE_DELIMITER+et_tuple[0]
+        reversed_et = et_tuple[1] + EDGE_TYPE_DELIMITER + et_tuple[0]
         if reversed_et not in unique_edge_types:
             unique_edge_types.append(et)
     return unique_edge_types
@@ -63,7 +63,7 @@ def Combination(n: int, k: int) -> int:
         raise ValueError('n < 0 or k < 0!')
     result = 1
     for i in range(k):
-        result = result*(n-i)//(i+1)
+        result = result * (n - i) // (i + 1)
     return result
 
 
@@ -75,8 +75,8 @@ def ChooseMultiSubgraphs(subgraph_num: int, edge_type_num: int,
         return subgraph_edge_types_list
 
     # Estimate by "coupon collector"
-    maximal_reasonable_steps = 10 * Combination(len(unique_edge_type), edge_type_num) *\
-        (math.log2(Combination(len(unique_edge_type), edge_type_num))+1)
+    maximal_reasonable_steps = 10 * Combination(len(unique_edge_type), edge_type_num) * \
+                               (math.log2(Combination(len(unique_edge_type), edge_type_num)) + 1)
     step_cnt = 0
 
     for _ in range(subgraph_num):

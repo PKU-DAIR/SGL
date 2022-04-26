@@ -1,7 +1,7 @@
 import os.path as osp
 import pickle as pkl
-import torch
 import scipy.sparse as sp
+import torch
 from ogb.nodeproppred import PygNodePropPredDataset
 
 from data.base_data import HeteroGraph
@@ -10,7 +10,6 @@ from dataset.utils import pkl_read_file, to_undirected
 
 
 class OgbnMag(HeteroNodeDataset):
-
     TYPE_OF_NODE_TO_PREDICT = 'paper'
 
     def __init__(self, name="mag", root=".", split="official"):

@@ -1,12 +1,12 @@
+import numpy as np
 import os.path as osp
 import pickle as pkl
-
-import numpy as np
 import torch
 
 from data.base_data import Graph
 from data.base_dataset import NodeDataset
 from dataset.utils import pkl_read_file, download_to, random_split_dataset
+
 
 class Twitch(NodeDataset):
     def __init__(self, name="EN", root="./", split="official", num_train_per_class=30, num_valid_per_class=100):
@@ -30,14 +30,14 @@ class Twitch(NodeDataset):
     def processed_file_paths(self):
         filename = "graph"
         return osp.join(self._processed_dir, "{}.{}".format(self._name, filename))
-    
+
     def _download(self):
         url = 'https://graphmining.ai/datasets/ptg/twitch'
         for filepath in self.raw_file_paths:
             file_url = url + '/' + osp.basename(filepath)
             print(file_url)
             download_to(file_url, filepath)
-    
+
     def _process(self):
         data = np.load(self.raw_file_paths[0])
         features = data["features"]
@@ -51,7 +51,7 @@ class Twitch(NodeDataset):
         row, col = edge_index[0], edge_index[1]
         edge_type = "gamer__to__gamer"
 
-        #Default Edge weights
+        # Default Edge weights
         edge_weight = np.ones(len(row))
 
         g = Graph(row, col, edge_weight, num_node, node_type, edge_type, x=features, y=labels)
@@ -61,7 +61,6 @@ class Twitch(NodeDataset):
             except IOError as e:
                 print(e)
                 exit(1)
-
 
     def __generate_split(self, split):
         if split == "official":
@@ -86,4 +85,3 @@ class Twitch(NodeDataset):
             raise ValueError("Please input valid split pattern!")
 
         return train_idx, val_idx, test_idx
-        

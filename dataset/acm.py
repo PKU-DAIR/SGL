@@ -1,16 +1,15 @@
 import os.path as osp
 import pickle as pkl
 import torch
+from torch_geometric.datasets import HGBDataset
 from typing import Tuple
 
 from data.base_data import HeteroGraph
 from data.base_dataset import HeteroNodeDataset
 from dataset.utils import pkl_read_file
-from torch_geometric.datasets import HGBDataset
 
 
 class Acm(HeteroNodeDataset):
-
     NODE_TYPES = [
         'paper',
         'author',
@@ -47,7 +46,7 @@ class Acm(HeteroNodeDataset):
     def edge_type_tuple_to_str(self, edge_type_tuple: Tuple) -> str:
         if len(edge_type_tuple) != 3:
             raise ValueError('number of elements is invalid for input tuple')
-        return edge_type_tuple[0]+self.EDGE_TYPE_DELIMITER+edge_type_tuple[2]
+        return edge_type_tuple[0] + self.EDGE_TYPE_DELIMITER + edge_type_tuple[2]
 
     @property
     def raw_file_paths(self):
@@ -86,12 +85,12 @@ class Acm(HeteroNodeDataset):
         edge_weight_dict = {}
         for edge_type_tuple in self.EDGE_TYPES_TUPLE:
             edge_type = self.edge_type_tuple_to_str(edge_type_tuple)
-         
+
             row_dict[edge_type] = self.src_dataset[edge_type_tuple]['edge_index'][0] \
-                + previous_node_cnt_dict[edge_type_tuple[0]]
+                                  + previous_node_cnt_dict[edge_type_tuple[0]]
 
             col_dict[edge_type] = self.src_dataset[edge_type_tuple]['edge_index'][1] \
-                + previous_node_cnt_dict[edge_type_tuple[2]]
+                                  + previous_node_cnt_dict[edge_type_tuple[2]]
 
             edge_weight_dict[edge_type] = torch.ones(
                 self.src_dataset[edge_type_tuple]['edge_index'].size(1))
@@ -110,7 +109,7 @@ class Acm(HeteroNodeDataset):
             num_cur_node_type = num_node_dict[node_type]
             node_id_dict[node_type] = [i for i in range(
                 accumulated_node_cnt,
-                accumulated_node_cnt+num_cur_node_type)]
+                accumulated_node_cnt + num_cur_node_type)]
             accumulated_node_cnt += num_cur_node_type
 
         # obtain x_dict
@@ -130,7 +129,7 @@ class Acm(HeteroNodeDataset):
             if 'x' in self.src_dataset[node_type]:
                 cur_x_len = self.src_dataset[node_type]['x'].size(1)
                 padded_tensor[:, accumulated_feature_dim:accumulated_feature_dim +
-                              cur_x_len] = self.src_dataset[node_type]['x']
+                                                         cur_x_len] = self.src_dataset[node_type]['x']
                 accumulated_feature_dim += cur_x_len
             x_dict[node_type] = padded_tensor.numpy()
 

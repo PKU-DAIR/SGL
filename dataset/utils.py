@@ -1,11 +1,11 @@
-import sys
+import numpy as np
 import os.path as osp
 import pickle as pkl
-import ssl
-import urllib
-import torch
-import numpy as np
 import scipy.sparse as sp
+import ssl
+import sys
+import torch
+import urllib
 
 
 def to_undirected(edge_index):
@@ -46,6 +46,7 @@ def file_exist(filepaths):
             return True
         else:
             return False
+
 
 def pkl_read_file(filepath):
     file = None

@@ -1,15 +1,14 @@
+import numpy as np
+import os
 import os.path as osp
 import pickle as pkl
-import os
-
-import numpy as np
 import scipy.sparse as sp
 import torch
+from torch_geometric.data import extract_zip
 
 from data.base_data import Graph
 from data.base_dataset import NodeDataset
 from dataset.utils import pkl_read_file, download_to
-from torch_geometric.data import extract_zip
 
 
 class Reddit(NodeDataset):
@@ -76,4 +75,3 @@ class Reddit(NodeDataset):
             raise ValueError("Please input valid split pattern!")
 
         return train_idx, val_idx, test_idx
-    

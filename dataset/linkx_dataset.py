@@ -1,20 +1,21 @@
+import numpy as np
 import os.path as osp
 import pickle as pkl
-
-import numpy as np
-import torch.nn.functional as F
 import torch
+import torch.nn.functional as F
 from scipy.io import loadmat
 
 from data.base_data import Graph
 from data.base_dataset import NodeDataset
 from dataset.utils import pkl_read_file, download_to
 
+
 # A variety of non-homophilous graph datasets
 # Note that only "penn94" has official split_mask, split_id in [0, 9] to identify different 
 # For other datasets applied official split, you should set numbers of samples for training/valid set
 class LINKXDataset(NodeDataset):
-    def __init__(self, name="penn94", root="./", split="official", split_id=0, num_train_per_class=10, num_valid_per_class=10):
+    def __init__(self, name="penn94", root="./", split="official", split_id=0, num_train_per_class=10,
+                 num_valid_per_class=10):
         name = name.lower()
         if name not in ['penn94', 'reed98', 'amherst41', 'cornell5', 'johnshopkins55']:
             raise ValueError("Dataset name not supported!")
@@ -29,30 +30,28 @@ class LINKXDataset(NodeDataset):
         self._train_idx, self._val_idx, self._test_idx = self.__generate_split(
             split)
 
-        
-    
     @property
     def raw_file_paths(self):
         dataset_name = {
-            'penn94':'Penn94.mat',
-            'reed98':'Reed98.mat',
-            'amherst41':'Amherst41.mat',
-            'cornell5':'Cornell5.mat',
-            'johnshopkins55':'Johns%20Hopkins55.mat',
+            'penn94': 'Penn94.mat',
+            'reed98': 'Reed98.mat',
+            'amherst41': 'Amherst41.mat',
+            'cornell5': 'Cornell5.mat',
+            'johnshopkins55': 'Johns%20Hopkins55.mat',
         }
         splits_name = {
-            'penn94':'fb100-Penn94-splits.npy',
+            'penn94': 'fb100-Penn94-splits.npy',
         }
         filenames = [dataset_name[self._name]]
         if self._name in splits_name:
             filenames += [splits_name[self._name]]
-        
+
         return [osp.join(self._raw_dir, filename) for filename in filenames]
 
     @property
     def processed_file_paths(self):
         return osp.join(self._processed_dir, f"{self._name}.graph")
-    
+
     def _download(self):
         url = 'https://github.com/CUAI/Non-Homophily-Large-Scale/raw/master/data'
 
@@ -76,7 +75,7 @@ class LINKXDataset(NodeDataset):
             file_url = splits[self._name]
             print(file_url)
             download_to(file_url, self.raw_file_paths[1])
-        
+
     def _process(self):
         mat = loadmat(self.raw_file_paths[0])
 
@@ -101,7 +100,7 @@ class LINKXDataset(NodeDataset):
 
         g = Graph(row, col, edge_weight, num_node,
                   node_type, edge_type, x=features, y=labels)
-        
+
         with open(self.processed_file_paths, 'wb') as rf:
             try:
                 pkl.dump(g, rf)
@@ -143,5 +142,5 @@ class LINKXDataset(NodeDataset):
 
             else:
                 raise ValueError("Please input valid split pattern!")
-        
+
         return train_idx, val_idx, test_idx

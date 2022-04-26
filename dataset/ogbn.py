@@ -1,7 +1,7 @@
-import pickle as pkl
-import os.path as osp
-import torch
 import numpy as np
+import os.path as osp
+import pickle as pkl
+import torch
 from ogb.nodeproppred import PygNodePropPredDataset
 
 from data.base_data import Graph
@@ -69,4 +69,3 @@ class Ogbn(NodeDataset):
             raise ValueError("Please input valid split pattern!")
 
         return train_idx, val_idx, test_idx
-    

@@ -1,23 +1,23 @@
+import json
+import numpy as np
 import os.path as osp
 import pickle as pkl
-
-import numpy as np
 import torch
 from itertools import chain
-import json
 
 from data.base_data import Graph
 from data.base_dataset import NodeDataset
 from dataset.utils import pkl_read_file, download_to, to_undirected
 
+
 class Wikics(NodeDataset):
     # Have 20 different split of training and validation set, identified by split_id in [0, 19]
     # Currently, we only support calculating the accuracy of one split, 
     # and average accuracy will be supported in the future.
-    def __init__(self, name="wikics", root="./", split="official", is_undirected=True, split_id = 0):
+    def __init__(self, name="wikics", root="./", split="official", is_undirected=True, split_id=0):
         if split_id not in range(20):
             raise ValueError("Split id not supported")
-        
+
         self._is_undirected = is_undirected
         super(Wikics, self).__init__(root + "Wikics", name)
 
@@ -46,7 +46,7 @@ class Wikics(NodeDataset):
     def _process(self):
         with open(self.raw_file_paths[0], 'r') as f:
             data = json.load(f)
-        
+
         features = np.array(data['features'])
         labels = torch.LongTensor(data['labels'])
         num_node = features.shape[0]
@@ -57,7 +57,7 @@ class Wikics(NodeDataset):
         edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
         if self._is_undirected:
             edge_index = to_undirected(edge_index)
-        
+
         edge_index = edge_index.numpy()
         row, col = edge_index[0], edge_index[1]
         edge_weight = np.ones(len(row))
@@ -70,7 +70,7 @@ class Wikics(NodeDataset):
             except IOError as e:
                 print(e)
                 exit(1)
-        
+
     def __generate_split(self, split):
         if split == "official":
             with open(self.raw_file_paths[0], 'r') as f:
@@ -86,7 +86,7 @@ class Wikics(NodeDataset):
             stopping_mask = stopping_mask.contiguous()
 
             test_mask = torch.tensor(data['test_mask'], dtype=torch.bool)
-            
+
             # Choose the specific split
             train_mask = train_mask[self._split_id]
             val_mask = val_mask[self._split_id]
@@ -105,5 +105,3 @@ class Wikics(NodeDataset):
             raise ValueError("Please input valid split pattern!")
 
         return train_idx, val_idx, test_idx
-
-

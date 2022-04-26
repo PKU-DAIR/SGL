@@ -25,7 +25,7 @@ class BaseSGAPModel(nn.Module):
             self._processed_feat_list = self._pre_graph_op.propagate(
                 adj, feature)
             if self._pre_msg_op.aggr_type in [
-                    "proj_concat", "learnable_weighted", "iterate_learnable_weighted"]:
+                "proj_concat", "learnable_weighted", "iterate_learnable_weighted"]:
                 self._pre_msg_learnable = True
             else:
                 self._pre_msg_learnable = False
@@ -38,7 +38,7 @@ class BaseSGAPModel(nn.Module):
     def postprocess(self, output):
         if self._post_graph_op is not None:
             if self._post_msg_op.aggr_type in [
-                    "proj_concat", "learnable_weighted", "iterate_learnable_weighted"]:
+                "proj_concat", "learnable_weighted", "iterate_learnable_weighted"]:
                 raise ValueError(
                     "Learnable weighted message operator is not supported in the post-processing phase!")
             output = F.softmax(output, dim=1)
@@ -205,7 +205,7 @@ class FastBaseHeteroSGAPModel(nn.Module):
         # 4-d tensor to 3-d tensor (num_node, feat_dim, num_subgraphs * prop_steps)
         shape = self._propagated_feat_list_list.size()
         self._propagated_feat_list_list = self._propagated_feat_list_list.view(
-            shape[0], shape[1], shape[2]*shape[3])
+            shape[0], shape[1], shape[2] * shape[3])
 
     # a wrapper of the forward function
     def model_forward(self, idx, device):

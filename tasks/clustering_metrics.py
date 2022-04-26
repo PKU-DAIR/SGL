@@ -1,8 +1,8 @@
-from sklearn import metrics
-from munkres import Munkres
-import numpy as np
-from sklearn.manifold import TSNE
 import matplotlib
+import numpy as np
+from munkres import Munkres
+from sklearn import metrics
+from sklearn.manifold import TSNE
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -20,11 +20,11 @@ class clustering_metrics:
 
         l2 = list(set(self.pred_label))
         numclass2 = len(l2)
-        
+
         if numclass1 != numclass2:
-#            print('Class Not equal, Error!!!!')
+            #            print('Class Not equal, Error!!!!')
             return 0
-        
+
         cost = np.zeros((numclass1, numclass2), dtype=int)
         for i, c1 in enumerate(l1):
             mps = [i1 for i1, e1 in enumerate(self.true_label) if e1 == c1]

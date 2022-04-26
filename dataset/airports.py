@@ -1,7 +1,6 @@
+import numpy as np
 import os.path as osp
 import pickle as pkl
-
-import numpy as np
 import torch
 
 from data.base_data import Graph

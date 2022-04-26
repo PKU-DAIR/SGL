@@ -1,6 +1,7 @@
+import numpy as np
+
 from auto_select_edge_type_for_nars import GenerateSubgraphList, OneTrialWithSubgraphList
 from dataset.dblp import Dblp
-import numpy as np
 
 SUBGRAPH_COMBINATIONS = 20
 NUM_REPEAT = 5
@@ -12,10 +13,10 @@ def main():
     dataset = Dblp(root='.', path_of_zip='./dataset/DBLP_processed.zip')
     with open('subgraph_weight.txt', 'w') as output:
         for i in range(SUBGRAPH_COMBINATIONS):
-            output.write(f'Subgraph combination {i+1}\n')
+            output.write(f'Subgraph combination {i + 1}\n')
             subgraph_list = GenerateSubgraphList(dataset, SUBGRAPH_CONFIG)
             for j in range(NUM_REPEAT):
-                output.write(f'\tIteration {j+1}\n')
+                output.write(f'\tIteration {j + 1}\n')
                 test_acc, _, subgraph_weight = OneTrialWithSubgraphList(
                     dataset, subgraph_list, NUM_EPOCHS_TO_FIND_WEIGHT)
                 index_sort = np.argsort(subgraph_weight.detach().numpy())

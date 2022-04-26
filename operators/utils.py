@@ -1,13 +1,13 @@
-import torch
-from torch import Tensor
 import numpy as np
-import scipy.sparse as sp
 import numpy.ctypeslib as ctl
+import scipy.sparse as sp
+import torch
 from ctypes import c_int
+from torch import Tensor
 
 
 def csr_sparse_dense_matmul(adj, feature):
-    ctl_lib = ctl.load_library("./csrc/libmatmul.so", "./models/")
+    ctl_lib = ctl.load_library("./csrc/libmatmul.so", "./operators/")
 
     arr_1d_int = ctl.ndpointer(
         dtype=np.int32,
@@ -21,7 +21,7 @@ def csr_sparse_dense_matmul(adj, feature):
         flags="CONTIGUOUS"
     )
     ctl_lib.FloatCSRMulDenseOMP.argtypes = [arr_1d_float, arr_1d_float, arr_1d_int, arr_1d_int, arr_1d_float,
-                                                  c_int, c_int]
+                                            c_int, c_int]
     ctl_lib.FloatCSRMulDenseOMP.restypes = None
 
     answer = np.zeros(feature.shape).astype(np.float32).flatten()
@@ -37,7 +37,7 @@ def csr_sparse_dense_matmul(adj, feature):
 
 
 def cuda_csr_sparse_dense_matmul(adj, feature):
-    ctl_lib = ctl.load_library("./csrc/libcudamatmul.so", "./models/")
+    ctl_lib = ctl.load_library("./csrc/libcudamatmul.so", "./operators/")
 
     arr_1d_int = ctl.ndpointer(
         dtype=np.int32,

@@ -1,9 +1,9 @@
 from models.base_model import BaseSGAPModel
-
-from operators.graph_operator import LaplacianGraphOp, PprGraphOp
-from operators.message_operator import LastMessageOp, ConcatMessageOp, MeanMessageOp, SimpleWeightedMessageOp, \
-    LearnableWeightedMessageOp, IterateLearnableWeightedMessageOp, SumMessageOp, MaxMessageOp, MinMessageOp
 from models.simple_models import LogisticRegression, MultiLayerPerceptron
+from operators.graph_op import LaplacianGraphOp, PprGraphOp
+from operators.message_op import LastMessageOp, ConcatMessageOp, MeanMessageOp, SimpleWeightedMessageOp, \
+    LearnableWeightedMessageOp, IterateLearnableWeightedMessageOp, SumMessageOp, MaxMessageOp, MinMessageOp
+
 
 class SearchModel(BaseSGAPModel):
     def __init__(self, arch, feat_dim, num_classes, hidden_dim):
@@ -15,18 +15,17 @@ class SearchModel(BaseSGAPModel):
         post_types = arch[5]
         pmsg_types = arch[6]
         super(SearchModel, self).__init__(prop_steps, feat_dim, num_classes)
-        
+
         if prop_types == 0:
             self._pre_graph_op = LaplacianGraphOp(prop_steps, r=0.5)
         else:
             self._pre_graph_op = PprGraphOp(prop_steps, r=0.5, alpha=0.15)
-        
 
         if mesg_types == 0:
             self._pre_msg_op = LastMessageOp()
         elif mesg_types == 1:
             self._pre_msg_op = ConcatMessageOp(start=0, end=prop_steps + 1)
-            feat_dim *= prop_steps + 1 
+            feat_dim *= prop_steps + 1
         elif mesg_types == 2:
             self._pre_msg_op = MeanMessageOp(start=0, end=prop_steps + 1)
         elif mesg_types == 3:
@@ -41,7 +40,6 @@ class SearchModel(BaseSGAPModel):
             self._pre_msg_op = LearnableWeightedMessageOp(0, prop_steps + 1, "gate", feat_dim)
         elif mesg_types == 8:
             self._pre_msg_op = IterateLearnableWeightedMessageOp(0, prop_steps + 1, "recursive", feat_dim)
-        
 
         if num_layers == 1:
             self._base_model = LogisticRegression(feat_dim, num_classes)
@@ -53,7 +51,7 @@ class SearchModel(BaseSGAPModel):
                 self._post_graph_op = LaplacianGraphOp(post_steps, r=0.5)
             else:
                 self._post_graph_op = PprGraphOp(post_steps, r=0.5, alpha=0.15)
-            
+
             if pmsg_types == 0:
                 self._post_msg_op = LastMessageOp()
             elif pmsg_types == 1:

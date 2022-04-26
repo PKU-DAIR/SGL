@@ -1,10 +1,12 @@
-import torch
 import numpy as np
+import torch
+
+from dataset import Planetoid
 from models.search_models import SearchModel
-from dataset.planetoid import Planetoid
 from search.auto_search import SearchManager
 
 dataset = Planetoid("cora", "./", "official")
+
 
 def AutoSearch(arch):
     model = SearchModel(arch, dataset.num_features, int(dataset.num_classes), 64)
@@ -14,10 +16,9 @@ def AutoSearch(arch):
     result['objs'] = np.stack([-acc_res, time_res], axis=-1)
     return result
 
+
 res = AutoSearch([2, 0, 1, 2, 3, 0, 0])
 print(res)
-
-
 
 import math
 from openbox.core.base import Observation
@@ -25,7 +26,8 @@ from openbox.optimizer.generic_smbo import SMBO
 from openbox.utils.constants import MAXINT, SUCCESS, FAILED, TIMEOUT
 from openbox.utils.limit import time_limit, TimeoutException
 from openbox.utils.util_funcs import get_result
-from openbox.utils.config_space import ConfigurationSpace, UniformFloatHyperparameter, CategoricalHyperparameter, UniformIntegerHyperparameter
+from openbox.utils.config_space import ConfigurationSpace, UniformFloatHyperparameter, CategoricalHyperparameter, \
+    UniformIntegerHyperparameter
 
 # Define Configuration Space
 config_space = ConfigurationSpace()
@@ -37,6 +39,7 @@ post_steps = UniformIntegerHyperparameter("post_steps", 1, 10, default_value=0)
 post_types = UniformIntegerHyperparameter("post_types", 0, 1)
 pmsg_types = UniformIntegerHyperparameter("pmsg_types", 0, 5)
 config_space.add_hyperparameters([prop_steps, prop_types, mesg_types, num_layers, post_steps, post_types, pmsg_types])
+
 
 def SearchTarget(config_space):
     arch = [2, 0, 1, 2, 3, 0, 0]
@@ -50,6 +53,7 @@ def SearchTarget(config_space):
     result = AutoSearch(arch)
     return result
 
+
 dim = 7
 bo = SMBO(SearchTarget,
           config_space,
@@ -59,7 +63,7 @@ bo = SMBO(SearchTarget,
           surrogate_type='prf',
           acq_type='ehvi',
           acq_optimizer_type='local_random',
-          initial_runs=2*(dim+1),
+          initial_runs=2 * (dim + 1),
           init_strategy='sobol',
           ref_point=[-1, 0.00001],
           time_limit_per_trial=5000,

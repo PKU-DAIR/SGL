@@ -1,7 +1,6 @@
+import numpy as np
 import os.path as osp
 import pickle as pkl
-
-import numpy as np
 import torch
 
 from data.base_data import Graph
@@ -34,7 +33,7 @@ class Github(NodeDataset):
         path = osp.join(self._raw_dir, "github.npz")
         print(url)
         download_to(url, path)
-    
+
     def _process(self):
         data = np.load(self.raw_file_paths[0])
         features = data["features"]
@@ -48,7 +47,7 @@ class Github(NodeDataset):
         row, col = edge_index[0], edge_index[1]
         edge_type = "developer__to__developer"
 
-        #Default Edge weights
+        # Default Edge weights
         edge_weight = np.ones(len(row))
 
         g = Graph(row, col, edge_weight, num_node, node_type, edge_type, x=features, y=labels)
@@ -58,7 +57,6 @@ class Github(NodeDataset):
             except IOError as e:
                 print(e)
                 exit(1)
-
 
     def __generate_split(self, split):
         if split == "official":

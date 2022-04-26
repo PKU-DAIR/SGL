@@ -1,8 +1,8 @@
 import time
 import torch
-from torch.utils.data import DataLoader
-from torch.optim import Adam
 import torch.nn as nn
+from torch.optim import Adam
+from torch.utils.data import DataLoader
 
 from tasks.base_task import BaseTask
 from tasks.utils import accuracy, set_seed, train, mini_batch_train, evaluate, mini_batch_evaluate

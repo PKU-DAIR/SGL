@@ -1,6 +1,7 @@
+import numpy as np
 import random
 import torch
-import numpy as np
+
 
 def accuracy(output, labels):
     pred = output.max(1)[1].type_as(labels)

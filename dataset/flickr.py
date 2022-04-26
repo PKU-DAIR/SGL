@@ -1,14 +1,14 @@
+import json
+import numpy as np
 import os.path as osp
 import pickle as pkl
-import json
-
-import numpy as np
 import scipy.sparse as sp
 import torch
 
 from data.base_data import Graph
 from data.base_dataset import NodeDataset
 from dataset.utils import pkl_read_file, download_to
+
 
 class Flickr(NodeDataset):
     def __init__(self, name="flickr", root="./", split="official"):
@@ -23,7 +23,7 @@ class Flickr(NodeDataset):
     def raw_file_paths(self):
         filenames = ['adj_full.npz', 'feats.npy', 'class_map.json', 'role.json']
         return [osp.join(self._raw_dir, filename) for filename in filenames]
-    
+
     @property
     def processed_file_paths(self):
         return osp.join(self._processed_dir, f"{self._name}.graph")
@@ -96,5 +96,3 @@ class Flickr(NodeDataset):
             raise ValueError("Please input valid split pattern!")
 
         return train_idx, val_idx, test_idx
-
-        

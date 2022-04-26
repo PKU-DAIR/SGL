@@ -1,17 +1,17 @@
-import os.path as osp
-import os
-import pickle as pkl
-import shutil
-
 import networkx as nx
+import os
+import os.path as osp
+import pickle as pkl
 import scipy.sparse as sp
+import shutil
 import torch
+from torch_geometric.data import extract_tar
+from torch_geometric.io import read_txt_array
 
 from data.base_data import Graph
 from data.base_dataset import NodeDataset
 from dataset.utils import pkl_read_file, download_to
-from torch_geometric.data import extract_tar
-from torch_geometric.io import read_txt_array
+
 
 class Nell(NodeDataset):
     def __init__(self, name="nell.0.001", root='./', split="official"):
@@ -40,7 +40,7 @@ class Nell(NodeDataset):
         download_to(url, path)
         extract_tar(path, self._raw_dir)
         os.unlink(path)
-        
+
         raw_dir_path = osp.join(self._raw_dir, "nell_data")
         for root, dirs, files in os.walk(raw_dir_path, topdown=False):
             for file in files:

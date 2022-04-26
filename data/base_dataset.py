@@ -1,9 +1,9 @@
+import itertools
+import numpy as np
 import os
 import os.path as osp
-import itertools
-import warnings
-import numpy as np
 import torch
+import warnings
 from scipy.sparse import csr_matrix
 
 from data.base_data import Node, Edge
@@ -248,7 +248,7 @@ class HeteroNodeDataset:
         pre_sampled_node_types = []
         for edge_type in edge_types:
             pre_sampled_node_types = pre_sampled_node_types + \
-                [edge_type.split('__')[0], edge_type.split('__')[2]]
+                                     [edge_type.split('__')[0], edge_type.split('__')[2]]
         pre_sampled_node_types = list(set(pre_sampled_node_types))
 
         sampled_node_types = []
@@ -302,7 +302,7 @@ class HeteroNodeDataset:
 
         edge_weight = torch.ones(len(rows))
         adj = csr_matrix((edge_weight.numpy(), (rows.numpy(),
-                         cols.numpy())), shape=(num_node, num_node))
+                                                cols.numpy())), shape=(num_node, num_node))
 
         # remove previously existed undirected edges
         adj.data = torch.ones(len(adj.data)).numpy()

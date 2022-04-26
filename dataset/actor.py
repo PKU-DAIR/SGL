@@ -1,7 +1,6 @@
+import numpy as np
 import os.path as osp
 import pickle as pkl
-
-import numpy as np
 import torch
 from torch_sparse import SparseTensor, coalesce
 
@@ -23,17 +22,17 @@ class Actor(NodeDataset):
         self._split, self._split_id = split, split_id
         self._train_idx, self._val_idx, self._test_idx = self.__generate_split(
             split)
-        
+
     @property
     def raw_file_paths(self):
         filenames = ['out1_node_feature_label.txt', 'out1_graph_edges.txt'
-                ] + [f'film_split_0.6_0.2_{i}.npz' for i in range(10)]
+                     ] + [f'film_split_0.6_0.2_{i}.npz' for i in range(10)]
         return [osp.join(self._raw_dir, filename) for filename in filenames]
 
     @property
     def processed_file_paths(self):
         return osp.join(self._processed_dir, f"{self._name}.graph")
-    
+
     def _download(self):
         url = 'https://raw.githubusercontent.com/graphdml-uiuc-jlu/geom-gcn/master'
 
@@ -42,13 +41,13 @@ class Actor(NodeDataset):
             file_url = f'{url}/new_data/film/{raw_file_name}'
             print(file_url)
             download_to(file_url, raw_file_path)
-        
+
         for raw_file_path in self.raw_file_paths[2:]:
             raw_file_name = osp.basename(raw_file_path)
             file_url = f'{url}/splits/{raw_file_name}'
             print(file_url)
             download_to(file_url, raw_file_path)
-        
+
     def _process(self):
         with open(self.raw_file_paths[0], 'r') as f:
             data = [x.split('\t') for x in f.read().split('\n')[1:-1]]
@@ -74,21 +73,21 @@ class Actor(NodeDataset):
             data = [[int(v) for v in r.split('\t')] for r in data]
             edge_index = torch.tensor(data, dtype=torch.long).t().contiguous()
             edge_index, _ = coalesce(edge_index, None, x.size(0), x.size(0))
-        
+
         row, col = edge_index[0], edge_index[1]
         edge_weight = torch.ones(len(row))
         edge_type = "actor__to__actor"
 
         g = Graph(row, col, edge_weight, num_node,
                   node_type, edge_type, x=features, y=labels)
-        
+
         with open(self.processed_file_paths, 'wb') as rf:
             try:
                 pkl.dump(g, rf)
             except IOError as e:
                 print(e)
                 exit(1)
-    
+
     def __generate_split(self, split):
         if split == "official":
             train_masks, val_masks, test_masks = [], [], []

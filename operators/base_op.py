@@ -1,9 +1,9 @@
+import numpy as np
+import platform
+import scipy.sparse as sp
 import torch
 import torch.nn as nn
 from torch import Tensor
-import scipy.sparse as sp
-import numpy as np
-import platform
 
 from operators.utils import csr_sparse_dense_matmul, cuda_csr_sparse_dense_matmul
 

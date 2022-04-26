@@ -1,18 +1,18 @@
-import os.path as osp
-import pickle as pkl
-
 import networkx as nx
 import numpy as np
+import os.path as osp
+import pickle as pkl
 import torch
 
 from data.base_data import Graph
 from data.base_dataset import NodeDataset
 from dataset.utils import pkl_read_file
 
+
 class KarateClub(NodeDataset):
     def __init__(self, name="karateclub", root="./", split="official", num_train_per_class=1, num_valid_per_class=1):
         super(KarateClub, self).__init__(root + "KarateClub/", name)
-        
+
         self._data = pkl_read_file(self.processed_file_paths)
         self._split = split
         self._num_train_per_class = num_train_per_class
@@ -22,7 +22,7 @@ class KarateClub(NodeDataset):
 
     @property
     def raw_file_paths(self):
-        return [osp.join(self._raw_dir,"karateclub")]
+        return [osp.join(self._raw_dir, "karateclub")]
 
     @property
     def processed_file_paths(self):
@@ -41,7 +41,7 @@ class KarateClub(NodeDataset):
             adj = nx.to_scipy_sparse_array(G).tocoo()
         else:
             adj = nx.to_scipy_sparse_matrix(G).tocoo()
-        
+
         row, col, edge_weight = adj.row, adj.col, adj.data
         edge_type = "person__to__person"
 
@@ -79,13 +79,10 @@ class KarateClub(NodeDataset):
             train_idx.reshape(-1)
             val_idx.reshape(-1)
             test_idx.reshape(-1)
-        
+
         elif split == "random":
             raise NotImplementedError
         else:
             raise ValueError("Please input valid split pattern!")
 
         return train_idx, val_idx, test_idx
-
-
-    
