@@ -49,7 +49,6 @@ device = "cuda:0"
 test_acc = NodeClassification(dataset, model, lr=0.1, weight_decay=5e-5, epochs=200, device=device).test_acc
 ```
 
-**TODO**
 An example of the auto neural network search functionality is as follows:
 
 ```python
