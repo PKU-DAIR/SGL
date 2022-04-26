@@ -53,8 +53,8 @@ An example of the auto neural network search functionality is as follows:
 
 ```python
 import torch
-from sgl.dataset.planetoid import Planetoid
-from sgl.search.search_config import ConfigManager
+from SGL.dataset.planetoid import Planetoid
+from SGL.search.search_config import ConfigManager
 from openbox.optimizer.generic_smbo import SMBO
 
 dataset = Planetoid("cora", "./", "official")
