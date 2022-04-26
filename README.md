@@ -18,7 +18,7 @@ the <a href="https://cuibinpku.github.io/index.html" target="_blank" rel="nofoll
 + **Ease of use**: User-friendly interfaces of implementing existing scalable GNNs and executing various downstream
   tasks.
 
-## Installation (TODO)
+## Installation
 
 Some datasets in SGL are constructed based
 on <a href="https://github.com/pyg-team/pytorch_geometric" target="_blank" rel="nofollow">PyG</a>. Please follow the
