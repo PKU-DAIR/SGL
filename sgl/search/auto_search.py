@@ -53,7 +53,7 @@ class SearchManager(BaseSearch):
         print("Optimization Finished!")
         print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
         print(f'Best val: {best_val:.4f}, best test: {best_test:.4f}')
-        return acc_test, total_time
+        return best_test, total_time
 
     def _postprocess(self):
         self.__model.eval()
