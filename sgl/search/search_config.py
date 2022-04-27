@@ -1,5 +1,5 @@
 import numpy as np
-from sgl.models.search_models import SearchModel
+from sgl.search.search_models import SearchModel
 from sgl.search.auto_search import SearchManager
 from openbox.utils.config_space import ConfigurationSpace, UniformIntegerHyperparameter
 
