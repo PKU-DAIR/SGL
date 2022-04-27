@@ -10,7 +10,7 @@ device = torch.device(f"cuda:{0}" if torch.cuda.is_available() else "cpu")
 ## Define Initial Arch and Configuration
 initial_arch = [2, 0, 1, 2, 3, 0, 0]
 configer = ConfigManager(initial_arch)
-configer._setParameters(dataset, device, 64, 200, 1e-2, 5e-4)
+configer._setParameters(dataset, device, 128, 200, 1e-2, 5e-4)
 
 ## Define Search Parameters
 dim = 7
