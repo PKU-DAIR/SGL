@@ -38,9 +38,9 @@ pip install sgl-dair
 A quick start example is given by:
 
 ```python
-from SGL.dataset import Planetoid
-from SGL.models.homo import SGC
-from SGL.tasks import NodeClassification
+from sgl.dataset import Planetoid
+from sgl.models.homo import SGC
+from sgl.tasks import NodeClassification
 
 dataset = Planetoid("pubmed", "./", "official")
 model = SGC(prop_steps=3, feat_dim=dataset.num_features, num_classes=dataset.num_classes)
@@ -53,17 +53,20 @@ An example of the auto neural network search functionality is as follows:
 
 ```python
 import torch
-from SGL.dataset.planetoid import Planetoid
-from SGL.search.search_config import ConfigManager
 from openbox.optimizer.generic_smbo import SMBO
+
+from sgl.dataset.planetoid import Planetoid
+from sgl.search.search_config import ConfigManager
 
 dataset = Planetoid("cora", "./", "official")
 device = torch.device(f"cuda:{0}" if torch.cuda.is_available() else "cpu")
 
+## Define Initial Arch and Configuration
 initial_arch = [2, 0, 1, 2, 3, 0, 0]
 configer = ConfigManager(initial_arch)
-configer._setParameters(dataset, device, hiddim=64, epochs=200, lr=1e-2, wd=5e-4)
+configer._setParameters(dataset, device, 64, 200, 1e-2, 5e-4)
 
+## Define Search Parameters
 dim = 7
 bo = SMBO(configer._configFunction,
           configer._configSpace(),
@@ -73,12 +76,14 @@ bo = SMBO(configer._configFunction,
           surrogate_type='prf',
           acq_type='ehvi',
           acq_optimizer_type='local_random',
-          initial_runs=2*(dim+1),
+          initial_runs=2 * (dim + 1),
           init_strategy='sobol',
           ref_point=[-1, 0.00001],
           time_limit_per_trial=5000,
           task_id='quick_start',
           random_state=1)
+
+## Search
 history = bo.run()
 print(history)
 ```
