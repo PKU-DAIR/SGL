@@ -8,7 +8,7 @@ with open("requirements.txt", "r", encoding="utf-8") as require:
 
 setuptools.setup(
     name="sgl-dair",
-    version="0.1.0",
+    version="0.1.2",
     author="DAIR Lab @PKU",
     description="Graph Neural Network (GNN) toolkit targeting scalable graph learning",
     long_description=long_description,

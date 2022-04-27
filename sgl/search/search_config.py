@@ -1,10 +1,18 @@
 import numpy as np
+<<<<<<< Updated upstream
 from sgl.search.search_models import SearchModel
 from sgl.search.auto_search import SearchManager
+=======
+>>>>>>> Stashed changes
 from openbox.utils.config_space import ConfigurationSpace, UniformIntegerHyperparameter
 
+from sgl.search.auto_search import SearchManager
+from sgl.search.search_models import SearchModel
+
+
 class ConfigManager():
-    def __init__(self, arch, prop_steps=[1,10], prop_types=[0,1], mesg_types=[0,8], num_layers=[1,10], post_steps=[1,10], post_types=[0,1], pmsg_types=[0,5]):
+    def __init__(self, arch, prop_steps=[1, 10], prop_types=[0, 1], mesg_types=[0, 8], num_layers=[1, 10],
+                 post_steps=[1, 10], post_types=[0, 1], pmsg_types=[0, 5]):
         super(ConfigManager, self).__init__()
 
         self.__initial_arch = arch
@@ -16,7 +24,9 @@ class ConfigManager():
         self.__post_steps = UniformIntegerHyperparameter("post_steps", post_steps[0], post_steps[1])
         self.__post_types = UniformIntegerHyperparameter("post_types", post_types[0], post_types[1])
         self.__pmsg_types = UniformIntegerHyperparameter("pmsg_types", pmsg_types[0], pmsg_types[1])
-        self.__config_space.add_hyperparameters([self.__prop_steps, self.__prop_types, self.__mesg_types, self.__num_layers, self.__post_steps, self.__post_types, self.__pmsg_types])
+        self.__config_space.add_hyperparameters(
+            [self.__prop_steps, self.__prop_types, self.__mesg_types, self.__num_layers, self.__post_steps,
+             self.__post_types, self.__pmsg_types])
 
     def _setParameters(self, dataset, device, hiddim, epochs, lr, wd):
         self.__dataset = dataset
@@ -31,7 +41,8 @@ class ConfigManager():
 
     def _configTarget(self, arch):
         model = SearchModel(arch, self.__dataset.num_features, int(self.__dataset.num_classes), self.__hiddim)
-        acc_res, time_res = SearchManager(self.__dataset, model, lr=self.__lr, weight_decay=self.__wd, epochs=self.__epochs, device=self.__device)._execute()
+        acc_res, time_res = SearchManager(self.__dataset, model, lr=self.__lr, weight_decay=self.__wd,
+                                          epochs=self.__epochs, device=self.__device)._execute()
         result = dict()
         result['objs'] = np.stack([-acc_res, time_res], axis=-1)
         return result

@@ -1,7 +1,8 @@
 import torch
+from openbox.optimizer.generic_smbo import SMBO
+
 from sgl.dataset.planetoid import Planetoid
 from sgl.search.search_config import ConfigManager
-from openbox.optimizer.generic_smbo import SMBO
 
 dataset = Planetoid("cora", "./", "official")
 device = torch.device(f"cuda:{0}" if torch.cuda.is_available() else "cpu")
@@ -21,7 +22,7 @@ bo = SMBO(configer._configFunction,
           surrogate_type='prf',
           acq_type='ehvi',
           acq_optimizer_type='local_random',
-          initial_runs=2*(dim+1),
+          initial_runs=2 * (dim + 1),
           init_strategy='sobol',
           ref_point=[-1, 0.00001],
           time_limit_per_trial=5000,
