@@ -103,7 +103,7 @@ Thirty-fifth Conference on Neural Information Processing Systems.<br>
 
 **Graph Attention Multi-Layer Perceptron** [[PDF](https://arxiv.org/pdf/2108.10097)]<br>
 Wentao Zhang, Ziqi Yin, Zeang Sheng, Wen Ouyang, Xiaosen Li, Yangyu Tao, Zhi Yang, Bin Cui.<br>
-arXiv:2108.10097, 2021. (***arXiv preprint***). 
+arXiv:2108.10097, 2021. (***Rank \#1 in [Open Graph Benchmark](https://ogb.stanford.edu/docs/leader_nodeprop/\#ogbn-mag)***). 
 
 ## License
 
