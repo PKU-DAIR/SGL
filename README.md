@@ -109,7 +109,7 @@ arXiv:2108.10097, 2021. <br>
 **OpenBox: A Generalized Black-box Optimization Service** [[PDF](https://arxiv.org/abs/2106.00421)]<br>
 Yang Li, Yu Shen, Wentao Zhang, Yuanwei Chen, ..., Wentao Wu, Zhi Yang, Ce Zhang, Bin Cui.<br>
 ACM SIGKDD Conference on Knowledge Discovery and Data Mining.<br> 
-***KDD 2021, CCF-A***
+***KDD 2021, CCF-A, top prize in open-source innovation competition @ 2021 CCF ChinaSoft***
 
 ## License
 
