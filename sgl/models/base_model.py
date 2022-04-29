@@ -35,14 +35,16 @@ class BaseSGAPModel(nn.Module):
             self._pre_msg_learnable = False
             self._processed_feature = feature
 
-    def postprocess(self, output):
+    def postprocess(self, adj, output):
         if self._post_graph_op is not None:
             if self._post_msg_op.aggr_type in [
                 "proj_concat", "learnable_weighted", "iterate_learnable_weighted"]:
                 raise ValueError(
                     "Learnable weighted message operator is not supported in the post-processing phase!")
             output = F.softmax(output, dim=1)
-            output = self._post_msg_op(self._post_graph_op(output))
+            output = output.detach().numpy()
+            output = self._post_graph_op.propagate(adj, output)
+            output = self._post_msg_op.aggregate(output)
 
         return output
 
