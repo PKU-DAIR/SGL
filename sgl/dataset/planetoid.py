@@ -37,6 +37,15 @@ class Planetoid(NodeDataset):
             print(file_url)
             download_to(file_url, filepath)
 
+    def _normalize(self, mx):
+        """Row-normalize sparse matrix"""
+        rowsum = np.array(mx.sum(1))
+        r_inv = np.power(rowsum, -1).flatten()
+        r_inv[np.isinf(r_inv)] = 0.
+        r_mat_inv = sp.diags(r_inv)
+        mx = r_mat_inv.dot(mx)
+        return mx
+            
     def _process(self):
         objects = []
         for raw_file in self.raw_file_paths[:-1]:
@@ -68,6 +77,7 @@ class Planetoid(NodeDataset):
 
         features = sp.vstack((allx, tx)).tolil()
         features[test_idx_reorder, :] = features[test_idx_range, :]
+        features = self._normalize(features)
         features = np.array(features.todense())
         num_node = features.shape[0]
         node_type = "paper"
