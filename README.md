@@ -106,10 +106,10 @@ Wentao Zhang, Ziqi Yin, Zeang Sheng, Wen Ouyang, Xiaosen Li, Yangyu Tao, Zhi Yan
 arXiv:2108.10097, 2021. <br>
 ***Rank \#1 in [Open Graph Benchmark](https://ogb.stanford.edu/docs/leader_nodeprop/\#ogbn-mag)*** 
   
-**OpenBox: A Generalized Black-box Optimization Service** [[PDF](https://arxiv.org/abs/2106.00421)]<br>
+**[OpenBox](https://github.com/PKU-DAIR/open-box): A Generalized Black-box Optimization Service** [[PDF](https://arxiv.org/abs/2106.00421)]<br>
 Yang Li, Yu Shen, Wentao Zhang, Yuanwei Chen, ..., Wentao Wu, Zhi Yang, Ce Zhang, Bin Cui.<br>
 ACM SIGKDD Conference on Knowledge Discovery and Data Mining.<br> 
-***KDD 2021, CCF-A, top prize in open-source innovation competition @ 2021 CCF ChinaSoft***
+***KDD 2021, CCF-A, top prize in [open-source innovation competition @ 2021 CCF ChinaSoft](https://mp.weixin.qq.com/s/8JX5ymkUt5MvDcHLOjB3Xw)***
 
 ## License
 
