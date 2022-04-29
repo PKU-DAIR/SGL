@@ -94,7 +94,7 @@ The distributed version of the graph neural architecture search is built on the 
 **PaSca: a Graph Neural Architecture Search System under the Scalable Paradigm**[[PDF](https://arxiv.org/abs/2203.00638)]<br>
 Wentao Zhang, Yu Shen, Zheyu Lin, Yang Li, Xiaosen Li, Wen Ouyang, Yangyu Tao, Zhi Yang, and Bin Cui.<br>
 The world wide web conference.<br>
-***WWW 2022, CCF-A, 🏆 Best Student Paper Award</font></b>***
+***WWW 2022, CCF-A, 🏆 Best Student Paper Award (among 1822 submmisions)</font></b>***
 
 
 **Node Dependent Local Smoothing for Scalable Graph Learning** [[PDF](https://arxiv.org/pdf/2110.14377)]<br>
