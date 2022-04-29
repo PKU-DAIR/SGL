@@ -1,4 +1,5 @@
 import time
+import torch
 import torch.nn as nn
 from torch.optim import Adam
 
@@ -30,19 +31,21 @@ class SearchManager(BaseSearch):
         t_total = time.time()
         best_val = 0.
         best_test = 0.
-        for epoch in range(self.__epochs):
-            t = time.time()
-            loss_train, acc_train = self._train()
-            acc_val, acc_test = self._evaluate()
-            print('Epoch: {:03d}'.format(epoch + 1),
-                  'loss_train: {:.4f}'.format(loss_train),
-                  'acc_train: {:.4f}'.format(acc_train),
-                  'acc_val: {:.4f}'.format(acc_val),
-                  'acc_test: {:.4f}'.format(acc_test),
-                  'time: {:.4f}s'.format(time.time() - t))
-            if acc_val > best_val:
-                best_val = acc_val
-                best_test = acc_test
+        for i in range(10):
+            for epoch in range(self.__epochs):
+                t = time.time()
+                loss_train, acc_train = self._train()
+                acc_val, acc_test = self._evaluate()
+                print('Epoch: {:03d}'.format(epoch + 1),
+                      'loss_train: {:.4f}'.format(loss_train),
+                      'acc_train: {:.4f}'.format(acc_train),
+                      'acc_val: {:.4f}'.format(acc_val),
+                      'acc_test: {:.4f}'.format(acc_test),
+                      'time: {:.4f}s'.format(time.time() - t))
+                if acc_val > best_val:
+                    best_val = acc_val
+                    best_test = acc_test
+                    torch.save(self.__model, './best.pt')
 
         acc_val, acc_test, time_forward = self._postprocess()
         if acc_val > best_val:
@@ -56,10 +59,11 @@ class SearchManager(BaseSearch):
         return best_test, total_time
 
     def _postprocess(self):
-        self.__model.eval()
+        model = torch.load('./best.pt')
+        model.eval()
         t_forward_start = time.time()
-        output = self.__model.model_forward(range(self.__dataset.num_node), self.__device)
-        final_output = self.__model.postprocess(output)
+        output = model.model_forward(range(self.__dataset.num_node), self.__device)
+        final_output = model.postprocess(self.__dataset.adj, output)
         t_forward_end = time.time()
         time_forward = t_forward_end - t_forward_start
 
