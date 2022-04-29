@@ -105,6 +105,11 @@ Thirty-fifth Conference on Neural Information Processing Systems.<br>
 Wentao Zhang, Ziqi Yin, Zeang Sheng, Wen Ouyang, Xiaosen Li, Yangyu Tao, Zhi Yang, Bin Cui.<br>
 arXiv:2108.10097, 2021. <br>
 ***Rank \#1 in [Open Graph Benchmark](https://ogb.stanford.edu/docs/leader_nodeprop/\#ogbn-mag)*** 
+  
+**OpenBox: A Generalized Black-box Optimization Service** [[PDF](https://arxiv.org/abs/2106.00421)]<br>
+Yang Li, Yu Shen, Wentao Zhang, Yuanwei Chen, Huaijun Jiang, Mingchao Liu, Jiawei Jiang, Jinyang Gao, Wentao Wu, Zhi Yang, Ce Zhang, Bin Cui.<br>
+ACM SIGKDD Conference on Knowledge Discovery and Data Mining.<br> 
+***KDD 2021, CCF-A***
 
 ## License
 
