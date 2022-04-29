@@ -104,7 +104,7 @@ class NodeClassification(BaseTask):
                 else:
                     outputs = torch.vstack((outputs, output))
 
-        final_output = self.__model.postprocess(outputs)
+        final_output = self.__model.postprocess(self.__dataset.adj, outputs)
         acc_val = accuracy(
             final_output[self.__dataset.val_idx], self.__labels[self.__dataset.val_idx])
         acc_test = accuracy(

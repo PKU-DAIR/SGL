@@ -109,7 +109,7 @@ class NodeClustering(BaseTask):
         outputs = self.__model.model_forward(
             range(self.__dataset.num_node), self.__device).to("cpu")
 
-        final_output = self.__model.postprocess(outputs)
+        final_output = self.__model.postprocess(self.__dataset.adj, outputs)
         kmeans = KMeans(n_clusters=self.__n_clusters, n_init=self.__n_init)
         y_pred = kmeans.fit_predict(final_output.data.cpu().numpy())  # cluster_label
 
