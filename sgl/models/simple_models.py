@@ -133,3 +133,53 @@ class MultiLayerPerceptron(nn.Module):
 
         output = self.__fcs[-1](feature)
         return output
+
+class ResMultiLayerPerceptron(nn.Module):
+    def __init__(self, feat_dim, hidden_dim, num_layers, num_classes, dropout=0.8, bn=False):
+        super(ResMultiLayerPerceptron, self).__init__()
+        if num_layers < 3:
+            raise ValueError("ResMLP must have at least three layers!")
+        self.__num_layers = num_layers
+
+        self.__fcs = nn.ModuleList()
+        self.__fcs.append(nn.Linear(feat_dim, hidden_dim))
+        for _ in range(num_layers - 2):
+            self.__fcs.append(nn.Linear(hidden_dim, hidden_dim))
+        self.__fcs.append(nn.Linear(hidden_dim, num_classes))
+
+        self.__bn = bn
+        if self.__bn is True:
+            self.__bns = nn.ModuleList()
+            for _ in range(num_layers - 1):
+                self.__bns.append(nn.BatchNorm1d(hidden_dim))
+
+        self.__dropout = nn.Dropout(dropout)
+        self.__relu = nn.ReLU()
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        gain = nn.init.calculate_gain("relu")
+        for fc in self.__fcs:
+            nn.init.xavier_uniform_(fc.weight, gain=gain)
+            nn.init.zeros_(fc.bias)
+
+    def forward(self, feature):
+        feature = self.__dropout(feature)
+        feature = self.__fcs[0](feature)
+        if self.__bn is True:
+            feature = self.__bns[0](feature)
+        feature = self.__relu(feature)
+        residual = feature
+
+        for i in range(1, self.__num_layers - 1):
+            feature = self.__dropout(feature)
+            feature = self.__fcs[i](feature)
+            if self.__bn is True:
+                feature = self.__bns[i](feature)
+            feature_ = self.__relu(feature)
+            feature = feature_ + residual
+            residual = feature_
+
+        feature = self.__dropout(feature)
+        output = self.__fcs[-1](feature)
+        return output
