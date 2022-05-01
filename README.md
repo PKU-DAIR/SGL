@@ -8,15 +8,15 @@ on <a href="https://github.com/PKU-DAIR/open-box" target="_blank" rel="nofollow"
 developed by the graph learning team from
 the <a href="https://cuibinpku.github.io/index.html" target="_blank" rel="nofollow">DAIR Lab</a> at Peking University.
 
-## Library Highlights
+## Why SGL？
+The key difference between SGL and existing GNN toolkits, such as PyTorch Geometric (PyG) and Deep Graph Library (DGL), is that, SGL enjoys the characteristics of the follwing three perspectives.
 
-+ **High scalability**: Follow the scalable design paradigm **SGAP**
-  in <a href="https://arxiv.org/abs/2203.00638" target="_blank" rel="nofollow">PaSca</a>, SGL scale to graph data with
-  billions of nodes and edges.
-+ **Auto neural architecture search**: Automatically choose decent neural architectures according to specific tasks, and
-  pre-defined objectives (e.g., inference time).
-+ **Ease of use**: User-friendly interfaces of implementing existing scalable GNNs and executing various downstream
-  tasks.
++ **High scalability**: Following the scalable design paradigm **SGAP**
+  in <a href="https://arxiv.org/abs/2203.00638" target="_blank" rel="nofollow">PaSca</a>, SGL can scale to graph data with
+  billions of nodes and edges. 
++ **Auto neural architecture search**: SGL can automatically choose decent and scalable graph neural architectures according to specific tasks and
+  pre-defined multiple objectives (e.g., inference time, memory cost, and predictive performance).
++ **Ease of use**: SGL has user-friendly interfaces for implementing existing scalable GNNs and executing various downstream tasks.
 
 ## Installation
 
@@ -91,7 +91,7 @@ The distributed version of the graph neural architecture search is built on the 
 
 ## Related Publications
 
-**PaSca: a Graph Neural Architecture Search System under the Scalable Paradigm**[[PDF](https://arxiv.org/abs/2203.00638)]<br>
+**PaSca: a Graph Neural Architecture Search System under the Scalable Paradigm**[[PDF](https://dl.acm.org/doi/pdf/10.1145/3485447.3511986)]<br>
 Wentao Zhang, Yu Shen, Zheyu Lin, Yang Li, Xiaosen Li, Wen Ouyang, Yangyu Tao, Zhi Yang, and Bin Cui.<br>
 The world wide web conference.<br>
 ***WWW 2022, CCF-A, 🏆 Best Student Paper Award (among 1822 submmisions)</font></b>***
@@ -112,6 +112,27 @@ Yang Li, Yu Shen, Wentao Zhang, Yuanwei Chen, ..., Wentao Wu, Zhi Yang, Ce Zhang
 ACM SIGKDD Conference on Knowledge Discovery and Data Mining.<br> 
 ***KDD 2021, CCF-A, top prize in [open-source innovation competition @ 2021 CCF ChinaSoft](https://mp.weixin.qq.com/s/8JX5ymkUt5MvDcHLOjB3Xw)***
 
+
+
+## Citing SGL
+
+Please cite our [paper](https://dl.acm.org/doi/pdf/10.1145/3485447.3511986) if you find *SGL* useful in your work:
+```
+@inproceedings{zhang2022pasca,
+  title={PaSca: A Graph Neural Architecture Search System under the Scalable Paradigm},
+  author={Zhang, Wentao and Shen, Yu and Lin, Zheyu and Li, Yang and Li, Xiaosen and Ouyang, Wen and Tao, Yangyu and Yang, Zhi and Cui, Bin},
+  booktitle={Proceedings of the ACM Web Conference 2022},
+  pages={1817--1828},
+  year={2022}
+}
+```
+
+## Contact
+
+If you have any technical questions, please submit new issues.
+
+If you have any other questions, please contact: Wentao Zhang[wentao.zhang@pku.edu.cn] and Zeang Sheng[shengzeang18@pku.edu.cn].
+  
 ## License
 
 The entire codebase is under [MIT license](LICENSE).
