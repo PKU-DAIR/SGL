@@ -13,6 +13,11 @@ To scale GNNs to extremely large graphs, existing works can be classified into t
 <a name="Linear-Model" />
 
 ## 1.Linear Model
+<p class="center">
+    <img src="img/NDLS.jpg" width="60%">
+    <br>
+    <em>Source: Node Dependent Local Smoothing for Scalable Graph Learning</em>
+</p>
 
 1. **Simplifying Graph Convolutional Networks** [ICML 2019] [[paper]](https://arxiv.org/abs/1902.07153) [[code]](https://github.com/Tiiiger/SGC)
 2. **Scalable Graph Neural Networks via Bidirectional Propagation** [NeurIPS 2020] [[paper]](https://arxiv.org/abs/2010.15421) [[code]](https://github.com/chennnM/GBP)
@@ -26,6 +31,11 @@ To scale GNNs to extremely large graphs, existing works can be classified into t
 <a name="Sampling" />
 
 ## 2.Sampling
+<p class="center">
+    <img src="img/GraphSAGE.jpg" width="60%">
+    <br>
+    <em>Source: Inductive Representation Learning on Large Graphs</em>
+</p>
 
 ### Node-wise sampling
 
