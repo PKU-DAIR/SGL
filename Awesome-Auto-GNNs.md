@@ -14,7 +14,7 @@ This part refers to [[awesome-auto-graph-learning]](https://github.com/THUMNLab/
 
 ## Graph Neural Architecture Search
 <p class="center">
-    <img src="img/PaSca.jpg" width="60%">
+    <img src="img/PaSca.jpg" width="80%">
     <br>
     <em>Source: PaSca: a Graph Neural Architecture Search System under the Scalable Paradigm</em>
 </p>
@@ -73,7 +73,7 @@ This part refers to [[awesome-auto-graph-learning]](https://github.com/THUMNLab/
 
 ## Graph Hyper-Parameter Optimization
 <p class="center">
-    <img src="img/AutoNE.jpg" width="60%">
+    <img src="img/AutoNE.jpg" width="80%">
     <br>
     <em>Source: AutoNE: Hyperparameter optimization for massive network embedding</em>
 </p>
