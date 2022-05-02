@@ -73,7 +73,7 @@ This part refers to [[awesome-auto-graph-learning]](https://github.com/THUMNLab/
 
 ## Graph Hyper-Parameter Optimization
 <p class="center">
-    <img src="img/AutoNE.jpg" width="80%">
+    <img src="img/AutoNE.jpg" width="60%">
     <br>
     <em>Source: AutoNE: Hyperparameter optimization for massive network embedding</em>
 </p>
