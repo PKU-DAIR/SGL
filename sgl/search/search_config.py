@@ -11,8 +11,8 @@ from sgl.search.search_models import SearchModel
 
 
 class ConfigManager():
-    def __init__(self, arch, prop_steps=[1, 10], prop_types=[0, 1], mesg_types=[0, 8], num_layers=[1, 10],
-                 post_steps=[1, 10], post_types=[0, 1], pmsg_types=[0, 5]):
+    def __init__(self, arch, prop_steps=[1, 10], prop_types=[1, 4], mesg_types=[0, 8], num_layers=[1, 10],
+                 post_steps=[1, 10], post_types=[1, 4], pmsg_types=[0, 5]):
         super(ConfigManager, self).__init__()
 
         self.__initial_arch = arch
