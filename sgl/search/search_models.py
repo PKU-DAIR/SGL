@@ -64,11 +64,11 @@ class SearchModel(BaseSGAPModel):
                 self._post_msg_op = LastMessageOp()
             elif pmsg_types == 1:
                 self._post_msg_op = MeanMessageOp(start=0, end=post_steps + 1)
-            elif mesg_types == 2:
+            elif pmsg_types == 2:
                 self._post_msg_op = SumMessageOp(start=0, end=post_steps + 1)
-            elif mesg_types == 3:
+            elif pmsg_types == 3:
                 self._post_msg_op = MaxMessageOp(start=0, end=post_steps + 1)
-            elif mesg_types == 4:
+            elif pmsg_types == 4:
                 self._post_msg_op = MinMessageOp(start=0, end=post_steps + 1)
-            elif mesg_types == 5:
+            elif pmsg_types == 5:
                 self._post_msg_op = SimpleWeightedMessageOp(0, post_steps + 1, "alpha", 0.85)
