@@ -61,7 +61,7 @@
     
     ![formula](https://render.githubusercontent.com/render/math?math=X%5E%7B%28k%2B1%29%7D%3D%5Csigma%5Cleft%28%5Chat%20TX%5E%7B%28k%29%7DW_0%5E%7B%28k%29%7D%2BX%5E%7B%28k%29%7DW_1%5E%7B%28k%29%7D%5Cright%29)
     
-    where ![formula](https://render.githubusercontent.com/render/math?math=%5Chat%20T) is the transformation of GCN or GAT
+    where ![formula](https://render.githubusercontent.com/render/math?math=%5Chat%20T) is the transformation matrix of GCN or GAT
   
   - [Ref Code](https://github.com/skepsun/adaptive_graph_diffusion_networks_with_hop-wise_attention)
 
