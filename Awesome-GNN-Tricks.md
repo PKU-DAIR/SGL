@@ -7,8 +7,8 @@
   <img src="img/Label_Reuse.jpg" alt="Label_Reuse" style="zoom: 80%;" />
 
   - **Label Input**
-    - In each epoch, randomly split the training set into two sub-datasets $D_{\rm train}^L$ and $D_{\rm train}^U$
-    - For nodes in $D_{\rm train}^L$ , concatenate their label information with the original features
+    - In each epoch, randomly split the training set into two sub-datasets $ D_{\rm train}^L $ and $ D_{\rm train}^U $
+    - For nodes in $ D_{\rm train}^L $ , concatenate their label information with the original features
   - **Label Reuse**
     - Similar to label propagation algorithm. In each iteration, assign the output soft labels to the nodes which didn’t have true labels
     - Enable the model to update the predicted labels through iterations, but not limited by the homophily assumption
@@ -19,7 +19,7 @@
 
 - **Label embedding and propagation**
 
-  - Used in node prediction task. Get matrix $\hat Y$ through label propagation on training set labels. Apply linear transformation to $\hat Y$ and add the result to the original features to create the new features
+  - Used in node prediction task. Get matrix $ \hat Y $ through label propagation on training set labels. Apply linear transformation to $ \hat Y $ and add the result to the original features to create the new features
     $$
     \begin{aligned}
     \hat Y &= A^k Y_{\rm train}\\
@@ -51,9 +51,9 @@
 
 - **Hop-wise attention (AGDN)**
 
-  - In each layer of the model, the information of different scales is calculated by $\hat H^{(k,l)}=\hat T^k H^l$, where $\hat T$ is the transformation matrix of GAT
+  - In each layer of the model, the information of different scales is calculated by $ \hat H^{(k,l)}=\hat T^k H^l $, where $ \hat T $ is the transformation matrix of GAT
 
-  - When the attention weight of each node is calculated on the information of different scales, $\hat H_i^{(0,l)}$ is used as benchmark: 
+  - When the attention weight of each node is calculated on the information of different scales, $ \hat H_i^{(0,l)} $ is used as benchmark: 
     $$
     {\theta}^{(k,l)}_{i}=\frac{{\rm exp}\left({\rm LeakyReLU}\left(\left[\hat{H}^{%
     (0,l)}_{i}\lvert\rvert\hat{H}^{(k,l)}_{i}\right]\cdot a_{hw}^{(l)}\right)%
@@ -70,7 +70,7 @@
     $$
     X^{(k+1)}=\sigma\left(\hat TX^{(k)}W_0^{(k)}+X^{(k)}W_1^{(k)}\right)
     $$
-    where $\hat T$ is the transformation of GCN or GAT
+    where $ \hat T $ is the transformation of GCN or GAT
 
   - [Ref Code](https://github.com/skepsun/adaptive_graph_diffusion_networks_with_hop-wise_attention)
 
@@ -82,7 +82,7 @@
 
 - **APPNP-like Propagation (UniMP)** 
 
-  - Add the node features and labels vectors together as propagation information $(H^0=X+\hat Y_d)$
+  - Add the node features and labels vectors together as propagation information $ (H^0=X+\hat Y_d) $
 
   - Apply APPNP-like propagation to the combined message, where the transformation matrix can be attention matrix of GAT or Graph Transformer
     $$
@@ -121,9 +121,9 @@
     (1-y)\log(1-\widetilde{y}))
     \end{aligned}
     $$
-    where $\epsilon>0$ is a hyperparameter.
+    where $ \epsilon > 0 $ is a hyperparameter.
 
-  - Comparison with BCE loss and LBCE loss, where $y=1,\epsilon=1-\log2$
+  - Comparison with BCE loss and LBCE loss, where $ y=1,\epsilon=1-\log2 $
 
     <img src="img/LBCE_loss.png" alt="LBCE_loss" style="zoom:67%;" />
 
