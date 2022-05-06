@@ -4,7 +4,7 @@
 
 - **Label Usage**
 
-  <img src="./Label_Reuse.jpg" alt="Label_Reuse" style="zoom: 80%;" />
+  <img src="img/Label_Reuse.jpg" alt="Label_Reuse" style="zoom: 80%;" />
 
   - **Label Input**
     - In each epoch, randomly split the training set into two sub-datasets $D_{\rm train}^L$ and $D_{\rm train}^U$
@@ -104,7 +104,7 @@
 
   - Add a gradient-based perturbation to the feature during training to achieve data enhancement and alleviate overfit
 
-    <img src="./FLAG_image.jpg" alt="FLAG_img" style="zoom: 80%;" />
+    <img src="img/FLAG_image.jpg" alt="FLAG_img" style="zoom: 80%;" />
 
   - [FLAG_code](https://github.com/devnkong/FLAG)
 
@@ -125,7 +125,7 @@
 
   - Comparison with BCE loss and LBCE loss, where $y=1,\epsilon=1-\log2$
 
-    <img src="./LBCE_loss.png" alt="LBCE_loss" style="zoom:67%;" />
+    <img src="img/LBCE_loss.png" alt="LBCE_loss" style="zoom:67%;" />
 
   - [Ref_code](https://github.com/Espylapiza/dgl/tree/master/examples/pytorch/ogb/ogbn-arxiv)
 
