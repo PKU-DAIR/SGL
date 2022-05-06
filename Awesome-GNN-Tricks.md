@@ -51,7 +51,7 @@
   
   - When the attention weight of each node is calculated on the information of different scales, ![formula](https://render.githubusercontent.com/render/math?math=%5Chat%20H_i%5E%7B%280%2Cl%29%7D) is used as benchmark: 
     
-    <img src='./img/AGDN_formula.jpg'  alt="AGDN_formula" style="zoom: 80%;" />
+    <img src='./img/AGDN_formula.jpg'  alt="AGDN_formula" style="zoom: 60%;" />
   
   - [AGDN_code](https://github.com/skepsun/adaptive_graph_diffusion_networks_with_hop-wise_attention)
 
