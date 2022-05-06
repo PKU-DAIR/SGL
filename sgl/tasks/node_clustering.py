@@ -1,13 +1,13 @@
 import time
 import torch
 from torch.optim import Adam
-
-from tasks.base_task import BaseTask
-from tasks.utils import set_seed, clustering_train, cluster_loss, sparse_mx_to_torch_sparse_tensor
-from models.utils import adj_to_symmetric_norm
-from tasks.clustering_metrics import clustering_metrics
-from sklearn.cluster import KMeans
 import torch.nn.functional as F
+from sklearn.cluster import KMeans
+
+from sgl.tasks.base_task import BaseTask
+from sgl.tasks.utils import set_seed, clustering_train, cluster_loss, \
+    sparse_mx_to_torch_sparse_tensor, adj_to_symmetric_norm
+from sgl.tasks.clustering_metrics import clustering_metrics
 
 class NodeClustering(BaseTask):
     def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn=cluster_loss, seed=42,

@@ -1,12 +1,11 @@
 import random
 import torch
 import numpy as np
-from tasks.clustering_metrics import clustering_metrics
-from sklearn.cluster import KMeans
 import scipy.sparse as sp
-import torch.nn.functional as F
+from sklearn.cluster import KMeans
 from sklearn.metrics import roc_auc_score, average_precision_score
 
+from sgl.tasks.clustering_metrics import clustering_metrics
 
 def accuracy(output, labels):
     pred = output.max(1)[1].type_as(labels)
@@ -378,6 +377,20 @@ def mix_pos_neg_edges(pos_edges, neg_edges, mix_size):
 
     return mix_edges, mix_labels
 
+def adj_to_symmetric_norm(adj, r):
+    adj = adj + sp.eye(adj.shape[0])
+    degrees = np.array(adj.sum(1))
+    r_inv_sqrt_left = np.power(degrees, r - 1).flatten()
+    r_inv_sqrt_left[np.isinf(r_inv_sqrt_left)] = 0.
+    r_mat_inv_sqrt_left = sp.diags(r_inv_sqrt_left)
+
+    r_inv_sqrt_right = np.power(degrees, -r).flatten()
+    r_inv_sqrt_right[np.isinf(r_inv_sqrt_right)] = 0.
+    r_mat_inv_sqrt_right = sp.diags(r_inv_sqrt_right)
+
+    adj_normalized = adj.dot(r_mat_inv_sqrt_left).transpose().dot(r_mat_inv_sqrt_right)
+    return adj_normalized
+    
 def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     """Convert a scipy sparse matrix to a torch sparse tensor."""
     sparse_mx = sparse_mx.tocoo().astype(np.float32)

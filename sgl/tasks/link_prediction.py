@@ -4,13 +4,13 @@ import torch
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 import torch.utils.data as Data
-from tasks.base_task import BaseTask
 import torch.nn.functional as F
 import scipy.sparse as sp
-from models.utils import adj_to_symmetric_norm
-from tasks.utils import set_seed, edge_predict_eval, mask_test_edges, edge_predict_train, \
+
+from sgl.tasks.base_task import BaseTask
+from sgl.tasks.utils import set_seed, edge_predict_eval, mask_test_edges, edge_predict_train, \
     mini_batch_edge_predict_train, mini_batch_edge_predict_eval, edge_predict_score, mix_pos_neg_edges
-from tasks.utils import sparse_mx_to_torch_sparse_tensor
+from sgl.tasks.utils import sparse_mx_to_torch_sparse_tensor, adj_to_symmetric_norm
 
 class LinkPredictionGAE(BaseTask):
     def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn=F.binary_cross_entropy_with_logits, seed=42,
