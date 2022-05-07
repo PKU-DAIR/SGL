@@ -306,7 +306,7 @@ def mini_batch_edge_predict_train(model, train_node_index, train_loader, device,
     edge_feature = torch.sigmoid(edge_feature)
 
     for batch, label in train_loader:
-        edge_pred = edge_feature[batch[:, 0], batch[: ,1]].reshape(-1)
+        edge_pred = edge_feature[batch[:, 0], batch[:, 1]].reshape(-1)
         label = label
 
         roc_auc_sum += roc_auc_score(label.data, edge_pred.data)

@@ -1,4 +1,3 @@
-from audioop import avg
 import time
 import torch
 from torch.optim import Adam
@@ -28,8 +27,8 @@ class LinkPredictionGAE(BaseTask):
         self.__all_edges_neg = torch.cat((self.__train_edges_neg, self.__val_edges_neg, self.__test_edges_neg))
 
         self.__model = model
-        self.__optimizer = Adam(model.parameters(), lr=lr,
-                                weight_decay=weight_decay)
+        self.__optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        
         self.__epochs = epochs
         self.__loss_fn = loss_fn
         self.__device = device
@@ -148,7 +147,7 @@ class LinkPredictionGAE(BaseTask):
             outputs = None
             return 0., 0., 0., 0.
 
-        final_node_features = self.__model.postprocess(node_features)
+        final_node_features = self.__model.postprocess(self.__train_adj, node_features)
         edge_feature = torch.mm(final_node_features, final_node_features.t()).data
 
         roc_auc_val, avg_prec_val = edge_predict_score(edge_feature, self.__val_edges, self.__val_edges_neg)
