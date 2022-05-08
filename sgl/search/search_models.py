@@ -6,7 +6,7 @@ from sgl.operators.message_op import LastMessageOp, ConcatMessageOp, MeanMessage
 
 
 class SearchModel(BaseSGAPModel):
-    def __init__(self, arch, feat_dim, num_classes, hidden_dim):
+    def __init__(self, arch, feat_dim, output_dim, hidden_dim):
         prop_steps = arch[0]
         prop_types = arch[1]
         mesg_types = arch[2]
@@ -14,7 +14,7 @@ class SearchModel(BaseSGAPModel):
         post_steps = arch[4]
         post_types = arch[5]
         pmsg_types = arch[6]
-        super(SearchModel, self).__init__(prop_steps, feat_dim, num_classes)
+        super(SearchModel, self).__init__(prop_steps, feat_dim, output_dim)
 
         if prop_types == 1:
             self._pre_graph_op = LaplacianGraphOp(prop_steps, r=0.5)
@@ -46,9 +46,9 @@ class SearchModel(BaseSGAPModel):
             self._pre_msg_op = LearnableWeightedMessageOp(1, prop_steps + 1, "simple", feat_dim)
 
         if num_layers == 1:
-            self._base_model = LogisticRegression(feat_dim, num_classes)
+            self._base_model = LogisticRegression(feat_dim, output_dim)
         else:
-            self._base_model = ResMultiLayerPerceptron(feat_dim, hidden_dim, num_layers, num_classes)
+            self._base_model = ResMultiLayerPerceptron(feat_dim, hidden_dim, num_layers, output_dim)
 
         if post_types != 0 and post_steps != 0:
             if post_types == 1:

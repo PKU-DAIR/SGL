@@ -5,8 +5,8 @@ from sgl.operators.message_op import ProjectedConcatMessageOp
 
 
 class NARS_SIGN(BaseHeteroSGAPModel):
-    def __init__(self, prop_steps, feat_dim, num_classes, hidden_dim, num_layers, random_subgraph_num):
-        super(NARS_SIGN, self).__init__(prop_steps, feat_dim, num_classes)
+    def __init__(self, prop_steps, feat_dim, output_dim, hidden_dim, num_layers, random_subgraph_num):
+        super(NARS_SIGN, self).__init__(prop_steps, feat_dim, output_dim)
 
         self._pre_graph_op = LaplacianGraphOp(prop_steps, r=0.5)
         self._pre_msg_op = ProjectedConcatMessageOp(
@@ -15,4 +15,4 @@ class NARS_SIGN(BaseHeteroSGAPModel):
         self._aggregator = OneDimConvolution(
             random_subgraph_num, prop_steps + 1, feat_dim)
         self._base_model = MultiLayerPerceptron(
-            hidden_dim * (prop_steps + 1), hidden_dim, num_layers, num_classes)
+            hidden_dim * (prop_steps + 1), hidden_dim, num_layers, output_dim)

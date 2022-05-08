@@ -85,9 +85,9 @@ class FastOneDimConvolution(nn.Module):
 
 
 class LogisticRegression(nn.Module):
-    def __init__(self, feat_dim, num_classes):
+    def __init__(self, feat_dim, output_dim):
         super(LogisticRegression, self).__init__()
-        self.__fc = nn.Linear(feat_dim, num_classes)
+        self.__fc = nn.Linear(feat_dim, output_dim)
 
     def forward(self, feature):
         output = self.__fc(feature)
@@ -95,7 +95,7 @@ class LogisticRegression(nn.Module):
 
 
 class MultiLayerPerceptron(nn.Module):
-    def __init__(self, feat_dim, hidden_dim, num_layers, num_classes, dropout=0.5, bn=False):
+    def __init__(self, feat_dim, hidden_dim, num_layers, output_dim, dropout=0.5, bn=False):
         super(MultiLayerPerceptron, self).__init__()
         if num_layers < 2:
             raise ValueError("MLP must have at least two layers!")
@@ -105,7 +105,7 @@ class MultiLayerPerceptron(nn.Module):
         self.__fcs.append(nn.Linear(feat_dim, hidden_dim))
         for _ in range(num_layers - 2):
             self.__fcs.append(nn.Linear(hidden_dim, hidden_dim))
-        self.__fcs.append(nn.Linear(hidden_dim, num_classes))
+        self.__fcs.append(nn.Linear(hidden_dim, output_dim))
 
         self.__bn = bn
         if self.__bn is True:
@@ -135,7 +135,7 @@ class MultiLayerPerceptron(nn.Module):
         return output
 
 class ResMultiLayerPerceptron(nn.Module):
-    def __init__(self, feat_dim, hidden_dim, num_layers, num_classes, dropout=0.8, bn=False):
+    def __init__(self, feat_dim, hidden_dim, num_layers, output_dim, dropout=0.8, bn=False):
         super(ResMultiLayerPerceptron, self).__init__()
         if num_layers < 2:
             raise ValueError("ResMLP must have at least two layers!")
@@ -145,7 +145,7 @@ class ResMultiLayerPerceptron(nn.Module):
         self.__fcs.append(nn.Linear(feat_dim, hidden_dim))
         for _ in range(num_layers - 2):
             self.__fcs.append(nn.Linear(hidden_dim, hidden_dim))
-        self.__fcs.append(nn.Linear(hidden_dim, num_classes))
+        self.__fcs.append(nn.Linear(hidden_dim, output_dim))
 
         self.__bn = bn
         if self.__bn is True:

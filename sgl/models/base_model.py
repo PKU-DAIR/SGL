@@ -6,11 +6,11 @@ from sgl.data.base_dataset import HeteroNodeDataset
 
 
 class BaseSGAPModel(nn.Module):
-    def __init__(self, prop_steps, feat_dim, num_classes):
+    def __init__(self, prop_steps, feat_dim, output_dim):
         super(BaseSGAPModel, self).__init__()
         self._prop_steps = prop_steps
         self._feat_dim = feat_dim
-        self._num_classes = num_classes
+        self._output_dim = output_dim
 
         self._pre_graph_op, self._pre_msg_op = None, None
         self._post_graph_op, self._post_msg_op = None, None
@@ -67,11 +67,11 @@ class BaseSGAPModel(nn.Module):
 
 
 class BaseHeteroSGAPModel(nn.Module):
-    def __init__(self, prop_steps, feat_dim, num_classes):
+    def __init__(self, prop_steps, feat_dim, output_dim):
         super(BaseHeteroSGAPModel, self).__init__()
         self._prop_steps = prop_steps
         self._feat_dim = feat_dim
-        self._num_classes = num_classes
+        self._output_dim = output_dim
 
         self._pre_graph_op, self._pre_msg_op = None, None
         self._aggregator = None
@@ -142,11 +142,11 @@ class BaseHeteroSGAPModel(nn.Module):
 
 
 class FastBaseHeteroSGAPModel(nn.Module):
-    def __init__(self, prop_steps, feat_dim, num_classes):
+    def __init__(self, prop_steps, feat_dim, output_dim):
         super(FastBaseHeteroSGAPModel, self).__init__()
         self._prop_steps = prop_steps
         self._feat_dim = feat_dim
-        self._num_classes = num_classes
+        self._output_dim = output_dim
 
         self._pre_graph_op = None
         self._aggregator = None

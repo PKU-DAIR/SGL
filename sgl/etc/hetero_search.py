@@ -20,7 +20,7 @@ def OneTrial(dataset, random_subgraph_num: int, subgraph_edge_type_num: int) -> 
     predict_class = dataset.TYPE_OF_NODE_TO_PREDICT
     model = Fast_NARS_SGC_WithLearnableWeights(prop_steps=PROP_STEPS,
                                                feat_dim=dataset.data.num_features[predict_class],
-                                               num_classes=dataset.data.num_classes[predict_class],
+                                               output_dim=dataset.data.num_classes[predict_class],
                                                hidden_dim=HIDDEN_DIM, num_layers=NUM_LAYERS,
                                                random_subgraph_num=random_subgraph_num)
 
