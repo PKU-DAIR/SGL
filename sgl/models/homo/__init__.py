@@ -4,7 +4,6 @@ from .gbp import GBP
 from .sgc import SGC
 from .sign import SIGN
 from .ssgc import SSGC
-from .nafs import NAFS
 
 __all__ = [
     "SGC",
@@ -13,5 +12,4 @@ __all__ = [
     "GBP",
     "GAMLP",
     "GAMLPRecursive",
-    "NAFS"
 ]
