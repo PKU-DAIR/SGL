@@ -259,9 +259,10 @@ def edge_predict_score(edge_feature, pos_edges, neg_edges):
     return roc_auc, avg_prec
 
 
-def edge_predict_train(model, train_node_index, pos_edges, neg_edges, device, optimizer, loss_fn):
-    model.train()
-    optimizer.zero_grad()
+def edge_predict_train(model, train_node_index, with_params, pos_edges, neg_edges, device, optimizer, loss_fn):
+    if with_params is True:
+        model.train()
+        optimizer.zero_grad()
 
     train_output = model.model_forward(train_node_index, device)
     edge_feature = torch.mm(train_output, train_output.t())
@@ -270,9 +271,16 @@ def edge_predict_train(model, train_node_index, pos_edges, neg_edges, device, op
     edge_pred = edge_feature[train_edge[:, 0], train_edge[:, 1]].reshape(-1)
     edge_pred = torch.sigmoid(edge_pred)
 
+    # print("-----------------------------")
+    # print("edge_features:  ", edge_feature[:200])
+    # print("edge_pred:\n", edge_pred[len(pos_edges)-50:len(pos_edges)+50])
+    # print("labels:\n",labels[len(pos_edges)-50:len(pos_edges)+50])
+    # print("-----------------------------")
+
     loss = loss_fn(edge_pred, labels)
-    loss.backward()
-    optimizer.step()
+    if with_params is True:
+        loss.backward()
+        optimizer.step()
 
     labels = labels.cpu().data
     edge_pred = edge_pred.cpu().data
@@ -292,9 +300,10 @@ def edge_predict_eval(model, train_node_index, val_pos_edges, val_neg_edges, tes
     return roc_auc_val, avg_prec_val, roc_auc_test, avg_prec_test
 
 
-def mini_batch_edge_predict_train(model, train_node_index, train_loader, device, optimizer, loss_fn):
-    model.train()
-    optimizer.zero_grad()
+def mini_batch_edge_predict_train(model, train_node_index, with_params, train_loader, device, optimizer, loss_fn):
+    if with_params is True:
+        model.train()
+        optimizer.zero_grad()
     
     loss_train = 0.
     roc_auc_sum = 0.
@@ -307,8 +316,11 @@ def mini_batch_edge_predict_train(model, train_node_index, train_loader, device,
 
     for batch, label in train_loader:
         edge_pred = edge_feature[batch[:, 0], batch[:, 1]].reshape(-1)
-        label = label
-
+        # print("-----------------------------")
+        # print("edge_pred:\n", edge_pred.data[:100])
+        # print("labels:\n",label.data[:100])
+        # print("roc_auc_partial: ",roc_auc_score(label.data, edge_pred.data[:100]))
+        # print("-----------------------------")
         roc_auc_sum += roc_auc_score(label.data, edge_pred.data)
         avg_prec_sum += average_precision_score(label.data, edge_pred.data)
 
@@ -316,8 +328,9 @@ def mini_batch_edge_predict_train(model, train_node_index, train_loader, device,
         label = label.to(device)
         loss_train += loss_fn(edge_pred, label)
 
-    loss_train.backward()
-    optimizer.step()
+    if with_params is True:
+        loss_train.backward()
+        optimizer.step()
         
     loss_train = loss_train.item() / len(train_loader)
     roc_auc = roc_auc_sum / len(train_loader)

@@ -27,7 +27,8 @@ class LinkPredictionGAE(BaseTask):
         self.__all_edges_neg = torch.cat((self.__train_edges_neg, self.__val_edges_neg, self.__test_edges_neg))
 
         self.__model = model
-        self.__optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        self.__with_params = len(list(model.parameters())) != 0 
+        self.__optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay) if self.__with_params is True else None
         
         self.__epochs = epochs
         self.__loss_fn = loss_fn
@@ -96,12 +97,12 @@ class LinkPredictionGAE(BaseTask):
         for epoch in range(self.__epochs):
             t = time.time()
             if self.__mini_batch is False:
-                loss_train, roc_auc_train, avg_prec_train = edge_predict_train(self.__model, train_node_index, self.__train_edges, self.__train_edges_neg,
+                loss_train, roc_auc_train, avg_prec_train = edge_predict_train(self.__model, train_node_index, self.__with_params, self.__train_edges, self.__train_edges_neg,
                                                                                self.__device, self.__optimizer, self.__loss_fn)
                 roc_auc_val, avg_prec_val, roc_auc_test, avg_prec_test = edge_predict_eval(self.__model, train_node_index, self.__val_edges, self.__val_edges_neg,
                                                                                            self.__test_edges, self.__test_edges_neg, self.__device)
             else:
-                loss_train, roc_auc_train, avg_prec_train = mini_batch_edge_predict_train(self.__model, train_node_index, self.__train_loader, self.__device, 
+                loss_train, roc_auc_train, avg_prec_train = mini_batch_edge_predict_train(self.__model, train_node_index, self.__with_params, self.__train_loader, self.__device, 
                                                                                     self.__optimizer, self.__loss_fn)
                 roc_auc_val, avg_prec_val, roc_auc_test, avg_prec_test = mini_batch_edge_predict_eval(self.__model, train_node_index, self.__val_loader, self.__test_loader, self.__device)
             print('Epoch: {:03d}'.format(epoch + 1),

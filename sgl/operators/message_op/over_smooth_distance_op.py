@@ -19,8 +19,7 @@ class OverSmoothDistanceWeightedOp(MessageOp):
 
             weight_list.append(tmp.unsqueeze(-1))
 
-        tmp_weight = torch.cat(weight_list, dim=1)
-        weight = F.softmax(tmp_weight, dim=1)
+        weight = F.softmax(torch.cat(weight_list, dim=1), dim=1)
 
         hops = len(feat_list)
         num_nodes = features.shape[0]
