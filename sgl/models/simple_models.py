@@ -83,7 +83,13 @@ class FastOneDimConvolution(nn.Module):
         return self.__learnable_weight.view(
             self.__num_subgraphs, self.__prop_steps).sum(dim=1)
 
+class IdenticalMapping(nn.Module):
+    def __init__(self) -> None:
+        super(IdenticalMapping, self).__init__()
 
+    def forward(self, feature):
+        return feature
+        
 class LogisticRegression(nn.Module):
     def __init__(self, feat_dim, output_dim):
         super(LogisticRegression, self).__init__()
