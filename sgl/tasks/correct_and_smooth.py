@@ -67,6 +67,7 @@ class CorrectAndSmooth(BaseTask):
         t_total = time.time()
         best_val = 0.
         best_test = 0.
+        best_y_soft = None
         for epoch in range(self.__epochs):
             t = time.time()
             if self.__mini_batch is False:
@@ -88,10 +89,14 @@ class CorrectAndSmooth(BaseTask):
                   'acc_test: {:.4f}'.format(acc_test),
                   'time: {:.4f}s'.format(time.time() - t))
             if acc_val > best_val:
+                idx = torch.arange(0, self.__dataset.num_node)
+                output = self.__model.model_forward(idx, self.__device).detach()
+                best_y_soft = F.softmax(output, dim=1)
                 best_val = acc_val
                 best_test = acc_test
 
-        acc_val, acc_test = self._postprocess()
+        acc_val, acc_test = self._postprocess(best_y_soft)
+        # print("best_y_soft: ", best_y_soft)
         print(f"After C&S, acc_val: {acc_val:.4f} acc_test: {acc_test:.4f}")
         if acc_val > best_val:
             best_val = acc_val
@@ -102,27 +107,17 @@ class CorrectAndSmooth(BaseTask):
         print(f'Best val: {best_val:.4f}, best test: {best_test:.4f}')
         return best_test
 
-    def _postprocess(self):
+    def _postprocess(self, y_soft):
         self.__model.eval()
-        if self.__mini_batch is False:
-            outputs = self.__model.model_forward(
-                range(self.__dataset.num_node), self.__device).to("cpu")
-        else:
-            outputs = None
-            for batch in self.__all_eval_loader:
-                output = self.__model.model_forward(batch, self.__device)
-                if outputs is None:
-                    outputs = output
-                else:
-                    outputs = torch.vstack((outputs, output))
 
         DAD = adj_to_symmetric_norm(adj=self.__dataset.adj, r=0.5)
         DA = adj_to_symmetric_norm(adj=self.__dataset.adj, r=0)
 
-        final_output = self._correct(outputs, self.__labels, self.__dataset.train_idx, DAD, 
+        final_output = self._correct(y_soft, self.__labels, self.__dataset.train_idx, DAD, 
                                     self.__num_correct_layers, self.__correct_alpha)
         final_output = self._smooth(final_output, self.__labels, self.__dataset.train_idx, DA,
                                     self.__num_smooth_layers, self.__smooth_alpha)
+                                    
         acc_val = accuracy(
             final_output[self.__dataset.val_idx], self.__labels[self.__dataset.val_idx])
         acc_test = accuracy(
@@ -138,15 +133,8 @@ class CorrectAndSmooth(BaseTask):
         if y_true.dtype == torch.long:
             y_true = F.one_hot(y_true.view(-1), y_soft.size(-1))
             y_true = y_true.to(y_soft.dtype)
-        # y_true.to(self.__device)
-        # print("y_soft shape: ",y_soft.shape)
-        # print("y_true.shape: ",y_true.shape)
+
         error = torch.zeros_like(y_soft)
-        # print("error.device:", error.device)
-        # print("y_soft.device:", y_soft.device)
-        # print("y_true.device:", y_true.device)
-
-
         error[mask] = y_true[mask] - y_soft[mask]
         num_true = mask.shape[0] if mask.dtype == torch.long else int(mask.sum())
 
