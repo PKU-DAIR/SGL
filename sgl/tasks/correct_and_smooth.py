@@ -1,5 +1,4 @@
 import time
-from matplotlib.pyplot import sca
 import torch
 import torch.nn as nn
 from torch.optim import Adam
@@ -9,13 +8,14 @@ import torch.nn.functional as F
 from sgl.tasks.base_task import BaseTask
 from sgl.tasks.utils import accuracy, set_seed, train, mini_batch_train, evaluate, \
                             mini_batch_evaluate, label_prop, adj_to_symmetric_norm
+from sgl.tricks import CorrectAndSmooth
 
-
-class CorrectAndSmooth(BaseTask):
+class NodeClassification_With_CorrectAndSmooth(BaseTask):
     def __init__(self, dataset, model, lr, weight_decay, epochs, device, num_correct_layers, 
                  correct_alpha, num_smooth_layers, smooth_alpha, autoscale=True, scale=1.0, 
-                 loss_fn=nn.CrossEntropyLoss(), seed=42, train_batch_size=None, eval_batch_size=None, ):
-        super(CorrectAndSmooth, self).__init__()
+                 loss_fn=nn.CrossEntropyLoss(), seed=42, train_batch_size=None, eval_batch_size=None, 
+                 correct_r=0.5, smooth_r=0.5):
+        super(NodeClassification_With_CorrectAndSmooth, self).__init__()
 
         self.__dataset = dataset
         self.__labels = self.__dataset.y
@@ -28,12 +28,10 @@ class CorrectAndSmooth(BaseTask):
         self.__device = device
         self.__seed = seed
 
-        self.__autoscale = autoscale
-        self.__scale = scale
-        self.__num_correct_layers = num_correct_layers
-        self.__num_smooth_layers = num_smooth_layers
-        self.__correct_alpha = correct_alpha
-        self.__smooth_alpha = smooth_alpha
+        self.__post_trick = CorrectAndSmooth(num_correct_layers, correct_alpha, 
+                                        num_smooth_layers, smooth_alpha, autoscale, scale)
+        self.__smooth_r = smooth_r
+        self.__correct_r = correct_r
 
         self.__mini_batch = False
         if train_batch_size is not None:
@@ -110,58 +108,15 @@ class CorrectAndSmooth(BaseTask):
     def _postprocess(self, y_soft):
         self.__model.eval()
 
-        DAD = adj_to_symmetric_norm(adj=self.__dataset.adj, r=0.5)
-        DA = adj_to_symmetric_norm(adj=self.__dataset.adj, r=0)
+        correct_adj = adj_to_symmetric_norm(adj=self.__dataset.adj, r=self.__correct_r)
+        smooth_adj = adj_to_symmetric_norm(adj=self.__dataset.adj, r=self.__smooth_r)
 
-        final_output = self._correct(y_soft, self.__labels, self.__dataset.train_idx, DAD, 
-                                    self.__num_correct_layers, self.__correct_alpha)
-        final_output = self._smooth(final_output, self.__labels, self.__dataset.train_idx, DA,
-                                    self.__num_smooth_layers, self.__smooth_alpha)
+        post = self.__post_trick
+        final_output = post.correct(y_soft, self.__labels, self.__dataset.train_idx, correct_adj)
+        final_output = post.smooth(final_output, self.__labels, self.__dataset.train_idx, smooth_adj)
                                     
         acc_val = accuracy(
             final_output[self.__dataset.val_idx], self.__labels[self.__dataset.val_idx])
         acc_test = accuracy(
             final_output[self.__dataset.test_idx], self.__labels[self.__dataset.test_idx])
         return acc_val, acc_test
-
-    # different from pyg implemetation, y_true here represents all the labels for convenience
-    @torch.no_grad()
-    def _correct(self, y_soft, y_true, mask, adj, num_layers, alpha):
-        y_soft = y_soft.cpu()
-        y_true = y_true.cpu()
-        mask = torch.tensor(mask)
-        if y_true.dtype == torch.long:
-            y_true = F.one_hot(y_true.view(-1), y_soft.size(-1))
-            y_true = y_true.to(y_soft.dtype)
-
-        error = torch.zeros_like(y_soft)
-        error[mask] = y_true[mask] - y_soft[mask]
-        num_true = mask.shape[0] if mask.dtype == torch.long else int(mask.sum())
-
-        if self.__autoscale:
-            smoothed_error = label_prop(error, adj, num_layers, alpha, post_process=lambda x:x.clamp_(-1., 1.))
-            sigma = error[mask].abs().sum() / num_true
-            scale = sigma / smoothed_error.abs().sum(dim=1, keepdim=True)
-            scale[scale.isinf() | (scale > 1000)] = 1.0
-            return y_soft + smoothed_error * scale
-        
-        else:
-            def fix_input(x):
-                x[mask] = error[mask]
-                return x
-
-            smoothed_error = label_prop(error, adj, num_layers, alpha, post_process=fix_input)
-            return smoothed_error * self.__scale + y_soft
-
-    @torch.no_grad()
-    def _smooth(self, y_soft, y_true, mask, adj, num_layers, alpha):
-        y_soft = y_soft.cpu()
-        y_true = y_true.cpu()
-        if y_true.dtype == torch.long:
-            y_true = F.one_hot(y_true.view(-1), y_soft.size(-1))
-            y_true = y_true.to(y_soft.dtype)
-        
-        y_soft[mask] = y_true[mask]
-
-        smoothed_label = label_prop(y_soft, adj, num_layers, alpha)
-        return smoothed_label

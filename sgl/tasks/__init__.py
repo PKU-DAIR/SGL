@@ -4,7 +4,7 @@ from .node_clustering import NodeClustering
 from .node_clustering import NodeClusteringNAFS
 from .link_prediction import LinkPredictionGAE
 from .link_prediction import LinkPredictionNAFS
-from .correct_and_smooth import CorrectAndSmooth
+from .correct_and_smooth import NodeClassification_With_CorrectAndSmooth
 
 __all__ = [
     "NodeClassification",
@@ -13,5 +13,5 @@ __all__ = [
     "NodeClusteringNAFS",
     "LinkPredictionGAE",
     "LinkPredictionNAFS",
-    "CorrectAndSmooth"
+    "NodeClassification_With_CorrectAndSmooth"
 ]
