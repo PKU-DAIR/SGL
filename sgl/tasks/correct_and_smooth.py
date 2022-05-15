@@ -94,7 +94,7 @@ class NodeClassification_With_CorrectAndSmooth(BaseTask):
                 best_test = acc_test
 
         acc_val, acc_test = self._postprocess(best_y_soft)
-        # print("best_y_soft: ", best_y_soft)
+        
         print(f"After C&S, acc_val: {acc_val:.4f} acc_test: {acc_test:.4f}")
         if acc_val > best_val:
             best_val = acc_val
@@ -110,11 +110,11 @@ class NodeClassification_With_CorrectAndSmooth(BaseTask):
 
         correct_adj = adj_to_symmetric_norm(adj=self.__dataset.adj, r=self.__correct_r)
         smooth_adj = adj_to_symmetric_norm(adj=self.__dataset.adj, r=self.__smooth_r)
-
+        
         post = self.__post_trick
         final_output = post.correct(y_soft, self.__labels, self.__dataset.train_idx, correct_adj)
         final_output = post.smooth(final_output, self.__labels, self.__dataset.train_idx, smooth_adj)
-                                    
+
         acc_val = accuracy(
             final_output[self.__dataset.val_idx], self.__labels[self.__dataset.val_idx])
         acc_test = accuracy(
