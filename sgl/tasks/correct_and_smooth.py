@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 from sgl.tasks.base_task import BaseTask
 from sgl.tasks.utils import accuracy, set_seed, train, mini_batch_train, evaluate, \
-                            mini_batch_evaluate, label_prop, adj_to_symmetric_norm
+                            mini_batch_evaluate, adj_to_symmetric_norm
 from sgl.tricks import CorrectAndSmooth
 
 class NodeClassification_With_CorrectAndSmooth(BaseTask):
