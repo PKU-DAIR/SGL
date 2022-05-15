@@ -1,5 +1,7 @@
 import random
+from typing import Optional
 import torch
+import torch.nn.functional as F
 import numpy as np
 import scipy.sparse as sp
 from sklearn.cluster import KMeans
@@ -412,3 +414,23 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     values = torch.from_numpy(sparse_mx.data)
     shape = torch.Size(sparse_mx.shape)
     return torch.sparse.FloatTensor(indices, values, shape)
+
+@torch.no_grad()
+def label_prop(labels, adj, num_layers, alpha, post_process = lambda x: x.clamp_(0., 1.), mask=None):
+    if labels.dtype == torch.long:
+        labels = F.one_hot(labels.reshape(-1)).to(torch.float)
+
+    out = labels.clone()
+    if mask is not None:
+        out = torch.zeros_like(labels)
+        out[mask] = labels[mask]
+
+    adj_tensor = sparse_mx_to_torch_sparse_tensor(adj)
+    
+    # record H_0
+    res = (1 - alpha) * out
+    for _ in range(num_layers):
+        out = alpha * torch.spmm(adj_tensor, out) + res
+        out = post_process(out)
+    
+    return out
