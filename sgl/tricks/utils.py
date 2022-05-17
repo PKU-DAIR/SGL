@@ -2,6 +2,17 @@ import scipy.sparse as sp
 import numpy as np
 import torch
 import torch.nn.functional as F
+import math
+
+def LogeCrossEntropy(pred, target, epsilon= 1.0 - math.log(2)):
+    loss = F.cross_entropy(pred, target)
+    loss = torch.log(epsilon + loss) - math.log(epsilon)
+    return torch.mean(loss)
+
+def LogeBinaryCrossEntropyWithLogits(pred, target, epsilon= 1.0 - math.log(2)):
+    loss = F.binary_cross_entropy_with_logits(pred, target)
+    loss = torch.log(epsilon + loss) - math.log(epsilon)
+    return loss
 
 def adj_to_symmetric_norm(adj, r):
     adj = adj + sp.eye(adj.shape[0])
