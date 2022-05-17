@@ -1,4 +1,5 @@
 import random
+import math
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -24,6 +25,10 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+def adjust_learning_rate(optimizer, lr, epoch):
+    if epoch <= 50:
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = lr * epoch / 50
 
 def evaluate(model, val_idx, test_idx, labels, device):
     model.eval()
