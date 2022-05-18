@@ -30,6 +30,11 @@ def adjust_learning_rate(optimizer, lr, epoch):
         for param_group in optimizer.param_groups:
             param_group["lr"] = lr * epoch / 50
 
+def add_labels(features, labels, idx, num_classes):
+    onehot = np.zeros([features.shape[0], num_classes])
+    onehot[idx, labels[idx]] = 1
+    return np.concatenate([features, onehot], axis=-1)
+
 def evaluate(model, val_idx, test_idx, labels, device):
     model.eval()
     val_output = model.model_forward(val_idx, device)
