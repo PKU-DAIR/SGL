@@ -1,5 +1,7 @@
 import random
+import math
 import torch
+import torch.nn.functional as F
 import numpy as np
 import scipy.sparse as sp
 from sklearn.cluster import KMeans
@@ -23,6 +25,15 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+def adjust_learning_rate(optimizer, lr, epoch):
+    if epoch <= 50:
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = lr * epoch / 50
+
+def add_labels(features, labels, idx, num_classes):
+    onehot = np.zeros([features.shape[0], num_classes])
+    onehot[idx, labels[idx]] = 1
+    return np.concatenate([features, onehot], axis=-1)
 
 def evaluate(model, val_idx, test_idx, labels, device):
     model.eval()
@@ -249,17 +260,19 @@ def mask_test_edges(adj):
 
 
 # input full edge_features, pos_edges and neg_edges to calc roc_auc, avg_prec score
-def edge_predict_score(edge_feature, pos_edges, neg_edges):
+def edge_predict_score(edge_feature, pos_edges, neg_edges, threshold):
     labels = torch.cat((torch.ones(len(pos_edges)), torch.zeros(len(neg_edges))))
     all_edges = torch.cat((pos_edges, neg_edges))
     edge_pred = edge_feature[all_edges[:, 0], all_edges[:, 1]].reshape(-1)
     edge_pred = torch.sigmoid(edge_pred)
+    edge_pred = edge_pred > threshold
     roc_auc = roc_auc_score(labels, edge_pred)
     avg_prec = average_precision_score(labels, edge_pred)
     return roc_auc, avg_prec
 
 
-def edge_predict_train(model, train_node_index, with_params, pos_edges, neg_edges, device, optimizer, loss_fn):
+def edge_predict_train(model, train_node_index, with_params, pos_edges, neg_edges, 
+                       device, optimizer, loss_fn, threshold):
     if with_params is True:
         model.train()
         optimizer.zero_grad()
@@ -284,23 +297,26 @@ def edge_predict_train(model, train_node_index, with_params, pos_edges, neg_edge
 
     labels = labels.cpu().data
     edge_pred = edge_pred.cpu().data
+    edge_pred = edge_pred > threshold
     roc_auc = roc_auc_score(labels, edge_pred)
     avg_prec = average_precision_score(labels, edge_pred)
     return loss.item(), roc_auc, avg_prec
 
 
-def edge_predict_eval(model, train_node_index, val_pos_edges, val_neg_edges, test_pos_edges, test_neg_edges, device):
+def edge_predict_eval(model, train_node_index, val_pos_edges, val_neg_edges, 
+                      test_pos_edges, test_neg_edges, device, threshold):
     model.eval()
     train_output = model.model_forward(train_node_index, device)
     edge_feature = torch.mm(train_output, train_output.t()).cpu().data
 
-    roc_auc_val, avg_prec_val = edge_predict_score(edge_feature, val_pos_edges, val_neg_edges)
-    roc_auc_test, avg_prec_test = edge_predict_score(edge_feature, test_pos_edges, test_neg_edges)
+    roc_auc_val, avg_prec_val = edge_predict_score(edge_feature, val_pos_edges, val_neg_edges, threshold)
+    roc_auc_test, avg_prec_test = edge_predict_score(edge_feature, test_pos_edges, test_neg_edges, threshold)
 
     return roc_auc_val, avg_prec_val, roc_auc_test, avg_prec_test
 
 
-def mini_batch_edge_predict_train(model, train_node_index, with_params, train_loader, device, optimizer, loss_fn):
+def mini_batch_edge_predict_train(model, train_node_index, with_params, train_loader, 
+                                  device, optimizer, loss_fn, threshold):
     if with_params is True:
         model.train()
         optimizer.zero_grad()
@@ -321,8 +337,9 @@ def mini_batch_edge_predict_train(model, train_node_index, with_params, train_lo
         # print("labels:\n",label.data[:100])
         # print("roc_auc_partial: ",roc_auc_score(label.data, edge_pred.data[:100]))
         # print("-----------------------------")
-        roc_auc_sum += roc_auc_score(label.data, edge_pred.data)
-        avg_prec_sum += average_precision_score(label.data, edge_pred.data)
+        pred_label = edge_pred > threshold
+        roc_auc_sum += roc_auc_score(label.data, pred_label.data)
+        avg_prec_sum += average_precision_score(label.data, pred_label.data)
 
         edge_pred = edge_pred.to(device)
         label = label.to(device)
@@ -339,7 +356,7 @@ def mini_batch_edge_predict_train(model, train_node_index, with_params, train_lo
     return loss_train, roc_auc, avg_prec
 
 
-def mini_batch_edge_predict_eval(model, train_node_index, val_loader, test_loader, device):
+def mini_batch_edge_predict_eval(model, train_node_index, val_loader, test_loader, device, threshold):
     model.eval()
     roc_auc_val_sum, avg_prec_val_sum = 0., 0.
     roc_auc_test_sum, avg_prec_test_sum = 0., 0.
@@ -351,14 +368,16 @@ def mini_batch_edge_predict_eval(model, train_node_index, val_loader, test_loade
 
     for batch, label in val_loader:
         edge_pred = edge_feature[batch[:, 0], batch[:, 1]].reshape(-1)
-        roc_auc_val_sum += roc_auc_score(label, edge_pred)
-        avg_prec_val_sum += average_precision_score(label, edge_pred)
+        label_pred = edge_pred > threshold
+        roc_auc_val_sum += roc_auc_score(label, label_pred)
+        avg_prec_val_sum += average_precision_score(label, label_pred)
 
     roc_auc_val = roc_auc_val_sum / len(val_loader)
     avg_prec_val = avg_prec_val_sum / len(val_loader)
 
     for batch, label in test_loader:
         edge_pred = edge_feature[batch[:, 0], batch[:, 1]].reshape(-1)
+        label_pred = edge_pred > threshold
         roc_auc_test_sum += roc_auc_score(label, edge_pred)
         avg_prec_test_sum += average_precision_score(label, edge_pred)
 

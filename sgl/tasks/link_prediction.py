@@ -13,7 +13,7 @@ from sgl.tasks.utils import sparse_mx_to_torch_sparse_tensor, adj_to_symmetric_n
 
 class LinkPredictionGAE(BaseTask):
     def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn=F.binary_cross_entropy_with_logits, seed=42,
-                 train_batch_size=None, eval_batch_size=None):
+                 train_batch_size=None, eval_batch_size=None, threshold=0.5):
         super(LinkPredictionGAE, self).__init__()
 
         self.__dataset = dataset
@@ -34,6 +34,7 @@ class LinkPredictionGAE(BaseTask):
         self.__loss_fn = loss_fn
         self.__device = device
         self.__seed = seed
+        self.__pred_threshold = threshold
 
         self.__mini_batch = False
         if train_batch_size is not None:
@@ -98,13 +99,13 @@ class LinkPredictionGAE(BaseTask):
             t = time.time()
             if self.__mini_batch is False:
                 loss_train, roc_auc_train, avg_prec_train = edge_predict_train(self.__model, train_node_index, self.__with_params, self.__train_edges, self.__train_edges_neg,
-                                                                               self.__device, self.__optimizer, self.__loss_fn)
+                                                                               self.__device, self.__optimizer, self.__loss_fn, self.__pred_threshold)
                 roc_auc_val, avg_prec_val, roc_auc_test, avg_prec_test = edge_predict_eval(self.__model, train_node_index, self.__val_edges, self.__val_edges_neg,
-                                                                                           self.__test_edges, self.__test_edges_neg, self.__device)
+                                                                                           self.__test_edges, self.__test_edges_neg, self.__device, self.__pred_threshold)
             else:
                 loss_train, roc_auc_train, avg_prec_train = mini_batch_edge_predict_train(self.__model, train_node_index, self.__with_params, self.__train_loader, self.__device, 
-                                                                                    self.__optimizer, self.__loss_fn)
-                roc_auc_val, avg_prec_val, roc_auc_test, avg_prec_test = mini_batch_edge_predict_eval(self.__model, train_node_index, self.__val_loader, self.__test_loader, self.__device)
+                                                                                    self.__optimizer, self.__loss_fn, self.__pred_threshold)
+                roc_auc_val, avg_prec_val, roc_auc_test, avg_prec_test = mini_batch_edge_predict_eval(self.__model, train_node_index, self.__val_loader, self.__test_loader, self.__device, self.__pred_threshold)
             print('Epoch: {:03d}'.format(epoch + 1),
                   'loss_train: {:.4f}'.format(loss_train),
                   'roc_auc_train: {:.4f}'.format(roc_auc_train),
@@ -151,15 +152,15 @@ class LinkPredictionGAE(BaseTask):
         final_node_features = self.__model.postprocess(self.__train_adj, node_features)
         edge_feature = torch.mm(final_node_features, final_node_features.t()).data
 
-        roc_auc_val, avg_prec_val = edge_predict_score(edge_feature, self.__val_edges, self.__val_edges_neg)
-        roc_auc_test, avg_prec_test = edge_predict_score(edge_feature, self.__test_edges, self.__all_edges_neg)
+        roc_auc_val, avg_prec_val = edge_predict_score(edge_feature, self.__val_edges, self.__val_edges_neg, self.__pred_threshold)
+        roc_auc_test, avg_prec_test = edge_predict_score(edge_feature, self.__test_edges, self.__all_edges_neg, self.__pred_threshold)
         return roc_auc_val, avg_prec_val, roc_auc_test, avg_prec_test
 
 class LinkPredictionNAFS(BaseTask):
     """ LinkPrediction Tasks based on NAFS
         Fast and Does Not need train
     """
-    def __init__(self, dataset, hops=20, method='mean', seed=42, r_list=[0.5, 0.4, 0.3, 0.2, 0.1, 0]):
+    def __init__(self, dataset, hops=20, method='mean', seed=42, r_list=[0.5, 0.4, 0.3, 0.2, 0.1, 0], threshold=0.5):
         # NOTE that: hops can be either an integer or a list
         # when it's a list, it contains the numbers of hops that you want to test
         # when it's a numebr, it will test all the hops in range(hops) 
@@ -179,6 +180,7 @@ class LinkPredictionNAFS(BaseTask):
         self.__r_list = r_list
         self.__hops = range(hops) if type(hops) == int else hops
         self.__seed = seed
+        self.__pred_threshold = threshold
 
         self.__best_hop_roc_auc, self.__best_hop_avg_prec, self.__test_roc_auc, self.__test_avg_prec = self._execute()
     
@@ -278,5 +280,5 @@ class LinkPredictionNAFS(BaseTask):
             input_features = input_features[-1]
 
         sim = torch.mm(input_features, input_features.t())
-        roc_auc, avg_prec = edge_predict_score(sim, self.__test_edges, self.__test_edges_neg)
+        roc_auc, avg_prec = edge_predict_score(sim, self.__test_edges, self.__test_edges_neg, self.__pred_threshold)
         return roc_auc, avg_prec
