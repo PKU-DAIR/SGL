@@ -30,10 +30,8 @@ class GraphOp:
         for _ in range(self._prop_steps):
             if platform.system() == "Linux":
                 feat_temp = csr_sparse_dense_matmul(self._adj, prop_feat_list[-1])
-            elif platform.system() == "Windows":
-                feat_temp = self._adj.dot(prop_feat_list[-1])
             else:
-                raise ValueError("Only support Linux and Windows platform!")
+                feat_temp = self._adj.dot(prop_feat_list[-1])
             prop_feat_list.append(feat_temp)
         return [torch.FloatTensor(feat) for feat in prop_feat_list]
 

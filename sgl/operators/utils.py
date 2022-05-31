@@ -1,3 +1,4 @@
+import os.path as osp
 import numpy as np
 import numpy.ctypeslib as ctl
 import scipy.sparse as sp
@@ -7,7 +8,10 @@ from torch import Tensor
 
 
 def csr_sparse_dense_matmul(adj, feature):
-    ctl_lib = ctl.load_library("./csrc/libmatmul.so", "./operators/")
+    file_path = osp.abspath(__file__)
+    dir_path = osp.split(file_path)[0]
+
+    ctl_lib = ctl.load_library("./csrc/libmatmul.so", dir_path)
 
     arr_1d_int = ctl.ndpointer(
         dtype=np.int32,
@@ -37,7 +41,10 @@ def csr_sparse_dense_matmul(adj, feature):
 
 
 def cuda_csr_sparse_dense_matmul(adj, feature):
-    ctl_lib = ctl.load_library("./csrc/libcudamatmul.so", "./operators/")
+    file_path = osp.abspath(__file__)
+    dir_path = osp.split(file_path)[0]
+    
+    ctl_lib = ctl.load_library("./csrc/libcudamatmul.so", dir_path)
 
     arr_1d_int = ctl.ndpointer(
         dtype=np.int32,
