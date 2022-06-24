@@ -19,40 +19,16 @@ class ConfigManagerDist():
         self.__pmsg_types = UniformIntegerHyperparameter("pmsg_types", pmsg_types[0], pmsg_types[1])
         self.__config_space.add_hyperparameters([self.__prop_steps, self.__prop_types, self.__mesg_types, self.__num_layers, self.__post_steps, self.__post_types, self.__pmsg_types])
     
-    def _setParameters(self, dataset, device, hiddim, epochs, lr, wd):
+    def _setParameters(self, dataset, args):
         self.__dataset = dataset
-        self.__device = device
-        self.__hiddim = hiddim
-        self.__epochs = epochs
-        self.__lr = lr
-        self.__wd = wd
-
-        parser = argparse.ArgumentParser()
-        parser.add_argument('-n', '--nodes', default=1, type=int, metavar='N',
-                            help='number of data loading workers (default: 4)')
-        parser.add_argument('-g', '--gpus', default=2, type=int,
-                            help='number of gpus per node')
-        parser.add_argument('-nr', '--nr', default=0, type=int,
-                            help='ranking within the nodes')
-        parser.add_argument('--lr', default=1e-2, type=float, metavar='LR',
-                            help='learning rate')
-        parser.add_argument('--wd', default=5e-4, type=float, metavar='WD',
-                            help='weight decay')                        
-        parser.add_argument('--epochs', default=200, type=int, metavar='N',
-                            help='number of total epochs to run')
-        parser.add_argument('--hidden', default=128, type=int, metavar='N',
-                            help='hidden_dims')
-        parser.add_argument('--batch', default=128, type=int, metavar='N',
-                            help='batch_size')
-        args = parser.parse_args()
-
+        self.__args = args
 
     def _configSpace(self):
         return self.__config_space
 
     def _configTarget(self, arch):
-        model = SearchModelDist(arch, self.__dataset.num_features, int(self.__dataset.num_classes), self.__hiddim)
-        acc_res, time_res = SearchManagerDist(self.__dataset, model)._execute(args)
+        model = SearchModelDist(arch, self.__dataset.num_features, int(self.__dataset.num_classes), self.__args.hidden)
+        acc_res, time_res = SearchManagerDist(self.__dataset, model)._execute(self.__args)
         result = dict()
         result['objs'] = np.stack([-acc_res, time_res], axis=-1)
         return result
