@@ -107,7 +107,7 @@ The 39th International Conference on Machine Learning.<br>
 ***ICML 2022, CCF-A***. 
 
 **Deep and Flexible Graph Neural Architecture Search.** [To appear]<br>
-Wentao Zhang, Yu Shen, Zheyu Lin, Yang Li, Zhi Yang, Bin Cui.<br>
+Wentao Zhang, Zheyu Lin, Yu Shen, Yang Li, Zhi Yang, Bin Cui.<br>
 The 39th International Conference on Machine Learning.<br>
 ***ICML 2022, CCF-A***. 
   
