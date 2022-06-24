@@ -87,7 +87,6 @@ bo = SMBO(configer._configFunction,
 history = bo.run()
 print(history)
 ```
-The distributed version of the graph neural architecture search is built on the code used by our cooperation partner Tencent, and we will release this part ASAP.
 
 ## Related Publications
 
