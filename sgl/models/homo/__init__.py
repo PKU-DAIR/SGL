@@ -5,6 +5,7 @@ from .sgc import SGC
 from .sign import SIGN
 from .ssgc import SSGC
 from .nafs import NAFS
+from .sgc_dist import SGCDist
 
 __all__ = [
     "SGC",
@@ -13,5 +14,6 @@ __all__ = [
     "GBP",
     "GAMLP",
     "GAMLPRecursive",
-    "NAFS"
+    "NAFS",
+    "SGCDist"
 ]
