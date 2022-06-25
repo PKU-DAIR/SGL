@@ -111,7 +111,7 @@ Wentao Zhang, Zheyu Lin, Yu Shen, Yang Li, Zhi Yang, Bin Cui.<br>
 The 39th International Conference on Machine Learning.<br>
 ***ICML 2022, CCF-A***. 
   
-**Model Degradation Hinders Deep Graph Neural Networks.** [[PDF]([https://arxiv.org/abs/2206.08582](https://arxiv.org/abs/2206.04361))]<br>
+**Model Degradation Hinders Deep Graph Neural Networks.** [[PDF](https://arxiv.org/abs/2206.04361)]<br>
 Wentao Zhang, Zeang Sheng, Yuezihan Jiang, Yikuan Xia, Jun Gao, Zhi Yang, Bin Cui.<br>
 SIGKDD Conference on Knowledge Discovery and Data Mining.<br>
 ***KDD 2022, CCF-A***. 
