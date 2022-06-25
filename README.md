@@ -101,17 +101,17 @@ Wentao Zhang, Mingyu Yang, Zeang Sheng, Yang Li, Wen Ouyang, Yangyu Tao, Zhi Yan
 Thirty-fifth Conference on Neural Information Processing Systems.<br>
 ***NeurIPS 2021, CCF-A, <font color=orange>Spotlight Presentation, Acceptance Rate: < 3%</font>***. 
 
-**NAFS: A Simple yet Tough-to-beat Baseline for Graph Representation Learning.** [To appear]<br>
+**NAFS: A Simple yet Tough-to-beat Baseline for Graph Representation Learning.** [[PDF](https://arxiv.org/abs/2206.08583)]<br>
 Wentao Zhang, Zeang Sheng, Mingyu Yang, Yang Li, Yu Shen, Zhi Yang, Bin Cui.<br>
 The 39th International Conference on Machine Learning.<br>
 ***ICML 2022, CCF-A***. 
 
-**Deep and Flexible Graph Neural Architecture Search.** [To appear]<br>
+**Deep and Flexible Graph Neural Architecture Search.** [[PDF](https://arxiv.org/abs/2206.08582)]<br>
 Wentao Zhang, Zheyu Lin, Yu Shen, Yang Li, Zhi Yang, Bin Cui.<br>
 The 39th International Conference on Machine Learning.<br>
 ***ICML 2022, CCF-A***. 
   
-**An Empirical Study of Deep Graph Neural Networks.** [To appear]<br>
+**Model Degradation Hinders Deep Graph Neural Networks.** [[PDF]([https://arxiv.org/abs/2206.08582](https://arxiv.org/abs/2206.04361))]<br>
 Wentao Zhang, Zeang Sheng, Yuezihan Jiang, Yikuan Xia, Jun Gao, Zhi Yang, Bin Cui.<br>
 SIGKDD Conference on Knowledge Discovery and Data Mining.<br>
 ***KDD 2022, CCF-A***. 
