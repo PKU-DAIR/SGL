@@ -6,7 +6,7 @@ import torch
 
 from sgl.data.base_data import Graph
 from sgl.data.base_dataset import NodeDataset
-from sgl.dataset.utils import pkl_read_file
+from sgl.dataset.utils import pkl_read_file, download_to
 
 
 class KarateClub(NodeDataset):
@@ -29,7 +29,10 @@ class KarateClub(NodeDataset):
         return osp.join(self._processed_dir, f"{self._name}.graph")
 
     def _download(self):
-        pass
+        url = 'https://github.com/EdisonLeeeee/GraphData/blob/master/datasets/karate_club.npz'
+        path = osp.join(self._raw_dir, "karate_club.npz")
+        print(url)
+        download_to(url, path)
 
     def _process(self):
         G = nx.karate_club_graph()
