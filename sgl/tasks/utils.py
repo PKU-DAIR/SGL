@@ -265,7 +265,7 @@ def edge_predict_score(edge_feature, pos_edges, neg_edges, threshold):
     all_edges = torch.cat((pos_edges, neg_edges))
     edge_pred = edge_feature[all_edges[:, 0], all_edges[:, 1]].reshape(-1)
     edge_pred = torch.sigmoid(edge_pred)
-    edge_pred = edge_pred > threshold
+    # edge_pred = edge_pred > threshold
     roc_auc = roc_auc_score(labels, edge_pred)
     avg_prec = average_precision_score(labels, edge_pred)
     return roc_auc, avg_prec
