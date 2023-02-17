@@ -61,6 +61,9 @@ def pkl_read_file(filepath):
             exit(1)
     return file
 
+def load_np(path):
+    f = np.load(path)
+    return f
 
 def read_npz(path):
     with np.load(path) as f:
