@@ -104,6 +104,15 @@ class Planetoid(NodeDataset):
             train_idx = range(self.num_classes * 20)
             val_idx = range(self.num_classes * 20, self.num_classes * 20 + 500)
             test_idx = range(self.num_node - 1000, self.num_node)
+        elif split =='fastgcn':
+            train_idx = range(self.num_node - 1500)
+            val_idx = range(self.num_node - 1500, self.num_node - 1000)
+            test_idx = range(self.num_node - 1000, self.num_node)
+        elif split.startswith("clustergcn"):
+            cluster_number = int(split.split("_")[1])
+            train_idx = range(cluster_number)
+            val_idx = range(cluster_number)
+            test_idx = range(cluster_number)
         elif split == "random":
             raise NotImplementedError
         else:

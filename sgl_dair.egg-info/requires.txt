@@ -1,0 +1,10 @@
+torch>=1.8
+networkx
+tqdm
+numpy>=1.21
+scipy
+gensim
+scikit_learn
+ogb
+openbox
+munkres

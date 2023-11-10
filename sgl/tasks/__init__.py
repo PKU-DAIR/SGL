@@ -1,5 +1,6 @@
 from .node_classification import HeteroNodeClassification
 from .node_classification import NodeClassification
+from .node_classification_sampling import NodeClassification_Sampling
 from .node_clustering import NodeClustering
 from .node_clustering import NodeClusteringNAFS
 from .link_prediction import LinkPredictionGAE
@@ -17,5 +18,6 @@ __all__ = [
     "LinkPredictionNAFS",
     "NodeClassification_With_CorrectAndSmooth",
     "NodeClassificationWithLabelUse",
-    "NodeClassificationDist"
+    "NodeClassificationDist",
+    "NodeClassification_Sampling"
 ]

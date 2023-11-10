@@ -6,6 +6,10 @@ from .sign import SIGN
 from .ssgc import SSGC
 from .nafs import NAFS
 from .sgc_dist import SGCDist
+from .fastgcn import FastGCN
+from .clustergcn import ClusterGCN
+from .graphsage import GraphSAGE
+from .vanillagcn import VanillaGCN
 
 __all__ = [
     "SGC",
@@ -15,5 +19,9 @@ __all__ = [
     "GAMLP",
     "GAMLPRecursive",
     "NAFS",
-    "SGCDist"
+    "SGCDist",
+    "FastGCN",
+    "ClusterGCN",
+    "GraphSAGE",
+    "VanillaGCN"
 ]

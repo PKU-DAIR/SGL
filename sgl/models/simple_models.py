@@ -1,5 +1,7 @@
+import math
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class OneDimConvolution(nn.Module):
@@ -182,3 +184,60 @@ class ResMultiLayerPerceptron(nn.Module):
         feature = self.__dropout(feature)
         output = self.__fcs[-1](feature)
         return output
+
+class GraphConvolution(nn.Module):
+    """
+    Simple GCN layer, similar to https://arxiv.org/abs/1609.02907
+    """
+
+    def __init__(self, in_features, out_features, bias=False):
+        super(GraphConvolution, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.weight = nn.Parameter(torch.FloatTensor(in_features, out_features))
+        if bias:
+            self.bias = nn.Parameter(torch.FloatTensor(out_features))
+        else:
+            self.register_parameter("bias", None)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        stdv = 1.0 / math.sqrt(self.weight.size(1))
+        self.weight.data.uniform_(-stdv, stdv)
+        if self.bias is not None:
+            self.bias.data.uniform_(-stdv, stdv)   
+    
+    def forward(self, input, adj):
+        support = torch.mm(input, self.weight)
+        output = torch.spmm(adj, support)
+        if self.bias is not None:
+            return output + self.bias
+        else:
+            return output
+
+
+class GCN(nn.Module):
+    def __init__(self, nfeat, nhid, nclass, nlayers=2, dropout=0.5):
+        super().__init__()
+        self.gcs = nn.ModuleList()
+        self.gcs.append(GraphConvolution(nfeat, nhid))
+        for _ in range(nlayers-2):
+            self.gcs.append(GraphConvolution(nhid, nhid))
+        self.gcs.append(GraphConvolution(nhid, nclass))
+        self.dropout = dropout
+
+    def forward(self, x, adjs):
+        repr = x
+        if isinstance(adjs, list):
+            for i, adj in enumerate(adjs[:-1]):
+                repr = self.gcs[i](repr, adj)
+                repr = F.relu(repr)
+                repr = F.dropout(repr, self.dropout, training=self.training)
+            repr = self.gcs[-1](repr, adjs[-1])
+        else:
+            for i, gc in enumerate(self.gcs[:-1]):
+                repr = gc(repr, adjs)
+                repr = F.relu(repr)
+                repr = F.dropout(repr, self.dropout, training=self.training)
+            repr = self.gcs[-1](repr, adjs)
+        return F.log_softmax(repr, dim=1)

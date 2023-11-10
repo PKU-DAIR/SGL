@@ -32,7 +32,7 @@ class Edge:
     @property
     def sparse_matrix(self):
         return self.__sparse_matrix
-
+    
     @property
     def edge_type(self):
         return self.__edge_type
@@ -86,7 +86,7 @@ class Node:
         
         if x is not None:
             if isinstance(x, np.ndarray):
-                x = torch.FloatTensor(x)
+                x = torch.FloatTensor(x)   #这里是原始实现，但是是有bug的
             elif not isinstance(x, Tensor):
                 raise TypeError("x must be a np.ndarray or Tensor!")
         self.__x = x
@@ -160,7 +160,7 @@ class Graph:
     @property
     def adj(self):
         return self.__edge.sparse_matrix
-
+    
     @property
     def edge_index(self):
         return self.__edge.edge_index

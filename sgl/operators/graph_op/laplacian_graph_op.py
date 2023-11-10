@@ -5,7 +5,7 @@ from sgl.operators.utils import adj_to_symmetric_norm
 
 
 class LaplacianGraphOp(GraphOp):
-    def __init__(self, prop_steps, r=0.5):
+    def __init__(self, prop_steps=-1, r=0.5):
         super(LaplacianGraphOp, self).__init__(prop_steps)
         self.__r = r
 
