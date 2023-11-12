@@ -35,6 +35,12 @@ class GraphOp:
             prop_feat_list.append(feat_temp)
         return [torch.FloatTensor(feat) for feat in prop_feat_list]
 
+class PreMessageOp:
+    def __init__(self, dim=1):
+        self._dim = dim
+
+    def _transform_x(self, x):
+        raise NotImplementedError
 
 # Might include training parameters
 class MessageOp(nn.Module):

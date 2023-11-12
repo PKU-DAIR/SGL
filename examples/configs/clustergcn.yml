@@ -1,0 +1,21 @@
+dataset:
+  classname: "Planetoid"
+  name: "cora"
+  root: "/home/ssq/test_data/"
+sampler:
+  cluster_method: "random"
+  cluster_number: 10
+  test_ratio: 0.3
+model:
+  hidden_dim: 128
+  dropout: 0.5
+  num_layers: 2
+task:
+  train_batch_size: 1
+  eval_batch_size: 1
+  epochs: 30
+  lr: 0.01
+  weight_decay: 0.00005
+  loss_fn: "nll_loss"
+  seed: 42
+

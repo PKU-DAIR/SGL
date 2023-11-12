@@ -1,7 +1,7 @@
 import time
 import torch
-import torch.nn as nn
 from torch.optim import Adam
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from sgl.tasks.base_task import BaseTask
@@ -9,7 +9,7 @@ from sgl.tasks.utils import accuracy, set_seed, train, mini_batch_train, evaluat
 
 
 class NodeClassification_Sampling(BaseTask):
-    def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn=nn.CrossEntropyLoss(), seed=42,
+    def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn="nll_loss", seed=42,
                  train_batch_size=None, eval_batch_size=None):
         super(NodeClassification_Sampling, self).__init__()
 
@@ -20,7 +20,7 @@ class NodeClassification_Sampling(BaseTask):
         self.__optimizer = Adam(model.parameters(), lr=lr,
                                 weight_decay=weight_decay)
         self.__epochs = epochs
-        self.__loss_fn = loss_fn
+        self.__loss_fn = getattr(F, loss_fn) if isinstance(loss_fn, str) else loss_fn
         self.__device = device
         self.__seed = seed
         self.__train_batch_size= train_batch_size
@@ -37,9 +37,9 @@ class NodeClassification_Sampling(BaseTask):
 
         pre_time_st = time.time()
         if self.__model.pre_sampling:
-            # ClusterGCN samples only once and the sampling/preprocess procedure is done before training.
-            subgraphs = self.__model.sampling(None)
-            self.__model.preprocess(use_subgraphs=True, **subgraphs)
+            # ClusterGCN samples only once and the sampling procedure is done before training.
+            subgraphs = self.__model.sampling(None, to_sparse_tensor=True)
+            self.__model.preprocess(adj=subgraphs["sampled_adjs"], x=subgraphs["x"])
         else:
             self.__model.preprocess(adj=self.__dataset.adj, x=self.__dataset.x)
         pre_time_ed = time.time()

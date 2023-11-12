@@ -1,4 +1,4 @@
-from sgl.models.base_model import BaseSGAPModelDist
+from sgl.models.base_model_dist import BaseSGAPModelDist
 from sgl.models.simple_models import MultiLayerPerceptron
 from sgl.operators.graph_op import LaplacianGraphOp
 from sgl.operators.message_op import LearnableWeightedMessageOp

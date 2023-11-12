@@ -1,0 +1,24 @@
+dataset:
+  classname: "Planetoid"  
+  name: "cora"
+  root: "/home/ssq/test_data/"
+  split: "official"
+sampler:
+  name: "NeighborSampler"
+  inductive: False
+  layer_sizes: "5-5"
+  prob_type: "normalize"
+  replace: False
+model:
+  name: "GraphSAGE"
+  hidden_dim: 128
+  dropout: 0.5
+  num_layers: 2
+task:
+  train_batch_size: 64
+  eval_batch_size: 64
+  epochs: 20
+  lr: 0.1
+  weight_decay: 0.00005
+  loss_fn: "nll_loss"
+

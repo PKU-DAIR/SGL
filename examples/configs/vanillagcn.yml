@@ -1,0 +1,19 @@
+dataset:
+  classname: "Planetoid"  
+  name: "cora"
+  root: "/home/ssq/test_data/"
+  split: "official"
+sampler:
+  name: "FullSampler"
+  inductive: False
+model:
+  name: "VanillaGCN"
+  hidden_dim: 128
+  dropout: 0.5
+  num_layers: 2
+task:
+  epochs: 20
+  lr: 0.1
+  weight_decay: 0.00005
+  loss_fn: "nll_loss"
+

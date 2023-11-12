@@ -70,7 +70,8 @@ class BaseSAMPLEModel(nn.Module):
     def __init__(self, evaluate_mode="full"):
         super(BaseSAMPLEModel, self).__init__()
 
-        self._pre_graph_op, self._sampling_op, self._post_graph_op = None, None, None
+        self._pre_graph_op, self._post_graph_op = None, None
+        self._sampling_op, self._post_sampling_graph_op = None, None
         self._base_model = None
         self._evaluate_mode = evaluate_mode
 
@@ -91,20 +92,41 @@ class BaseSAMPLEModel(nn.Module):
     def evaluate_mode(self):
         return self._evaluate_mode
 
-    def sampling(self, batch_inds):
-        return self._sampling_op.sampling(batch_inds)
-       
-    def preprocess(self, adj, x, use_subgraphs=False):
-        if self._pre_graph_op is not None:
-            if use_subgraphs is False:
-                # We don't transform _norm_adj into the form of sparse tensor, as sparse tensors don't have strides
-                self._norm_adj = self._pre_graph_op._construct_adj(adj)
+    def sampling(self, batch_inds, to_sparse_tensor=True):
+        sample_results = self._sampling_op.sampling(batch_inds)
+        adjs = sample_results.get("sampled_adjs", None)
+        if adjs is not None:
+            if isinstance(adjs, list):
+                if self._post_sampling_graph_op is not None:
+                    adjs = [self._post_sampling_graph_op._construct_adj(adj) for adj in adjs]
+                if to_sparse_tensor:
+                    adjs = [sparse_mx_to_torch_sparse_tensor(adj) for adj in adjs]
+            elif isinstance(adjs, dict):
+                if self._post_sampling_graph_op is not None:
+                    adjs = {sg_id: self._post_sampling_graph_op._construct_adj(adj) for sg_id, adj in adjs.items()}
+                if to_sparse_tensor:
+                    adjs = {sg_id: sparse_mx_to_torch_sparse_tensor(adj) for sg_id, adj in adjs.items()}
             else:
-                self._norm_adj = {sg_id: self._pre_graph_op._construct_adj(sampled_adj) for sg_id, sampled_adj in adj.items()}
-                self._norm_adj = {sg_id: sparse_mx_to_torch_sparse_tensor(sampled_adj) for sg_id, sampled_adj in self._norm_adj.items()}
+                if self._post_sampling_graph_op is not None:
+                    adjs = self._post_sampling_graph_op._construct_adj(adjs)
+                if to_sparse_tensor:
+                    adjs = sparse_mx_to_torch_sparse_tensor(adjs)
+            sample_results.update({"sampled_adjs": adjs})
+        return sample_results  
+       
+    def preprocess(self, adj, x):
+        if self._pre_graph_op is not None:
+            # We don't transform _norm_adj into the form of sparse tensor, 
+            # as sparse tensors don't have strides.
+            self._norm_adj = self._pre_graph_op._construct_adj(adj)
         else:
-            self._pre_msg_learnable = False
-        self._processed_feature = x
+            # For ClusterGCN, we have already processed subgraphs after sampling.
+            self._norm_adj = adj
+        self._pre_msg_learnable = False
+        if hasattr(self, "_pre_feature_op"):
+            self._processed_feature = self._pre_feature_op._transform_x(x)
+        else:
+            self._processed_feature = x
     
     def postprocess(self, adj, output):
         if self._post_graph_op is not None:
@@ -120,7 +142,7 @@ class BaseSAMPLEModel(nn.Module):
         if self.training: 
             if sampler_name in ["FastGCNSampler", "NeighborSampler"]:
                 sampled_adjs = kwargs["sampled_adjs"]
-                n_ids = kwargs["source_n_ids"] # source node inds of the last layer
+                n_ids = kwargs["n_ids"]
                 sampled_x = self._processed_feature[n_ids].to(device)
                 sampled_adjs = [sampled_adj.to(device) for sampled_adj in sampled_adjs]
                 effective_batch = batch_idx
@@ -145,7 +167,7 @@ class BaseSAMPLEModel(nn.Module):
                 sampled_adjs = [sparse_mx_to_torch_sparse_tensor(self._norm_adj).to(device)] * (num_layers - 1)
                 sampled_adjs.append(sparse_mx_to_torch_sparse_tensor(self._norm_adj[batch_idx, :]).to(device))
                 effective_batch = batch_idx
-                output = self._base_model(full_x, sampled_adjs)
+                output = self._base_model(full_x, sampled_adjs, tgt_nids=batch_idx)
             elif sampler_name == "ClusterGCNSampler":
                 batch_idx = batch_idx.item()
                 sampled_x = self._processed_feature[batch_idx].to(device)

@@ -185,13 +185,13 @@ class ResMultiLayerPerceptron(nn.Module):
         output = self.__fcs[-1](feature)
         return output
 
-class GraphConvolution(nn.Module):
+class GCNConv(nn.Module):
     """
     Simple GCN layer, similar to https://arxiv.org/abs/1609.02907
     """
 
     def __init__(self, in_features, out_features, bias=False):
-        super(GraphConvolution, self).__init__()
+        super(GCNConv, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.weight = nn.Parameter(torch.FloatTensor(in_features, out_features))
@@ -215,18 +215,96 @@ class GraphConvolution(nn.Module):
         else:
             return output
 
+class SAGEConv(nn.Module):
+    """
+    Simple GraphSAGE layer, use mean as aggregation way
+    """
+
+    def __init__(self, in_features, out_features, root_weight=True, bias=True):
+        super(SAGEConv, self).__init__()
+        if isinstance(in_features, int):
+            in_features = (in_features, in_features)
+        self.in_features = in_features
+        self.out_features = out_features
+        self.root_weight = root_weight
+
+        self.lin_l = nn.Linear(in_features[0], out_features, bias=bias)
+
+        if self.root_weight:
+            self.lin_r = nn.Linear(in_features[1], out_features, bias=False)
+        
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        self.lin_l.reset_parameters()
+        if hasattr(self, "lin_r"):
+            self.lin_r.reset_parameters()
+
+    def forward(self, x, adj, tgt_nids=None):
+        output = torch.spmm(adj, x)
+        output = self.lin_l(output)
+
+        if tgt_nids is None:
+            num_tgt = adj.shape[0]
+            x_r = x[:num_tgt]
+        else:
+            x_r = x[tgt_nids]
+        
+        if self.root_weight:
+            output += self.lin_r(x_r)
+        
+        return output
+    
+class SAGE(nn.Module):
+    def __init__(self, nfeat, nhid, nclass, nlayers=2, dropout=0.5, normalize=True):
+        super(SAGE, self).__init__()
+        self.gcs = nn.ModuleList()
+        self.gcs.append(SAGEConv(nfeat, nhid))
+        for _ in range(nlayers-2):
+            self.gcs.append(SAGEConv(nhid, nhid))
+        self.gcs.append(SAGEConv(nhid, nclass))
+        self.dropout = dropout
+        self.normalize = lambda x: F.normalize(x, p=1, dim=1) if normalize else None
+
+    def reset_parameter(self):
+        for conv in self.gcs:
+            conv.reset_parameters()
+
+    def forward(self, x, adjs, tgt_nids=None):
+        repr = x
+        if isinstance(adjs, list):
+            for i, adj in enumerate(adjs[:-1]):
+                repr = self.gcs[i](repr, adj)
+                if self.normalize is not None:
+                    repr = self.normalize(repr)
+                repr = F.relu(repr)
+                repr = F.dropout(repr, self.dropout, training=self.training)
+            repr = self.gcs[-1](repr, adjs[-1], tgt_nids)
+        else:
+            for gc in self.gcs[:-1]:
+                repr = gc(repr, adjs)
+                if self.normalize is not None:
+                    repr = self.normalize(repr)
+                repr = F.relu(repr)
+                repr = F.dropout(repr, self.dropout, training=self.training)
+            repr = self.gcs[-1](repr, adjs, tgt_nids)
+        return F.log_softmax(repr, dim=1)
 
 class GCN(nn.Module):
     def __init__(self, nfeat, nhid, nclass, nlayers=2, dropout=0.5):
-        super().__init__()
+        super(GCN, self).__init__()
         self.gcs = nn.ModuleList()
-        self.gcs.append(GraphConvolution(nfeat, nhid))
+        self.gcs.append(GCNConv(nfeat, nhid))
         for _ in range(nlayers-2):
-            self.gcs.append(GraphConvolution(nhid, nhid))
-        self.gcs.append(GraphConvolution(nhid, nclass))
+            self.gcs.append(GCNConv(nhid, nhid))
+        self.gcs.append(GCNConv(nhid, nclass))
         self.dropout = dropout
+    
+    def reset_parameter(self):
+        for conv in self.gcs:
+            conv.reset_parameters()
 
-    def forward(self, x, adjs):
+    def forward(self, x, adjs, **kwargs):
         repr = x
         if isinstance(adjs, list):
             for i, adj in enumerate(adjs[:-1]):
@@ -235,7 +313,7 @@ class GCN(nn.Module):
                 repr = F.dropout(repr, self.dropout, training=self.training)
             repr = self.gcs[-1](repr, adjs[-1])
         else:
-            for i, gc in enumerate(self.gcs[:-1]):
+            for gc in self.gcs[:-1]:
                 repr = gc(repr, adjs)
                 repr = F.relu(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
