@@ -2,8 +2,8 @@ import yaml
 import argparse
 
 import sgl.dataset as Dataset
-import sgl.models.homo as HomoModels
 import sgl.sampler as Sampler
+import sgl.models.homo as HomoModels
 from sgl.tasks import NodeClassification_Sampling
 
 
@@ -21,17 +21,23 @@ if __name__ == "__main__":
     dataset_kwargs = config["dataset"]
     classname = dataset_kwargs.pop("classname")
     dataset = getattr(Dataset, classname)(**dataset_kwargs)
-    sampler_kwargs = config["sampler"]
-    if "inductive" in sampler_kwargs.keys():
-        inductive = sampler_kwargs.pop("inductive")
+    training_sampler_kwargs = config["sampler"]["training"]
+    if "inductive" in training_sampler_kwargs.keys():
+        inductive = training_sampler_kwargs.pop("inductive")
     else:
         inductive = False
-    sampler_name = sampler_kwargs.pop("name")
-    sampler = getattr(Sampler, sampler_name)(dataset.adj[dataset.train_idx, :][:, dataset.train_idx] if inductive else dataset.adj, **sampler_kwargs)
+    training_sampler_name = training_sampler_kwargs.pop("name")
+    training_sampler = getattr(Sampler, training_sampler_name)(dataset.adj[dataset.train_idx, :][:, dataset.train_idx] if inductive else dataset.adj, **training_sampler_kwargs)
+    if "eval" in config["sampler"].keys():
+        eval_sampler_kwargs = config["sampler"]["eval"]
+        eval_sampler_name = eval_sampler_kwargs.pop("name")
+        eval_sampler = getattr(Sampler, eval_sampler_name)(dataset.adj, **eval_sampler_kwargs)
+    else:
+        eval_sampler = training_sampler
     model_kwargs = config["model"]
     model_name = model_kwargs.pop("name")
     model_kwargs.update({"device": device})
-    model = getattr(HomoModels, model_name)(dataset, sampler, **model_kwargs)
+    model = getattr(HomoModels, model_name)(dataset, training_sampler, eval_sampler, **model_kwargs)
     task_kwargs = config["task"]
     task_kwargs.update({"device": device})
     test_acc = NodeClassification_Sampling(dataset, model, **task_kwargs).test_acc

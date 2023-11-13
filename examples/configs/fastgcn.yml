@@ -4,12 +4,18 @@ dataset:
   root: "/home/ssq/test_data/"
   split: "official"
 sampler:
-  name: "FastGCNSampler"
-  inductive: False
-  adj_process: "LaplacianGraphOp"
-  layer_sizes: "256-256"
-  prob_type: "normalize"
-  replace: True
+  training:
+    name: "FastGCNSampler"
+    inductive: False
+    pre_sampling_op: "LaplacianGraphOp"
+    layer_sizes: "256,256"
+    prob_type: "normalize"
+    replace: True
+  eval:
+    name: "NeighborSampler"
+    layer_sizes: "-1,-1"
+    pre_sampling_op: "LaplacianGraphOp"
+    cached: True
 model:
   name: "FastGCN"
   hidden_dim: 128

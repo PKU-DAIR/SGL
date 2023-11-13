@@ -48,11 +48,8 @@ def mini_batch_evaluate(model, val_loader, test_loader, labels, device):
     val_num = 0
     correct_num_val, correct_num_test = 0, 0
     for batch in val_loader:
-        if model.evaluate_mode == "sampling": # clustergcn still uses mini-batches during evaluation
-            sample_dict = model.sampling(batch)
-            val_output, batch = model.model_forward(batch, device, **sample_dict)
-        else:  # other models use a full batch for evaluation
-            val_output, batch = model.model_forward(batch, device)
+        sample_dict = model.sampling(batch)
+        val_output, batch = model.model_forward(batch, device, **sample_dict)
         pred = val_output.max(1)[1].type_as(labels)
         correct_num_val += pred.eq(labels[batch]).double().sum()
         val_num += len(batch)
@@ -60,11 +57,8 @@ def mini_batch_evaluate(model, val_loader, test_loader, labels, device):
 
     test_num = 0
     for batch in test_loader:
-        if model.evaluate_mode == "sampling": 
-            sample_dict = model.sampling(batch)
-            test_output, batch = model.model_forward(batch, device, **sample_dict)
-        else: 
-            test_output, batch = model.model_forward(batch, device)
+        sample_dict = model.sampling(batch)
+        test_output, batch = model.model_forward(batch, device, **sample_dict)
         pred = test_output.max(1)[1].type_as(labels)
         correct_num_test += pred.eq(labels[batch]).double().sum()
         test_num += len(batch)
@@ -91,7 +85,7 @@ def mini_batch_train(model, train_loader, labels, device, optimizer, loss_fn):
     correct_num = 0
     loss_train_sum = 0.
     train_num = 0
-    
+
     for batch in train_loader:
         optimizer.zero_grad()
         sample_dict = model.sampling(batch)

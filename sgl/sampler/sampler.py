@@ -3,15 +3,17 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.sparse.linalg import norm as sparse_norm
 
+import sgl.operators.graph_op as GraphOps
 from sgl.sampler.base_sampler import BaseSampler
 from sgl.sampler.utils import adj_train_analysis
-import sgl.operators.graph_op as GraphOps
+from sgl.tasks.utils import sparse_mx_to_torch_sparse_tensor
 
 # import metis
 import random
 from sklearn.model_selection import train_test_split
 
 LOCALITY_KWARGS = {"min_neighs", "sim_threshold", "step", "low_quality_score"}
+UNI_KWARGS = {"pre_sampling_op", "post_sampling_op", "cached"}
 
 class FullSampler(BaseSampler):
     def __init__(self, adj, **kwargs):
@@ -28,20 +30,32 @@ class FullSampler(BaseSampler):
 class NeighborSampler(BaseSampler):
     def __init__(self, adj, **kwargs):
         """
-        Neighborhood sampling method follows GraphSAGE.
-        Implementation is adapted from PyG.
+        Node-wise neighbor sampler
         """
         super(NeighborSampler, self).__init__(adj, **kwargs)
         self.sampler_name = "NeighborSampler"
         self.pre_sampling = False
 
-    def _preproc(self, **kwargs):
-        allowed_kwargs = {"pre_probs", "prob_type", "layer_sizes", "num_layers", "replace"}
+    def _pre_process(self, **kwargs):
+        specific_kwargs = {"pre_probs", "prob_type", "layer_sizes", "num_layers", "replace"}
         for kwarg in kwargs.keys():
-            assert kwarg in allowed_kwargs or kwarg in LOCALITY_KWARGS, "Invalid keyword argument: " + kwarg
+            assert kwarg in specific_kwargs or kwarg in LOCALITY_KWARGS or kwarg in UNI_KWARGS, "Invalid keyword argument: " + kwarg
         
+        if "pre_sampling_op" in kwargs.keys():
+            if kwargs["pre_sampling_op"] == "LaplacianGraphOp":
+                graph_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5, add_self_loops=False)
+            elif kwargs["pre_sampling_op"] == "RwGraphOp":   
+                graph_op = getattr(GraphOps, "RwGraphOp")()
+            self.adj = graph_op._construct_adj(self.adj)
+
+        if "post_sampling_op" in kwargs.keys():
+            if kwargs["post_sampling_op"] == "LaplacianGraphOp":
+                self._post_sampling_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5, add_self_loops=False)
+            elif kwargs["post_sampling_op"] == "RwGraphOp":
+                self._post_sampling_op = getattr(GraphOps, "RwGraphOp")()
+
         if "layer_sizes" in kwargs.keys():
-            layer_sizes = kwargs["layer_sizes"].split("-")
+            layer_sizes = kwargs["layer_sizes"].split(",")
             layer_sizes = [int(layer_size) for layer_size in layer_sizes]
             self.layer_sizes = layer_sizes
         else:
@@ -70,77 +84,82 @@ class NeighborSampler(BaseSampler):
             else:
                 raise ValueError(f"Don\'t support {prob_type} probability calculation. "
                                  "Consider pre-calculating the probability and transfer it to pre_probs.")
+        
         self.replace = kwargs.get("replace", True)
-        self.adj_t = self.adj.transpose()
-
+        # When layer_size = -1, NeighborSampler always returns the same subgraph given the same batch_inds.
+        # So we can cache the subgraphs to save the time.
+        self.cached = kwargs.get("cached", False)
+        if self.cached:
+            self.cached_nids = {}
+            self.cached_adjs = {}
+    
     def sampling(self, batch_inds):
         """
-        Intput:
+        Input:
             batch_inds: array of batch node inds
         Method:
             Neighbor sampling
         Outputs:
             n_id: global node index of each node in batch
-            adjs: list of sampled adj in the form of 2D tensor [2, M] where M = number of edges
+            adjs: list of sampled adj in the form of sparse tensors
         """
-        all_adjs = []
+        if not (self.cached and batch_inds in self.cached_nids.keys()):
+            all_adjs = []
+            
+            cur_tgt_nodes = batch_inds.numpy()        
+            for layer_index in range(self.num_layers):
+                cur_src_nodes, adj_sampled = self._one_layer_sampling(cur_tgt_nodes, self.layer_sizes[layer_index])
+                all_adjs.append(adj_sampled)
+                cur_tgt_nodes = cur_src_nodes
+            
+            all_adjs = self._post_process(all_adjs[::-1])
+            
+            if self.cached:
+                self.cached_nids[batch_inds] = cur_tgt_nodes
+                self.cached_adjs[batch_inds] = all_adjs       
+            return {"n_ids": cur_tgt_nodes, "sampled_adjs": all_adjs}
         
-        cur_tgt_nodes = batch_inds.numpy()        
-        for layer_index in range(self.num_layers):
-            cur_src_nodes, adj_sampled = self._one_layer_sampling(cur_tgt_nodes, self.layer_sizes[layer_index])
-            all_adjs.append(adj_sampled)
-            cur_tgt_nodes = cur_src_nodes
-        
-        all_adjs = all_adjs[::-1]
-        
-        return {"n_ids": cur_tgt_nodes, "sampled_adjs": all_adjs}
+        else:
+            return {"n_ids": self.cached_nids[batch_inds], "sampled_adjs": self.cached_adjs[batch_inds]}      
 
 
-    def _one_layer_sampling(self, v_indices, layer_size):
+    def _one_layer_sampling(self, prev_nodes, layer_size=-1):
         """
         Inputs:
             v_indices: array of target node inds of the current layer
             layer_size: size of sampled neighbors as the source nodes
         """  
-        ret_nodes, ret_edges = [], []
-        for v_ind in v_indices: # global id
-            st_indptr, ed_indptr = self.adj_t.indptr[v_ind], self.adj_t.indptr[v_ind+1]
-            neis = self.adj_t.indices[st_indptr: ed_indptr] # neighbor range         
-            p1 = self.probs[neis]
-            p1 = p1 / np.sum(p1)
-            if self.replace is False:
-                layer_size = min(ed_indptr-st_indptr, layer_size)
-            e_ids = np.random.choice(np.arange(st_indptr, ed_indptr), layer_size, self.replace, p1)
-            src_nodes = self.adj_t.indices[e_ids]
-            ret_edges.append(e_ids)
-            ret_nodes.append(src_nodes)  
+        current_layer_adj = self.adj[prev_nodes, :]
+
+        if layer_size == -1:
+            # in case layer_size == -1, we simply keep all the neighbors
+            next_nodes = np.unique(current_layer_adj.indices)
+            
+        else:
+            next_nodes = []
+
+            row_start_stop = np.lib.stride_tricks.as_strided(current_layer_adj.indptr, shape=(current_layer_adj.shape[0], 2), strides=2*current_layer_adj.indptr.strides)
+
+            for start, stop in row_start_stop:
+                neigh_index = current_layer_adj.indices[start:stop]
+                probs = self.probs[neigh_index] / np.sum(self.probs[neigh_index])
+                num_samples = np.min([neigh_index.size, layer_size]) if self.replace is False else layer_size
+                sampled_nodes = np.random.choice(neigh_index, num_samples, replace=self.replace, p=probs)
+                next_nodes.append(sampled_nodes)
+            
+            next_nodes = np.unique(np.concatenate(next_nodes))
         
-        return self._adj_extract(v_indices, ret_nodes, ret_edges)
-    
-    def _adj_extract(self, tgt_nodes, src_nodes, e_ids):
-        row, col, data = [], [], []
-        unique_src_nodes = np.unique(np.concatenate(src_nodes))
-        unique_src_nodes = np.setdiff1d(unique_src_nodes, tgt_nodes)
-        # Similar to PyG, the target nodes are also the source nodes of the same layer.
-        # Guarantee the tgt_nodes inds are always at the beginning.
-        unique_src_nodes = np.concatenate((tgt_nodes, unique_src_nodes))
-        # global id to local id
-        nid_mapper_src = {unique_src_nodes[i]: i for i in range(len(unique_src_nodes))}
-        num_tgt_nodes = len(tgt_nodes)
-        for i in range(num_tgt_nodes):
-            tgt_node = tgt_nodes[i]
-            num_edges = len(e_ids[i])
-            col.extend([i] * num_edges)
-            for j in range(num_edges):
-                old_ptr = e_ids[i][j]
-                src_node = self.adj_t.indices[old_ptr]
-                row.append(nid_mapper_src[src_node])
-                data.append(self.adj_t[tgt_node, src_node])
-        row, col, data = np.array(row), np.array(col), np.array(data)
-        adj_sampled = sp.coo_matrix((data, (col, row)), shape=(len(tgt_nodes), len(unique_src_nodes)))
+        next_nodes = np.setdiff1d(next_nodes, prev_nodes)
+        next_nodes = np.concatenate((prev_nodes, next_nodes))
+        
+        return next_nodes, current_layer_adj[:, next_nodes]
 
-        return unique_src_nodes, adj_sampled
-
+    def _post_process(self, adjs, to_sparse_tensor=True):
+        if self._post_sampling_op is not None:
+            adjs = [self._post_sampling_op._construct_adj(adj) for adj in adjs]
+        if to_sparse_tensor:
+            adjs = [sparse_mx_to_torch_sparse_tensor(adj) for adj in adjs]
+        return adjs
 
 class FastGCNSampler(BaseSampler):
     def __init__(self, adj, **kwargs):   
@@ -148,13 +167,26 @@ class FastGCNSampler(BaseSampler):
         self.sampler_name = "FastGCNSampler"
         self.pre_sampling = False
 
-    def _preproc(self, **kwargs):
-        allowed_kwargs = {"pre_probs", "prob_type", "layer_sizes", "replace", "adj_process"}
+    def _pre_process(self, **kwargs):
+        specific_kwargs = {"pre_probs", "prob_type", "layer_sizes", "replace", "pre_sampling_op"}
         for kwarg in kwargs.keys():
-            assert kwarg in allowed_kwargs or kwarg in LOCALITY_KWARGS, "Invalid keyword argument: " + kwarg
+            assert kwarg in specific_kwargs or kwarg in LOCALITY_KWARGS or kwarg in UNI_KWARGS, "Invalid keyword argument: " + kwarg
+
+        if "pre_sampling_op" in kwargs.keys():
+            if kwargs["pre_sampling_op"] == "LaplacianGraphOp":
+                graph_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5, add_self_loops=False)
+            elif kwargs["pre_sampling_op"] == "RwGraphOp":   
+                graph_op = getattr(GraphOps, "RwGraphOp")()
+            self.adj = graph_op._construct_adj(self.adj)
+
+        if "post_sampling_op" in kwargs.keys():
+            if kwargs["post_sampling_op"] == "LaplacianGraphOp":
+                self._post_sampling_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5, add_self_loops=False)
+            elif kwargs["post_sampling_op"] == "RwGraphOp":
+                self._post_sampling_op = getattr(GraphOps, "RwGraphOp")()
 
         if "layer_sizes" in kwargs.keys():
-            layer_sizes = kwargs["layer_sizes"].split("-")
+            layer_sizes = kwargs["layer_sizes"].split(",")
             layer_sizes = [int(layer_size) for layer_size in layer_sizes]
             self.layer_sizes = layer_sizes
         else:
@@ -185,10 +217,6 @@ class FastGCNSampler(BaseSampler):
                                  "Consider pre-calculating the probability and transfer it to pre_probs.")
         self.replace = kwargs.get("replace", False)
 
-        if "adj_process" in kwargs.keys():
-            graph_op = getattr(GraphOps, kwargs["adj_process"])
-            self.adj = graph_op(r=0.5)._construct_adj(self.adj)
-
     def sampling(self, batch_inds): 
         """
         Input:
@@ -208,15 +236,11 @@ class FastGCNSampler(BaseSampler):
             all_adjs.append(cur_adj)
             cur_out_nodes = cur_in_nodes
 
-        all_adjs = all_adjs[::-1]
+        all_adjs = self._post_process(all_adjs[::-1])
 
         return {"n_ids": cur_out_nodes, "sampled_adjs": all_adjs}
 
     def _one_layer_sampling(self, v_indices, output_size):
-        # NOTE: FastGCN described in paper samples neighboors without reference
-        # to the v_indices. But in its tensorflow implementation, it has used
-        # the v_indice to filter out the disconnected nodes. So the same thing
-        # has been done here.
         """
         Inputs:
             v_indices: array of target node inds of the current layer
@@ -225,7 +249,6 @@ class FastGCNSampler(BaseSampler):
             u_samples: array of source node inds of the current layer
             support: normalized sparse adjacency matrix of the current layer
         """
-        # NOTE: Should we transpose adj since v_indices are the target nodes in the process of message propagation?
         support = self.adj[v_indices, :]
         neis = np.nonzero(np.sum(support, axis=0))[1]
         p1 = self.probs[neis]
@@ -242,6 +265,13 @@ class FastGCNSampler(BaseSampler):
         support = support.dot(sp.diags(1.0 / (sampled_p1 * output_size)))
         return u_sampled, support
 
+    def _post_process(self, adjs, to_sparse_tensor=True):
+        if self._post_sampling_op is not None:
+            adjs = [self._post_sampling_op._construct_adj(adj) for adj in adjs]
+        if to_sparse_tensor:
+            adjs = [sparse_mx_to_torch_sparse_tensor(adj) for adj in adjs]
+        
+        return adjs
     
 class ClusterGCNSampler(BaseSampler):
     """
@@ -261,10 +291,16 @@ class ClusterGCNSampler(BaseSampler):
         self.pre_sampling = True
         self._sampling_done = False
 
-    def _preproc(self, **kwargs):
-        allowed_kwargs = {"cluster_method", "cluster_number", "test_ratio"}
+    def _pre_process(self, **kwargs):
+        specific_kwargs = {"cluster_method", "cluster_number", "test_ratio"}
         for kwarg in kwargs.keys():
-            assert kwarg in allowed_kwargs, "Invalid keyword argument: " + kwarg
+            assert kwarg in specific_kwargs or kwarg in UNI_KWARGS, "Invalid keyword argument: " + kwarg
+
+        if "post_sampling_op" in kwargs.keys():
+            if kwargs["post_sampling_op"] == "LaplacianGraphOp":
+                self._post_sampling_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5, add_self_loops=False)
+            elif kwargs["post_sampling_op"] == "RwGraphOp":
+                self._post_sampling_op = getattr(GraphOps, "RwGraphOp")()
         self.cluster_method = kwargs.get("cluster_method", "random")
         self.cluster_number = kwargs.get("cluster_number", 32)
         self.test_ratio = kwargs.get("test_ratio", 0.3)
@@ -277,7 +313,7 @@ class ClusterGCNSampler(BaseSampler):
         self.feature_count = self.features.shape[1] 
         self.class_count = np.max(self.target)+1
 
-    def sampling(self, batch_inds):
+    def sampling(self, batch_inds, training):
         """
         Decomposing the graph, partitioning the features and target, creating Torch arrays.
         """
@@ -290,11 +326,20 @@ class ClusterGCNSampler(BaseSampler):
                 self._random_clustering()
             self._general_data_partitioning()
             self._transfer_edges_and_nodes()
+            
             self._sampling_done = True
-            return {"sampled_adjs": self.sg_edges, "x": self.sg_features}
-        else:
-            return {}
+        
+        batch_inds = batch_inds.item()
+        effective_batch = self.sg_train_nodes[batch_inds] if training else self.sg_test_nodes[batch_inds]
+        return {"adj": self.sg_edges[batch_inds], "x": self.sg_features[batch_inds], "effective_batch": effective_batch}
 
+    def _post_process(self, adj, to_sparse_tensor=True):
+        if self._post_sampling_op is not None:
+            adj = self._post_sampling_op._construct_adj(adj)
+        if to_sparse_tensor:
+            adj = sparse_mx_to_torch_sparse_tensor(adj)
+        return adj
+    
     def _random_clustering(self):
         """
         Random clustering the nodes.
@@ -306,9 +351,9 @@ class ClusterGCNSampler(BaseSampler):
     #     """
     #     Clustering the graph with Metis. For details see:
     #     """
-    #     (st, parts) = metis.part_graph(self.adj, self.cluster_number) # 每个聚类属于哪个part
-    #     self.clusters = list(set(parts)) # 一共有几个part
-    #     self.cluster_membership = {node: membership for node, membership in enumerate(parts)} # part加入key值，key为节点序号
+    #     (st, parts) = metis.part_graph(self.adj, self.cluster_number)
+    #     self.clusters = list(set(parts))
+    #     self.cluster_membership = {node: membership for node, membership in enumerate(parts)}
 
     def _general_data_partitioning(self):
         """
@@ -341,7 +386,7 @@ class ClusterGCNSampler(BaseSampler):
             num_nodes = len(self.sg_nodes[cluster])
             self.sg_nodes[cluster] = torch.LongTensor(self.sg_nodes[cluster])
             row, col = np.array(self.sg_edges[cluster]).transpose()
-            self.sg_edges[cluster] = sp.coo_matrix((np.ones(row.shape[0]), (row, col)), shape=(num_nodes, num_nodes))
+            self.sg_edges[cluster] = self._post_process(sp.coo_matrix((np.ones(row.shape[0]), (row, col)), shape=(num_nodes, num_nodes)))
             self.sg_train_nodes[cluster] = torch.LongTensor(self.sg_train_nodes[cluster])
             self.sg_test_nodes[cluster] = torch.LongTensor(self.sg_test_nodes[cluster])
             self.sg_features[cluster] = torch.FloatTensor(self.sg_features[cluster])

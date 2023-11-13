@@ -4,11 +4,18 @@ dataset:
   root: "/home/ssq/test_data/"
   split: "official"
 sampler:
-  name: "NeighborSampler"
-  inductive: False
-  layer_sizes: "5-5"
-  prob_type: "normalize"
-  replace: False
+  training:
+    name: "NeighborSampler"
+    inductive: False
+    layer_sizes: "5,5"
+    prob_type: "normalize"
+    replace: False
+    post_sampling_op: "RwGraphOp"
+  eval:
+    name: "NeighborSampler"
+    layer_sizes: "-1,-1"
+    post_sampling_op: "RwGraphOp"
+    cached: True
 model:
   name: "GraphSAGE"
   hidden_dim: 128

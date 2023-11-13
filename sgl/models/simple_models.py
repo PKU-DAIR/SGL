@@ -220,74 +220,66 @@ class SAGEConv(nn.Module):
     Simple GraphSAGE layer, use mean as aggregation way
     """
 
-    def __init__(self, in_features, out_features, root_weight=True, bias=True):
+    def __init__(self, in_features, out_features, normalize=True):
         super(SAGEConv, self).__init__()
         if isinstance(in_features, int):
             in_features = (in_features, in_features)
         self.in_features = in_features
         self.out_features = out_features
-        self.root_weight = root_weight
+        self.normalize = normalize
 
-        self.lin_l = nn.Linear(in_features[0], out_features, bias=bias)
-
-        if self.root_weight:
-            self.lin_r = nn.Linear(in_features[1], out_features, bias=False)
+        self.lin_l = nn.Linear(in_features[0], out_features)
+        self.lin_r = nn.Linear(in_features[1], out_features)
+        if normalize:
+            self.norm = lambda x: F.normalize(x, p=1, dim=1)
         
         self.reset_parameters()
 
     def reset_parameters(self):
         self.lin_l.reset_parameters()
-        if hasattr(self, "lin_r"):
-            self.lin_r.reset_parameters()
+        self.lin_r.reset_parameters()
 
-    def forward(self, x, adj, tgt_nids=None):
+    def forward(self, x, adj):
         output = torch.spmm(adj, x)
         output = self.lin_l(output)
 
-        if tgt_nids is None:
-            num_tgt = adj.shape[0]
-            x_r = x[:num_tgt]
-        else:
-            x_r = x[tgt_nids]
-        
-        if self.root_weight:
-            output += self.lin_r(x_r)
+        num_tgt = adj.shape[0]
+        x_r = x[:num_tgt]
+        output += self.lin_r(x_r)
+
+        if self.normalize:
+            output = self.norm(output)
         
         return output
     
 class SAGE(nn.Module):
-    def __init__(self, nfeat, nhid, nclass, nlayers=2, dropout=0.5, normalize=True):
+    def __init__(self, nfeat, nhid, nclass, nlayers=2, dropout=0.5):
         super(SAGE, self).__init__()
         self.gcs = nn.ModuleList()
         self.gcs.append(SAGEConv(nfeat, nhid))
         for _ in range(nlayers-2):
             self.gcs.append(SAGEConv(nhid, nhid))
-        self.gcs.append(SAGEConv(nhid, nclass))
+        self.gcs.append(SAGEConv(nhid, nclass, normalize=False))
         self.dropout = dropout
-        self.normalize = lambda x: F.normalize(x, p=1, dim=1) if normalize else None
 
     def reset_parameter(self):
         for conv in self.gcs:
             conv.reset_parameters()
 
-    def forward(self, x, adjs, tgt_nids=None):
+    def forward(self, x, adjs):
         repr = x
         if isinstance(adjs, list):
             for i, adj in enumerate(adjs[:-1]):
                 repr = self.gcs[i](repr, adj)
-                if self.normalize is not None:
-                    repr = self.normalize(repr)
                 repr = F.relu(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
-            repr = self.gcs[-1](repr, adjs[-1], tgt_nids)
+            repr = self.gcs[-1](repr, adjs[-1])
         else:
             for gc in self.gcs[:-1]:
                 repr = gc(repr, adjs)
-                if self.normalize is not None:
-                    repr = self.normalize(repr)
                 repr = F.relu(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
-            repr = self.gcs[-1](repr, adjs, tgt_nids)
+            repr = self.gcs[-1](repr, adjs)
         return F.log_softmax(repr, dim=1)
 
 class GCN(nn.Module):
@@ -304,7 +296,7 @@ class GCN(nn.Module):
         for conv in self.gcs:
             conv.reset_parameters()
 
-    def forward(self, x, adjs, **kwargs):
+    def forward(self, x, adjs):
         repr = x
         if isinstance(adjs, list):
             for i, adj in enumerate(adjs[:-1]):

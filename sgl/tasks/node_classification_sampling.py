@@ -36,12 +36,7 @@ class NodeClassification_Sampling(BaseTask):
         set_seed(self.__seed)
 
         pre_time_st = time.time()
-        if self.__model.pre_sampling:
-            # ClusterGCN samples only once and the sampling procedure is done before training.
-            subgraphs = self.__model.sampling(None, to_sparse_tensor=True)
-            self.__model.preprocess(adj=subgraphs["sampled_adjs"], x=subgraphs["x"])
-        else:
-            self.__model.preprocess(adj=self.__dataset.adj, x=self.__dataset.x)
+        self.__model.preprocess(adj=self.__dataset.adj, x=self.__dataset.x)
         pre_time_ed = time.time()
         print(f"Preprocessing done in {(pre_time_ed - pre_time_st):.4f}s")
         
@@ -52,8 +47,7 @@ class NodeClassification_Sampling(BaseTask):
                 self.__dataset.val_idx, batch_size=self.__eval_batch_size, shuffle=False, drop_last=False)
             self.__test_loader = DataLoader(
                 self.__dataset.test_idx, batch_size=self.__eval_batch_size, shuffle=False, drop_last=False)
-            
-            if self.__model.sampler_name != "ClusterGCNSampler":  # TODO: need further modification
+            if self.__model.evaluate_mode == "full":
                 self.__all_eval_loader = DataLoader(
                     range(self.__dataset.num_node), batch_size=self.__eval_batch_size, shuffle=False, drop_last=False)
             else:
@@ -91,7 +85,7 @@ class NodeClassification_Sampling(BaseTask):
                 best_val = acc_val
                 best_test = acc_test
 
-        acc_val, acc_test = self._postprocess(self.__model.evaluate_mode) # Test the best model, this part might have bugs
+        acc_val, acc_test = self._postprocess()
         if acc_val > best_val:
             best_val = acc_val
             best_test = acc_test
@@ -101,27 +95,41 @@ class NodeClassification_Sampling(BaseTask):
         print(f'Best val: {best_val:.4f}, best test: {best_test:.4f}')
         return best_test
 
-    def _postprocess(self, evaluate_mode):
+    def _postprocess(self):
         self.__model.eval()
-        if self.__mini_batch is False:
-            outputs = self.__model.model_forward(
-                range(self.__dataset.num_node), self.__device).to("cpu")
-        else:
-            outputs = None
-            for batch in self.__all_eval_loader:
-                if evaluate_mode == "sampling":
+        if self.__model.evaluate_mode == "full":
+            if self.__mini_batch is False:
+                outputs = self.__model.model_forward(
+                    range(self.__dataset.num_node), self.__device).to("cpu")
+            else:
+                outputs = []
+                for batch in self.__all_eval_loader:
                     sample_dict = self.__model.sampling(batch)
                     output, batch = self.__model.model_forward(batch, self.__device, **sample_dict)
-                else:
-                    output, batch = self.__model.model_forward(batch, self.__device)
-                if outputs is None:
-                    outputs = output
-                else:
-                    outputs = torch.vstack((outputs, output))
+                    outputs.append(output)
+                outputs = torch.vstack(outputs)
 
-        final_output = self.__model.postprocess(self.__dataset.adj, outputs)
-        acc_val = accuracy(
-            final_output[self.__dataset.val_idx], self.__labels[self.__dataset.val_idx])
-        acc_test = accuracy(
-            final_output[self.__dataset.test_idx], self.__labels[self.__dataset.test_idx])
+            # NOTE: self.__model.postprocess now directly returns the original outputs
+            final_output = self.__model.postprocess(self.__dataset.adj, outputs)
+            acc_val = accuracy(
+                final_output[self.__dataset.val_idx], self.__labels[self.__dataset.val_idx])
+            acc_test = accuracy(
+                final_output[self.__dataset.test_idx], self.__labels[self.__dataset.test_idx])           
+        else:
+            # ClusterGCN
+            for batch in self.__all_eval_loader:
+                outputs, labels = [], []
+                for batch in self.__all_eval_loader:
+                    sample_dict = self.__model.sampling(batch)
+                    sample_dict.update({"ret_full": True})
+                    output, batch = self.__model.model_forward(batch, self.__device, **sample_dict)
+                    output = self.__model.postprocess(sample_dict["adj"], output)
+                    outputs.append(output[batch])
+                    labels.append(self.__labels[batch])
+            outputs = torch.vstack(outputs)
+            labels = torch.cat(labels)
+            
+            acc_val = accuracy(outputs, labels)
+            acc_test = accuracy(outputs, labels)
+        
         return acc_val, acc_test

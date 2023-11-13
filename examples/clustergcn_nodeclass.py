@@ -13,7 +13,7 @@ if __name__ == "__main__":
         "--device", type=int, default=0, help="gpu device id or cpu (-1)"
     )
     parser.add_argument(
-        "--config_path", type=str, default="./configs/fastgcn.yml", help="save path of the configuration file"
+        "--config_path", type=str, default="./configs/clustergcn.yml", help="save path of the configuration file"
     )
     args = parser.parse_args()
     config = yaml.safe_load(open(args.config_path, "rb"))

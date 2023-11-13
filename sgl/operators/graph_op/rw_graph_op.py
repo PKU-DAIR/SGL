@@ -4,9 +4,9 @@ from sgl.operators.base_op import GraphOp
 from sgl.operators.utils import adj_to_row_norm
 
 
-class RwGraphOP(GraphOp):
+class RwGraphOp(GraphOp):
     def __init__(self, prop_steps=-1):
-        super(RwGraphOP, self).__init__(prop_steps)
+        super(RwGraphOp, self).__init__(prop_steps)
 
     def _construct_adj(self, adj):
         if isinstance(adj, sp.csr_matrix):

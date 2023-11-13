@@ -9,7 +9,7 @@ from .sgc_dist import SGCDist
 from .fastgcn import FastGCN
 from .clustergcn import ClusterGCN
 from .graphsage import GraphSAGE
-from .vanillagcn import VanillaGCN
+from .vanillagnn import VanillaGNN
 
 __all__ = [
     "SGC",
@@ -23,5 +23,5 @@ __all__ = [
     "FastGCN",
     "ClusterGCN",
     "GraphSAGE",
-    "VanillaGCN"
+    "VanillaGNN"
 ]

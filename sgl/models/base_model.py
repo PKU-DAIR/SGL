@@ -69,60 +69,26 @@ class BaseSGAPModel(nn.Module):
 class BaseSAMPLEModel(nn.Module):
     def __init__(self, evaluate_mode="full"):
         super(BaseSAMPLEModel, self).__init__()
-
-        self._pre_graph_op, self._post_graph_op = None, None
-        self._sampling_op, self._post_sampling_graph_op = None, None
-        self._base_model = None
         self._evaluate_mode = evaluate_mode
+        self._pre_graph_op, self._post_graph_op = None, None
+        self._training_sampling_op, self._eval_sampling_op = None, None
+        self._base_model = None
 
-        self._processed_feat_list = None
-        self._processed_feature = None
-        self._pre_msg_learnable = False
-        self._norm_adj = None
-
-    @property
-    def pre_sampling(self):
-        return self._sampling_op.pre_sampling
-    
-    @property
-    def sampler_name(self):
-        return self._sampling_op.sampler_name
-    
     @property
     def evaluate_mode(self):
         return self._evaluate_mode
-
-    def sampling(self, batch_inds, to_sparse_tensor=True):
-        sample_results = self._sampling_op.sampling(batch_inds)
-        adjs = sample_results.get("sampled_adjs", None)
-        if adjs is not None:
-            if isinstance(adjs, list):
-                if self._post_sampling_graph_op is not None:
-                    adjs = [self._post_sampling_graph_op._construct_adj(adj) for adj in adjs]
-                if to_sparse_tensor:
-                    adjs = [sparse_mx_to_torch_sparse_tensor(adj) for adj in adjs]
-            elif isinstance(adjs, dict):
-                if self._post_sampling_graph_op is not None:
-                    adjs = {sg_id: self._post_sampling_graph_op._construct_adj(adj) for sg_id, adj in adjs.items()}
-                if to_sparse_tensor:
-                    adjs = {sg_id: sparse_mx_to_torch_sparse_tensor(adj) for sg_id, adj in adjs.items()}
-            else:
-                if self._post_sampling_graph_op is not None:
-                    adjs = self._post_sampling_graph_op._construct_adj(adjs)
-                if to_sparse_tensor:
-                    adjs = sparse_mx_to_torch_sparse_tensor(adjs)
-            sample_results.update({"sampled_adjs": adjs})
-        return sample_results  
+    
+    def sampling(self, batch_inds):      
+        if self.training:
+            return self._training_sampling_op.sampling(batch_inds)
+        else:
+            return self._eval_sampling_op.sampling(batch_inds)
        
     def preprocess(self, adj, x):
         if self._pre_graph_op is not None:
-            # We don't transform _norm_adj into the form of sparse tensor, 
-            # as sparse tensors don't have strides.
             self._norm_adj = self._pre_graph_op._construct_adj(adj)
         else:
-            # For ClusterGCN, we have already processed subgraphs after sampling.
-            self._norm_adj = adj
-        self._pre_msg_learnable = False
+            self._norm_adj = adj 
         if hasattr(self, "_pre_feature_op"):
             self._processed_feature = self._pre_feature_op._transform_x(x)
         else:
@@ -137,50 +103,32 @@ class BaseSAMPLEModel(nn.Module):
     def model_forward(self, batch_idx, device, **kwargs):
         return self.forward(batch_idx, device, **kwargs)
 
-    def forward(self, batch_idx, device, **kwargs):
-        sampler_name = self._sampling_op.sampler_name    
-        if self.training: 
-            if sampler_name in ["FastGCNSampler", "NeighborSampler"]:
-                sampled_adjs = kwargs["sampled_adjs"]
-                n_ids = kwargs["n_ids"]
-                sampled_x = self._processed_feature[n_ids].to(device)
-                sampled_adjs = [sampled_adj.to(device) for sampled_adj in sampled_adjs]
-                effective_batch = batch_idx
-                output = self._base_model(sampled_x, sampled_adjs)
-            elif sampler_name == "ClusterGCNSampler":
-                batch_idx = batch_idx.item()
-                sampled_x = self._processed_feature[batch_idx].to(device)
-                sampled_adj = self._norm_adj[batch_idx].to(device)
-                effective_batch = self._sampling_op.sg_train_nodes[batch_idx]
-                output = self._base_model(sampled_x, sampled_adj)[effective_batch]
-            elif sampler_name == "FullSampler":
-                full_x = self._processed_feature.to(device)
-                full_adj = sparse_mx_to_torch_sparse_tensor(self._norm_adj).to(device)
-                output = self._base_model(full_x, full_adj)[batch_idx]
-                return output
-            else:
-                raise ValueError(f"{sampler_name} hasn't been implemented yet!")
+    def forward(self, batch_idx, device, **kwargs):  
+        sampler_name = self._training_sampling_op.sampler_name if self.training else self._eval_sampling_op.sampler_name 
+        if sampler_name in ["FastGCNSampler", "NeighborSampler"]:
+            sampled_adjs = kwargs["sampled_adjs"]
+            n_ids = kwargs["n_ids"]
+            sampled_x = self._processed_feature[n_ids].to(device)
+            sampled_adjs = [sampled_adj.to(device) for sampled_adj in sampled_adjs]
+            effective_batch = batch_idx
+            output = self._base_model(sampled_x, sampled_adjs)
+        elif sampler_name == "ClusterGCNSampler":
+            batch_idx = batch_idx.item()
+            sampled_x = kwargs["x"].to(device)
+            sampled_adj = kwargs["adj"].to(device)
+            effective_batch = kwargs["effective_batch"]
+            output = self._base_model(sampled_x, sampled_adj)
+            ret_full = kwargs.get("ret_full", False)
+            if ret_full is False:
+                output = output[effective_batch]
+        elif sampler_name == "FullSampler":
+            full_x = self._processed_feature.to(device)
+            full_adj = self._norm_adj.to(device)
+            output = self._base_model(full_x, full_adj)[batch_idx]
+            return output
         else:
-            if sampler_name in ["FastGCNSampler", "NeighborSampler"]:
-                full_x = self._processed_feature.to(device)
-                num_layers = self._sampling_op.num_layers
-                sampled_adjs = [sparse_mx_to_torch_sparse_tensor(self._norm_adj).to(device)] * (num_layers - 1)
-                sampled_adjs.append(sparse_mx_to_torch_sparse_tensor(self._norm_adj[batch_idx, :]).to(device))
-                effective_batch = batch_idx
-                output = self._base_model(full_x, sampled_adjs, tgt_nids=batch_idx)
-            elif sampler_name == "ClusterGCNSampler":
-                batch_idx = batch_idx.item()
-                sampled_x = self._processed_feature[batch_idx].to(device)
-                sampled_adj = self._norm_adj[batch_idx].to(device)
-                effective_batch = self._sampling_op.sg_test_nodes[batch_idx]
-                output = self._base_model(sampled_x, sampled_adj)[effective_batch]
-            elif sampler_name == "FullSampler":
-                full_x = self._processed_feature.to(device)
-                full_adj = sparse_mx_to_torch_sparse_tensor(self._norm_adj).to(device)
-                output = self._base_model(full_x, full_adj)[batch_idx]
-                return output
-            else:
-                raise ValueError(f"{sampler_name} hasn't been implemented yet!")
+            raise ValueError(f"{sampler_name} hasn't been implemented yet!")
+        
         return output, effective_batch
     
 class BaseHeteroSGAPModel(nn.Module):

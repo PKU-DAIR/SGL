@@ -4,10 +4,12 @@ dataset:
   root: "/home/ssq/test_data/"
   split: "official"
 sampler:
-  name: "FullSampler"
-  inductive: False
+  training:
+    name: "FullSampler"
+    inductive: False
 model:
-  name: "VanillaGCN"
+  name: "VanillaGNN"
+  basemodel: "SAGE"
   hidden_dim: 128
   dropout: 0.5
   num_layers: 2
