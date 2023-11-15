@@ -6,14 +6,14 @@ from scipy.sparse.linalg import norm as sparse_norm
 import sgl.operators.graph_op as GraphOps
 from sgl.sampler.base_sampler import BaseSampler
 from sgl.sampler.utils import adj_train_analysis
-from sgl.tasks.utils import sparse_mx_to_torch_sparse_tensor
+from sgl.utils import sparse_mx_to_torch_sparse_tensor
 
 # import metis
 import random
 from sklearn.model_selection import train_test_split
 
 LOCALITY_KWARGS = {"min_neighs", "sim_threshold", "step", "low_quality_score"}
-UNI_KWARGS = {"pre_sampling_op", "post_sampling_op", "cached"}
+UNI_KWARGS = {"pre_sampling_op", "post_sampling_op"}
 
 class FullSampler(BaseSampler):
     def __init__(self, adj, **kwargs):
@@ -88,10 +88,6 @@ class NeighborSampler(BaseSampler):
         self.replace = kwargs.get("replace", True)
         # When layer_size = -1, NeighborSampler always returns the same subgraph given the same batch_inds.
         # So we can cache the subgraphs to save the time.
-        self.cached = kwargs.get("cached", False)
-        if self.cached:
-            self.cached_nids = {}
-            self.cached_adjs = {}
     
     def sampling(self, batch_inds):
         """
@@ -103,25 +99,22 @@ class NeighborSampler(BaseSampler):
             n_id: global node index of each node in batch
             adjs: list of sampled adj in the form of sparse tensors
         """
-        if not (self.cached and batch_inds in self.cached_nids.keys()):
-            all_adjs = []
-            
-            cur_tgt_nodes = batch_inds.numpy()        
-            for layer_index in range(self.num_layers):
-                cur_src_nodes, adj_sampled = self._one_layer_sampling(cur_tgt_nodes, self.layer_sizes[layer_index])
-                all_adjs.append(adj_sampled)
-                cur_tgt_nodes = cur_src_nodes
-            
-            all_adjs = self._post_process(all_adjs[::-1])
-            
-            if self.cached:
-                self.cached_nids[batch_inds] = cur_tgt_nodes
-                self.cached_adjs[batch_inds] = all_adjs       
-            return {"n_ids": cur_tgt_nodes, "sampled_adjs": all_adjs}
-        
-        else:
-            return {"n_ids": self.cached_nids[batch_inds], "sampled_adjs": self.cached_adjs[batch_inds]}      
+        if callable(batch_inds):
+            batch_inds = batch_inds()
 
+        if isinstance(batch_inds, torch.Tensor):
+            batch_inds = batch_inds.numpy()
+
+        all_adjs = []
+        cur_tgt_nodes = batch_inds    
+        for layer_index in range(self.num_layers):
+            cur_src_nodes, adj_sampled = self._one_layer_sampling(cur_tgt_nodes, self.layer_sizes[layer_index])
+            all_adjs.append(adj_sampled)
+            cur_tgt_nodes = cur_src_nodes
+        
+        all_adjs = self._post_process(all_adjs[::-1])
+     
+        return {"batch_in": cur_tgt_nodes, "batch_out": batch_inds, "sampled_adjs": all_adjs}   
 
     def _one_layer_sampling(self, prev_nodes, layer_size=-1):
         """
@@ -238,7 +231,7 @@ class FastGCNSampler(BaseSampler):
 
         all_adjs = self._post_process(all_adjs[::-1])
 
-        return {"n_ids": cur_out_nodes, "sampled_adjs": all_adjs}
+        return {"batch_in": cur_out_nodes, "batch_out": batch_inds, "sampled_adjs": all_adjs}
 
     def _one_layer_sampling(self, v_indices, output_size):
         """
@@ -298,7 +291,7 @@ class ClusterGCNSampler(BaseSampler):
 
         if "post_sampling_op" in kwargs.keys():
             if kwargs["post_sampling_op"] == "LaplacianGraphOp":
-                self._post_sampling_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5, add_self_loops=False)
+                self._post_sampling_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5)
             elif kwargs["post_sampling_op"] == "RwGraphOp":
                 self._post_sampling_op = getattr(GraphOps, "RwGraphOp")()
         self.cluster_method = kwargs.get("cluster_method", "random")

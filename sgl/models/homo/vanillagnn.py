@@ -1,7 +1,6 @@
 import sgl.models.simple_models as SimpleModels
 from sgl.models.base_model import BaseSAMPLEModel
 from sgl.operators.graph_op import LaplacianGraphOp, RwGraphOp
-from sgl.tasks.utils import sparse_mx_to_torch_sparse_tensor
 
 
 class VanillaGNN(BaseSAMPLEModel):
@@ -19,8 +18,3 @@ class VanillaGNN(BaseSAMPLEModel):
         self._base_model = getattr(SimpleModels, basemodel)(
             nfeat=dataset.num_features, nhid=hidden_dim, nclass=dataset.num_classes, nlayers=num_layers, dropout=dropout
         ).to(device)
-
-    def preprocess(self, adj, x):
-        self._norm_adj = self._pre_graph_op._construct_adj(adj)
-        self._norm_adj = sparse_mx_to_torch_sparse_tensor(self._norm_adj)
-        self._processed_feature = x

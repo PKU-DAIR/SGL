@@ -12,18 +12,15 @@ sampler:
     prob_type: "normalize"
     replace: True
   eval:
-    name: "NeighborSampler"
-    layer_sizes: "-1,-1"
-    pre_sampling_op: "LaplacianGraphOp"
-    cached: True
+    name: "FullSampler"
 model:
   name: "FastGCN"
   hidden_dim: 128
   dropout: 0.5
   num_layers: 2
 task:
+  name: "NodeClassification_Sampling"
   train_batch_size: 256
-  eval_batch_size: 256
   epochs: 30
   lr: 0.1
   weight_decay: 0.00005

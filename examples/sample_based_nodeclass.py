@@ -4,7 +4,7 @@ import argparse
 import sgl.dataset as Dataset
 import sgl.sampler as Sampler
 import sgl.models.homo as HomoModels
-from sgl.tasks import NodeClassification_Sampling
+import sgl.tasks as Tasks
 
 
 if __name__ == "__main__":
@@ -40,5 +40,6 @@ if __name__ == "__main__":
     model = getattr(HomoModels, model_name)(dataset, training_sampler, eval_sampler, **model_kwargs)
     task_kwargs = config["task"]
     task_kwargs.update({"device": device})
-    test_acc = NodeClassification_Sampling(dataset, model, **task_kwargs).test_acc
+    task_name = task_kwargs.pop("name")
+    test_acc = getattr(Tasks, task_name)(dataset, model, **task_kwargs).test_acc
     print(f"final test acc: {test_acc}")

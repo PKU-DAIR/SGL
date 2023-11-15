@@ -10,17 +10,16 @@ sampler:
     layer_sizes: "5,5"
     prob_type: "normalize"
     replace: True
-    post_sampling_op: "RwGraphOp"
-  eval:
-    name: "FullSampler"
+    post_sampling_op: "LaplacianGraphOp"
 model:
-  name: "GraphSAGE"
+  name: "LazyGCN"
   hidden_dim: 128
   dropout: 0.5
   num_layers: 2
+  max_workers: 5
+  train_batch_size: 2048
 task:
-  name: "NodeClassification_Sampling"
-  train_batch_size: 512
+  name: "NodeClassification_RecycleSampling"
   epochs: 20
   lr: 0.1
   weight_decay: 0.00005

@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from sgl.data.base_dataset import HeteroNodeDataset
-from sgl.tasks.utils import sparse_mx_to_torch_sparse_tensor
+from sgl.utils import sparse_mx_to_torch_sparse_tensor
 
 
 class BaseSGAPModel(nn.Module):
@@ -77,7 +76,7 @@ class BaseSAMPLEModel(nn.Module):
     @property
     def evaluate_mode(self):
         return self._evaluate_mode
-    
+
     def sampling(self, batch_inds):      
         if self.training:
             return self._training_sampling_op.sampling(batch_inds)
@@ -89,6 +88,7 @@ class BaseSAMPLEModel(nn.Module):
             self._norm_adj = self._pre_graph_op._construct_adj(adj)
         else:
             self._norm_adj = adj 
+        self._norm_adj = sparse_mx_to_torch_sparse_tensor(self._norm_adj)
         if hasattr(self, "_pre_feature_op"):
             self._processed_feature = self._pre_feature_op._transform_x(x)
         else:
@@ -98,7 +98,7 @@ class BaseSAMPLEModel(nn.Module):
         if self._post_graph_op is not None:
             raise NotImplementedError
         return output
-    
+
     # a wrapper of the forward function
     def model_forward(self, batch_idx, device, **kwargs):
         return self.forward(batch_idx, device, **kwargs)
@@ -107,8 +107,8 @@ class BaseSAMPLEModel(nn.Module):
         sampler_name = self._training_sampling_op.sampler_name if self.training else self._eval_sampling_op.sampler_name 
         if sampler_name in ["FastGCNSampler", "NeighborSampler"]:
             sampled_adjs = kwargs["sampled_adjs"]
-            n_ids = kwargs["n_ids"]
-            sampled_x = self._processed_feature[n_ids].to(device)
+            batch_in = kwargs["batch_in"]
+            sampled_x = self._processed_feature[batch_in].to(device)
             sampled_adjs = [sampled_adj.to(device) for sampled_adj in sampled_adjs]
             effective_batch = batch_idx
             output = self._base_model(sampled_x, sampled_adjs)

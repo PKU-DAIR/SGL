@@ -14,6 +14,7 @@ model:
   dropout: 0.5
   num_layers: 2
 task:
+  name: "NodeClassification_Sampling"
   epochs: 20
   lr: 0.1
   weight_decay: 0.00005

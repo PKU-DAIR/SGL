@@ -1,5 +1,5 @@
-import random
 import torch
+import random
 import numpy as np
 import scipy.sparse as sp
 from sklearn.cluster import KMeans
@@ -45,8 +45,9 @@ def evaluate(model, val_idx, test_idx, labels, device):
 
 def mini_batch_evaluate(model, val_loader, test_loader, labels, device):
     model.eval()
-    val_num = 0
     correct_num_val, correct_num_test = 0, 0
+
+    val_num = 0
     for batch in val_loader:
         sample_dict = model.sampling(batch)
         val_output, batch = model.model_forward(batch, device, **sample_dict)
@@ -87,8 +88,8 @@ def mini_batch_train(model, train_loader, labels, device, optimizer, loss_fn):
     train_num = 0
 
     for batch in train_loader:
-        optimizer.zero_grad()
         sample_dict = model.sampling(batch)
+        optimizer.zero_grad()
         train_output, batch = model.model_forward(batch, device, **sample_dict) 
         loss_train = loss_fn(train_output, labels[batch])
         loss_train.backward()

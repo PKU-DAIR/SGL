@@ -215,6 +215,21 @@ class GCNConv(nn.Module):
         else:
             return output
 
+class RecGCNConv(GCNConv):
+    def __init__(self, in_features, out_features, bias=False):
+        super(RecGCNConv, self).__init__(in_features, out_features, bias)
+
+    def forward(self, input, adj, recycle_vec=None):
+        support = torch.mm(input, self.weight)
+        output = torch.spmm(adj, support)
+        if recycle_vec is not None:
+            output = output[recycle_vec, :]
+        
+        if self.bias is not None:
+            return output + self.bias 
+        else:
+            return output
+        
 class SAGEConv(nn.Module):
     """
     Simple GraphSAGE layer, use mean as aggregation way
@@ -283,13 +298,13 @@ class SAGE(nn.Module):
         return F.log_softmax(repr, dim=1)
 
 class GCN(nn.Module):
-    def __init__(self, nfeat, nhid, nclass, nlayers=2, dropout=0.5):
+    def __init__(self, nfeat, nhid, nclass, layer=GCNConv, nlayers=2, dropout=0.5):
         super(GCN, self).__init__()
         self.gcs = nn.ModuleList()
-        self.gcs.append(GCNConv(nfeat, nhid))
+        self.gcs.append(layer(nfeat, nhid))
         for _ in range(nlayers-2):
-            self.gcs.append(GCNConv(nhid, nhid))
-        self.gcs.append(GCNConv(nhid, nclass))
+            self.gcs.append(layer(nhid, nhid))
+        self.gcs.append(layer(nhid, nclass))
         self.dropout = dropout
     
     def reset_parameter(self):
@@ -310,4 +325,26 @@ class GCN(nn.Module):
                 repr = F.relu(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
             repr = self.gcs[-1](repr, adjs)
+        return F.log_softmax(repr, dim=1)
+    
+
+class RecycleGCN(GCN):
+    def __init__(self, nfeat, nhid, nclass, nlayers=2, dropout=0.5):
+        super(RecycleGCN, self).__init__(nfeat, nhid, nclass, RecGCNConv, nlayers, dropout)
+
+    def forward(self, x, adjs, recycle_vector=None):
+        repr = x 
+        if isinstance(adjs, list):
+            for i, adj in enumerate(adjs[:-1]):
+                repr = self.gcs[i](repr, adj)
+                repr = F.relu(repr)
+                repr = F.dropout(repr, self.dropout, training=self.training)
+            repr = self.gcs[-1](repr, adjs[-1], recycle_vector)
+        else:
+            for gc in self.gcs[:-1]:
+                repr = gc(repr, adjs)
+                repr = F.relu(repr)
+                repr = F.dropout(repr, self.dropout, training=self.training)
+            repr = self.gcs[-1](repr, adjs, recycle_vector)
+        
         return F.log_softmax(repr, dim=1)
