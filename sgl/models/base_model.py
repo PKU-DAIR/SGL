@@ -76,6 +76,10 @@ class BaseSAMPLEModel(nn.Module):
     @property
     def evaluate_mode(self):
         return self._evaluate_mode
+    
+    @property
+    def processed_feature(self):
+        return self._processed_feature
 
     def sampling(self, batch_inds):      
         if self.training:

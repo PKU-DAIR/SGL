@@ -1,8 +1,8 @@
 dataset:
   classname: "Planetoid"
-  name: "cora"
+  name: "pubmed"
   root: "/home/ssq/test_data/"
-  split: "official"
+  split: "full"
 sampler:
   training:
     name: "FastGCNSampler"

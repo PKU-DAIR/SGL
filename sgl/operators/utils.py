@@ -73,9 +73,8 @@ def cuda_csr_sparse_dense_matmul(adj, feature):
     return answer.reshape(feature.shape)
 
 
-def adj_to_symmetric_norm(adj, r, add_self_loops=True):
-    if add_self_loops:
-        adj = adj + sp.eye(adj.shape[0])
+def adj_to_symmetric_norm(adj, r):
+    adj = adj + sp.eye(*adj.shape)
     degrees_left = np.array(adj.sum(1))
     r_inv_sqrt_left = np.power(degrees_left, r - 1).flatten()
     r_inv_sqrt_left[np.isinf(r_inv_sqrt_left)] = 0.

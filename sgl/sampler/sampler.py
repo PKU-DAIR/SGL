@@ -43,14 +43,14 @@ class NeighborSampler(BaseSampler):
         
         if "pre_sampling_op" in kwargs.keys():
             if kwargs["pre_sampling_op"] == "LaplacianGraphOp":
-                graph_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5, add_self_loops=False)
+                graph_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5)
             elif kwargs["pre_sampling_op"] == "RwGraphOp":   
                 graph_op = getattr(GraphOps, "RwGraphOp")()
             self.adj = graph_op._construct_adj(self.adj)
 
         if "post_sampling_op" in kwargs.keys():
             if kwargs["post_sampling_op"] == "LaplacianGraphOp":
-                self._post_sampling_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5, add_self_loops=False)
+                self._post_sampling_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5)
             elif kwargs["post_sampling_op"] == "RwGraphOp":
                 self._post_sampling_op = getattr(GraphOps, "RwGraphOp")()
 
@@ -96,8 +96,9 @@ class NeighborSampler(BaseSampler):
         Method:
             Neighbor sampling
         Outputs:
-            n_id: global node index of each node in batch
-            adjs: list of sampled adj in the form of sparse tensors
+            batch_in: global node index of each source node in the first aggregation layer
+            batch_out: global node index of each target node in the last aggregation layer
+            sampled adjs: list of sampled adjs in the form of sparse tensors
         """
         if callable(batch_inds):
             batch_inds = batch_inds()
@@ -167,14 +168,14 @@ class FastGCNSampler(BaseSampler):
 
         if "pre_sampling_op" in kwargs.keys():
             if kwargs["pre_sampling_op"] == "LaplacianGraphOp":
-                graph_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5, add_self_loops=False)
+                graph_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5)
             elif kwargs["pre_sampling_op"] == "RwGraphOp":   
                 graph_op = getattr(GraphOps, "RwGraphOp")()
             self.adj = graph_op._construct_adj(self.adj)
 
         if "post_sampling_op" in kwargs.keys():
             if kwargs["post_sampling_op"] == "LaplacianGraphOp":
-                self._post_sampling_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5, add_self_loops=False)
+                self._post_sampling_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5)
             elif kwargs["post_sampling_op"] == "RwGraphOp":
                 self._post_sampling_op = getattr(GraphOps, "RwGraphOp")()
 
@@ -217,8 +218,9 @@ class FastGCNSampler(BaseSampler):
         Method:
             Sample fixed size of nodes independently at each layer.
         Outputs:
-            cur_out_nodes: array of source node inds at the first layer
-            all_adjs list of sampled adjs (torch sparse tensor) at each layer
+            batch_in: global node index of each source node in the first aggregation layer
+            batch_out: global node index of each target node in the last aggregation layer
+            sampled adjs: list of sampled adjs in the form of sparse tensors
         """
         all_adjs = []
 

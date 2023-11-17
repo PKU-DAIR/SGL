@@ -1,10 +1,11 @@
 import time
 import torch
-from tqdm import trange
+import numpy as np
 from torch.optim import Adam
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
+from sgl.data.utils import RandomLoader, SplitLoader
 from sgl.tasks.base_task import BaseTask
 from sgl.tasks.utils import accuracy, set_seed, train, mini_batch_train, evaluate, mini_batch_evaluate
 
@@ -141,7 +142,8 @@ class NodeClassification_Sampling(BaseTask):
         return acc_val, acc_test
 
 class NodeClassification_RecycleSampling(BaseTask):
-    def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn="nll_loss", seed=42):
+    def __init__(self, dataset, model, lr, weight_decay, num_iters, device, loss_fn="nll_loss", seed=42,
+                 train_batch_size=1024, eval_batch_size=None,):
         super(NodeClassification_RecycleSampling, self).__init__()
 
         self.__dataset = dataset
@@ -150,10 +152,18 @@ class NodeClassification_RecycleSampling(BaseTask):
         self.__model = model
         self.__optimizer = Adam(model.parameters(), lr=lr,
                                 weight_decay=weight_decay)
-        self.__epochs = epochs
+        self.__num_iters = num_iters
         self.__loss_fn = getattr(F, loss_fn) if isinstance(loss_fn, str) else loss_fn
         self.__device = device
         self.__seed = seed
+        self.__train_loader = RandomLoader(dataset.train_idx, train_batch_size)
+        if eval_batch_size is not None:
+           self.__val_loader = SplitLoader(dataset.val_idx, eval_batch_size)
+           self.__test_loader = SplitLoader(dataset.test_idx, eval_batch_size)
+           self.__eval_minibatch = True
+        else:
+           self.__val_loader = self.__test_loader = None
+           self.__eval_minibatch = False
         self.__test_acc = self._execute()
 
     @property
@@ -164,7 +174,7 @@ class NodeClassification_RecycleSampling(BaseTask):
         set_seed(self.__seed)
 
         pre_time_st = time.time()
-        self.__model.preprocess(adj=self.__dataset.adj, x=self.__dataset.x)
+        self.__model.preprocess(adj=self.__dataset.adj, x=self.__dataset.x, val_dataloader=self.__val_loader, test_dataloader=self.__test_loader)
         pre_time_ed = time.time()
         print(f"Preprocessing done in {(pre_time_ed - pre_time_st):.4f}s")
         
@@ -172,17 +182,17 @@ class NodeClassification_RecycleSampling(BaseTask):
         val_score = 0
         best_val_score = 0
 
-        total_iteration = self.__epochs * self.__model._num_iters
-        taus = self.__model.generate_taus(total_iteration)
-        tbar = trange(total_iteration, desc='Training Iterations')
+        torch.cuda.synchronize()
+        train_time_st = time.time()
+        taus = self.__model.generate_taus(self.__num_iters)
 
         iter_id = 0
-        generator = self.__model.flash_sampling(len(taus))
+        generator = self.__model.flash_sampling(len(taus), self.__train_loader)
 
         for sample_dict in generator:
             
             batch_out, batch_in, batch_adjs = sample_dict["batch_out"], sample_dict["batch_in"], sample_dict["sampled_adjs"]
-            batch_x = self.__model._processed_feature[batch_in].to(self.__device)
+            batch_x = self.__model.processed_feature[batch_in].to(self.__device)
             batch_y = self.__labels[batch_out].to(self.__device)
             batch_adjs = [adj.to(self.__device) for adj in batch_adjs]
             
@@ -198,50 +208,83 @@ class NodeClassification_RecycleSampling(BaseTask):
                     recycle_vector = torch.cuda.FloatTensor(len(batch_out)).uniform_() > 0.2
                     new_batch_y = batch_y[recycle_vector]
 
-                self.__model._base_model.train()
-                pred = self.__model._base_model(new_batch_x, new_batch_adjs)
+                self.__model.train()
+                pred = self.__model.model_forward(new_batch_x, new_batch_adjs)
 
                 if recycle_vector is not None:
                     pred = pred[recycle_vector]
 
                 loss = self.__loss_fn(pred, new_batch_y)
-                iter_loss = loss.detach().item()
                 loss.backward()
                 self.__optimizer.step()
 
-                iter_score = accuracy(pred, new_batch_y)
-                val_score = self._validation(iter_cnt, self.__dataset.val_idx, prev_score=val_score)
+                val_score = self._validation(iter_cnt, prev_score=val_score)
+                test_score = self._inference()
+                
                 if val_score > best_val_score:
                     best_val_score = val_score
+                    best_test_score = test_score
 
-                tbar.set_description('training iteration #{}'.format(iter_cnt+1))
-                tbar.set_postfix(loss=iter_loss, train_score=iter_score, val_score=val_score)
-                tbar.update(1)
-
+                print('Iteration: {:03d}'.format(iter_cnt + 1),
+                    'loss_train: {:.4f}'.format(loss),
+                    'acc_val: {:.4f}'.format(val_score),
+                    'acc_test: {:.4f}'.format(test_score))
+                
                 iter_cnt += 1
 
             iter_id += 1
         
-        final_test_score = self._inference()
-        print('best val acc: {:.4f}'.format(best_val_score))
-        return final_test_score
+        torch.cuda.synchronize()
+        train_time_ed = time.time()
+        print(f"Trianing done in {(train_time_ed - train_time_st):.4f}s")
+        print(f'Best val acc: {best_val_score:.4f}')
+        print(f'Best test acc: {best_test_score:.4f}')
+        
+        return best_test_score
 
-    def _validation(self, iter_cnt, val_idx, prev_score=None, val_freq=1):
-        if iter_cnt > 0 and iter_cnt % val_freq == 0:
-            val_y = self.__labels[val_idx].to(self.__device)
-            
-            self.__model._base_model.eval()
-            val_pred = self.__model._base_model(self.__model._processed_feature, self.__model._norm_adj)[val_idx]
-            val_score = accuracy(val_pred, val_y)
+    def _validation(self, iter_cnt, prev_score=None, val_freq=1):
+        if (iter_cnt + 1) % val_freq == 0:
+            self.__model.eval()
+            if self.__eval_minibatch is False:
+                val_y = self.__labels[self.__dataset.val_idx].to(self.__device)             
+                val_pred = self.__model.model_forward(use_full=True)[self.__dataset.val_idx]
+                val_score = accuracy(val_pred, val_y)
+            else:
+                val_scores = []
+                val_sample_dicts = self.__model.val_sampling()
+                for val_sample_dict in val_sample_dicts:
+                    val_batch_out, val_batch_in, val_batch_adjs = val_sample_dict["batch_out"], val_sample_dict["batch_in"], val_sample_dict["sampled_adjs"]
+                    val_batch_x = self.__model.processed_feature[val_batch_in].to(self.__device)
+                    val_batch_y = self.__labels[val_batch_out].to(self.__device)
+                    val_batch_adjs = [val_adj.to(self.__device) for val_adj in val_batch_adjs]
+
+                    pred = self.__model.model_forward(val_batch_x, val_batch_adjs) 
+                    val_score = accuracy(pred, val_batch_y)
+                    val_batch_size = len(val_batch_out)
+                    val_scores.append(val_score * val_batch_size)
+                val_score = np.sum(val_scores) / len(self.__dataset.val_idx)
             return val_score
         else:
             return prev_score
         
     def _inference(self):
-        test_y = self.__labels[self.__dataset.test_idx].to(self.__device, non_blocking=True)
+        self.__model.eval()
+        if self.__eval_minibatch is False:
+            test_y = self.__labels[self.__dataset.test_idx].to(self.__device, non_blocking=True)
+            test_pred = self.__model.model_forward(use_full=True)[self.__dataset.test_idx]
+            test_score = accuracy(test_pred, test_y)
+        else:
+            test_scores = []
+            test_sample_dicts = self.__model.test_sampling()
+            for test_sample_dict in test_sample_dicts:
+                test_batch_out, test_batch_in, test_batch_adjs = test_sample_dict["batch_out"], test_sample_dict["batch_in"], test_sample_dict["sampled_adjs"]
+                test_batch_x = self.__model.processed_feature[test_batch_in].to(self.__device)
+                test_batch_y = self.__labels[test_batch_out].to(self.__device)
+                test_batch_adjs = [test_adj.to(self.__device) for test_adj in test_batch_adjs]
 
-        self.__model._base_model.eval()
-        test_pred = self.__model._base_model(self.__model._processed_feature, self.__model._norm_adj)[self.__dataset.test_idx]
-        test_score = accuracy(test_pred, test_y)
-
+                pred = self.__model.model_forward(test_batch_x, test_batch_adjs)
+                test_score = accuracy(pred, test_batch_y)
+                test_batch_size = len(test_batch_out)
+                test_scores.append(test_score * test_batch_size) 
+            test_score = np.sum(test_scores) / len(self.__dataset.test_idx)
         return test_score

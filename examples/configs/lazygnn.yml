@@ -12,16 +12,18 @@ sampler:
     replace: True
     post_sampling_op: "LaplacianGraphOp"
 model:
-  name: "LazyGCN"
+  name: "LazyGNN"
+  basemodel: "GCN"
   hidden_dim: 128
   dropout: 0.5
   num_layers: 2
-  max_workers: 5
-  train_batch_size: 2048
+  max_workers: 8
+  max_threads: 10
 task:
   name: "NodeClassification_RecycleSampling"
-  epochs: 20
+  num_iters: 200
   lr: 0.1
   weight_decay: 0.00005
   loss_fn: "nll_loss"
+  train_batch_size: 2048
 
