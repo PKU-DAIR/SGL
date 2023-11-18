@@ -8,11 +8,8 @@ class ClusterGCN(BaseSAMPLEModel):
         self._eval_sampling_op = training_eval_sampler
         self._base_model = GCN(nfeat=nfeat, nhid=hidden_dim, nclass=nclass, nlayers=num_layers, dropout=dropout).to(device)
 
-    def preprocess(self, adj, x):
-        pass
-
     def sampling(self, batch_inds):      
         if self.training:
-            return self._training_sampling_op.sampling(batch_inds, self.training)
+            return self._training_sampling_op.sampling(batch_inds, training=True)
         else:
-            return self._eval_sampling_op.sampling(batch_inds, self.training)
+            return self._eval_sampling_op.sampling(batch_inds, training=False)

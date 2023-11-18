@@ -15,7 +15,7 @@ model:
   num_layers: 2
 task:
   name: "NodeClassification_Sampling"
-  epochs: 20
+  epochs: 50
   lr: 0.1
   weight_decay: 0.00005
   loss_fn: "nll_loss"

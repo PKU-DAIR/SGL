@@ -1,7 +1,29 @@
-import numpy as np
 import torch
-from scipy.sparse import csr_matrix
 from torch import Tensor
+import numpy as np
+from scipy.sparse import csr_matrix
+
+# A lighter wrapper class for sampled adjacency matrices, 
+# as the Edge class seems contains useless information
+class Block:
+    def __init__(self, adjs):
+        if not isinstance(adjs, list):
+            self.__adjs = [adjs]
+        else:
+            self.__adjs = adjs
+   
+    def __len__(self):
+        return len(self.__adjs)
+    
+    def __iter__(self):
+        for adj in self.__adjs:
+            yield adj
+
+    def __getitem__(self, id):
+        return self.__adjs[id]
+
+    def to_device(self, device):
+        self.__adjs = [adj.to(device) for adj in self.__adjs]
 
 
 # Base class for adjacency matrix
@@ -181,6 +203,10 @@ class Graph:
     def node_type(self):
         return self.__node.node_type
 
+    @property
+    def node_ids(self):
+        return self.__node.node_ids
+    
     @property
     def x(self):
         return self.__node.x

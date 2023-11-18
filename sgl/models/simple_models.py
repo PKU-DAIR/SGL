@@ -257,6 +257,7 @@ class SAGE(nn.Module):
         super(SAGE, self).__init__()
         self.gcs = nn.ModuleList()
         self.gcs.append(SAGEConv(nfeat, nhid))
+        self.nlayers = nlayers
         for _ in range(nlayers-2):
             self.gcs.append(SAGEConv(nhid, nhid))
         self.gcs.append(SAGEConv(nhid, nclass, normalize=False))
@@ -266,20 +267,23 @@ class SAGE(nn.Module):
         for conv in self.gcs:
             conv.reset_parameters()
 
-    def forward(self, x, adjs):
+    def forward(self, x, block):
         repr = x
-        if isinstance(adjs, list):
-            for i, adj in enumerate(adjs[:-1]):
-                repr = self.gcs[i](repr, adj)
+        if len(block) == self.nlayers:
+            for i in range(self.nlayers-1):
+                repr = self.gcs[i](repr, block[i])
                 repr = F.relu(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
-            repr = self.gcs[-1](repr, adjs[-1])
-        else:
+            repr = self.gcs[-1](repr, block[-1])
+        elif len(block) == 1:
             for gc in self.gcs[:-1]:
-                repr = gc(repr, adjs)
+                repr = gc(repr, block[0])
                 repr = F.relu(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
-            repr = self.gcs[-1](repr, adjs)
+            repr = self.gcs[-1](repr, block[0])
+        else:
+            raise ValueError('The sampling layer must be equal to GNN layer.')
+        
         return F.log_softmax(repr, dim=1)
 
 class GCN(nn.Module):
@@ -287,6 +291,7 @@ class GCN(nn.Module):
         super(GCN, self).__init__()
         self.gcs = nn.ModuleList()
         self.gcs.append(layer(nfeat, nhid))
+        self.nlayers = nlayers
         for _ in range(nlayers-2):
             self.gcs.append(layer(nhid, nhid))
         self.gcs.append(layer(nhid, nclass))
@@ -296,18 +301,21 @@ class GCN(nn.Module):
         for conv in self.gcs:
             conv.reset_parameters()
 
-    def forward(self, x, adjs):
+    def forward(self, x, block):
         repr = x
-        if isinstance(adjs, list):
-            for i, adj in enumerate(adjs[:-1]):
-                repr = self.gcs[i](repr, adj)
+        if len(block) == self.nlayers:
+            for i in range(self.nlayers-1):
+                repr = self.gcs[i](repr, block[i])
                 repr = F.relu(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
-            repr = self.gcs[-1](repr, adjs[-1])
-        else:
+            repr = self.gcs[-1](repr, block[-1])
+        elif len(block) == 1:
             for gc in self.gcs[:-1]:
-                repr = gc(repr, adjs)
+                repr = gc(repr, block[0])
                 repr = F.relu(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
-            repr = self.gcs[-1](repr, adjs)
+            repr = self.gcs[-1](repr, block[0])
+        else:
+            raise ValueError('The sampling layer must be equal to GNN layer.')
+        
         return F.log_softmax(repr, dim=1)

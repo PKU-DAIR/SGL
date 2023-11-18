@@ -96,6 +96,10 @@ class NodeDataset:
         return self._data.node_type
 
     @property
+    def node_ids(self):
+        return self._data.node_ids
+    
+    @property
     def train_idx(self):
         return self._train_idx
 

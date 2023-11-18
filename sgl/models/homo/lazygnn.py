@@ -1,3 +1,4 @@
+from sgl.data.base_data import Block
 import sgl.models.simple_models as SimpleModels
 from sgl.models.base_model import BaseSAMPLEModel
 from sgl.operators.graph_op import LaplacianGraphOp, RwGraphOp
@@ -30,16 +31,17 @@ class LazyGNN(BaseSAMPLEModel):
 
     def preprocess(self, adj, x, val_dataloader=None, test_dataloader=None):
         if val_dataloader is None:
-            self._norm_adj = self._pre_graph_op._construct_adj(adj)
-            self._norm_adj = sparse_mx_to_torch_sparse_tensor(self._norm_adj).to(self._device)
+            norm_adj = self._pre_graph_op._construct_adj(adj)
+            norm_adj = sparse_mx_to_torch_sparse_tensor(norm_adj).to(self._device)
+            self._processed_block = Block(norm_adj)
         else:
             # If dataloader is provided, it means that we conduct minibatch evaluation.
             # In such case, we could prepare evaluation minibatches in advance.
-            self._val_sample_dicts = []
+            self._val_samples = []
             with concurrent.futures.ThreadPoolExecutor(max_workers=int(torch.get_num_threads()*0.4)) as executor:
                 self._val_sampling_jobs = [executor.submit(
                     self._eval_sampling_op.sampling, val_dataloader(bid)) for bid in range(len(val_dataloader))]
-            self._test_sample_dicts = []
+            self._test_samples = []
             with concurrent.futures.ThreadPoolExecutor(max_workers=int(torch.get_num_threads()*0.4)) as executor:
                 self._test_sampling_jobs = [executor.submit(
                     self._eval_sampling_op.sampling, test_dataloader(bid)) for bid in range(len(test_dataloader))]
@@ -57,11 +59,11 @@ class LazyGNN(BaseSAMPLEModel):
             k += 1 
         return self._taus
 
-    def model_forward(self, batch_x=None, batch_adjs=None, use_full=False):
+    def model_forward(self, x=None, block=None, use_full=False):
         if use_full is False:
-            return self._base_model(batch_x, batch_adjs)
+            return self._base_model(x, block)
         else:
-            return self._base_model(self._processed_feature, self._norm_adj)
+            return self._base_model(self._processed_feature, self._processed_block)
     
     def flash_sampling(self, total_iter, dataloader):
         min_iter, max_iter = 1, self._max_threads
@@ -70,7 +72,7 @@ class LazyGNN(BaseSAMPLEModel):
         sampling_func = self._training_sampling_op.sampling
 
         while count_iter < total_iter:
-            # adaptively update the number of sampled subgraphs
+            # adaptively increase the number of sampled subgraphs
             curr_cycle = self._taus[pre_cycle.searchsorted(count_iter, 'right')]
             curr_iter = min_iter + int(curr_cycle / max_cycle * (max_iter - min_iter))
             curr_iter = min(curr_iter, total_iter - count_iter)
@@ -82,25 +84,25 @@ class LazyGNN(BaseSAMPLEModel):
                 for future in concurrent.futures.as_completed(sampling_jobs):
                     yield (future.result())
 
-    def val_sampling(self):
-        if len(self._val_sample_dicts) == 0:
-            # When val_sampling is called at the first time, 
-            # it would take a little more time to receive the subgraphs.
-            print('Waiting for validation minibatch...')
-            # Order won't be the same, but it doesn't matter
-            for future in concurrent.futures.as_completed(self._val_sampling_jobs):
-                self._val_sample_dicts.append(future.result())
-            print('Validation minibatch is ready...')
+    def sequential_sampling(self, do_val):
+        if do_val is True:
+            if len(self._val_samples) == 0:
+                # When val_sampling is called at the first time, 
+                # it would take a little more time to receive the subgraphs.
+                print('Waiting for validation minibatch...')
+                # Order won't be the same, but it doesn't matter
+                for future in concurrent.futures.as_completed(self._val_sampling_jobs):
+                    self._val_samples.append(future.result())
+                print('Validation minibatch is ready...')
 
-        return self._val_sample_dicts
-    
-    def test_sampling(self):
-        if len(self._test_sample_dicts) == 0:
-            print('Waiting for test minibatch...')
-            for future in concurrent.futures.as_completed(self._test_sampling_jobs):
-                self._test_sample_dicts.append(future.result())
-            print('Test minibatch is ready...')
-        
-        return self._test_sample_dicts
+            return self._val_samples
+        else:
+            if len(self._test_samples) == 0:
+                print('Waiting for test minibatch...')
+                for future in concurrent.futures.as_completed(self._test_sampling_jobs):
+                    self._test_samples.append(future.result())
+                print('Test minibatch is ready...')
+            
+            return self._test_samples
 
         
