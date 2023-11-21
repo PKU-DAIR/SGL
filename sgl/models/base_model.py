@@ -86,13 +86,20 @@ class BaseSAMPLEModel(nn.Module):
     def processed_feature(self):
         return self._processed_feature
 
+    @property
+    def collate_fn(self):
+        if self.training:
+            return self._training_sampling_op.collate_fn 
+        else:
+            return self._eval_sampling_op.collate_fn
+    
     def sampling(self, batch_inds):      
         if self.training:
             return self._training_sampling_op.sampling(batch_inds)
         else:
             return self._eval_sampling_op.sampling(batch_inds)
        
-    def preprocess(self, adj, x):
+    def preprocess(self, adj, x, mini_batch_eval, device):
         if self._pre_graph_op is not None:
             norm_adj = self._pre_graph_op._construct_adj(adj)
         else:
@@ -104,6 +111,10 @@ class BaseSAMPLEModel(nn.Module):
             self._processed_feature = self._pre_feature_op._transform_x(x)
         else:
             self._processed_feature = x
+
+        if mini_batch_eval is False:
+            self._processed_block.to_device(device)
+            self._processed_feature = self._processed_feature.to(device)
     
     def postprocess(self, adj, output):
         if self._post_graph_op is not None:

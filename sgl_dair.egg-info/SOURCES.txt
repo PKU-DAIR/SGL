@@ -32,7 +32,6 @@ sgl/dataset/nell.py
 sgl/dataset/ogbn.py
 sgl/dataset/ogbn_mag.py
 sgl/dataset/planetoid.py
-sgl/dataset/planetoid_sampling.py
 sgl/dataset/reddit.py
 sgl/dataset/twitch.py
 sgl/dataset/utils.py
@@ -47,7 +46,6 @@ sgl/models/__init__.py
 sgl/models/backup.py
 sgl/models/base_model.py
 sgl/models/base_model_dist.py
-sgl/models/sample_models.py
 sgl/models/simple_models.py
 sgl/models/hetero/__init__.py
 sgl/models/hetero/fast_nars_sgc.py
@@ -60,6 +58,7 @@ sgl/models/homo/gamlp_dist.py
 sgl/models/homo/gamlp_recursive.py
 sgl/models/homo/gbp.py
 sgl/models/homo/graphsage.py
+sgl/models/homo/lazygnn.py
 sgl/models/homo/nafs.py
 sgl/models/homo/pasca_v1.py
 sgl/models/homo/pasca_v2.py
@@ -68,6 +67,7 @@ sgl/models/homo/sgc.py
 sgl/models/homo/sgc_dist.py
 sgl/models/homo/sign.py
 sgl/models/homo/ssgc.py
+sgl/models/homo/vanillagnn.py
 sgl/operators/__init__.py
 sgl/operators/base_op.py
 sgl/operators/utils.py
@@ -76,6 +76,7 @@ sgl/operators/csrc/libmatmul.so
 sgl/operators/graph_op/__init__.py
 sgl/operators/graph_op/laplacian_graph_op.py
 sgl/operators/graph_op/ppr_graph_op.py
+sgl/operators/graph_op/rw_graph_op.py
 sgl/operators/message_op/__init__.py
 sgl/operators/message_op/concat_message_op.py
 sgl/operators/message_op/iterate_learnable_weighted_message_op.py
@@ -85,12 +86,14 @@ sgl/operators/message_op/max_message_op.py
 sgl/operators/message_op/mean_message_op.py
 sgl/operators/message_op/min_message_op.py
 sgl/operators/message_op/over_smooth_distance_op.py
+sgl/operators/message_op/pre_normalize_message_op.py
 sgl/operators/message_op/projected_concat_message_op.py
 sgl/operators/message_op/simple_weighted_message_op.py
 sgl/operators/message_op/sum_message_op.py
 sgl/sampler/__init__.py
 sgl/sampler/base_sampler.py
 sgl/sampler/sampler.py
+sgl/sampler/utils.py
 sgl/search/__init__.py
 sgl/search/auto_search.py
 sgl/search/auto_search_dist.py
@@ -116,6 +119,7 @@ sgl/tricks/correct_and_smooth.py
 sgl/tricks/utils.py
 sgl/utils/__init__.py
 sgl/utils/auto_choose_gpu.py
+sgl/utils/basic_operations.py
 sgl_dair.egg-info/PKG-INFO
 sgl_dair.egg-info/SOURCES.txt
 sgl_dair.egg-info/dependency_links.txt

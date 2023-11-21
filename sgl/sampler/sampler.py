@@ -1,12 +1,13 @@
+import os
 import torch
 import numpy as np
+import pickle as pkl
 import networkx as nx
 import scipy.sparse as sp
+from torch_sparse import SparseTensor, cat
+from torch_geometric.utils import from_networkx, mask_to_index
 
 from sgl.sampler.base_sampler import BaseSampler
-
-# import metis
-import random
 
 class FullSampler(BaseSampler):
     def __init__(self, adj, **kwargs):
@@ -41,7 +42,7 @@ class NeighborSampler(BaseSampler):
         
         self.replace = kwargs.get("replace", True)
     
-    def sampling(self, batch_inds):
+    def collate_fn(self, batch_inds):
         """
         Input:
             batch_inds: array of batch node inds
@@ -56,7 +57,9 @@ class NeighborSampler(BaseSampler):
             batch_inds = batch_inds()
         if isinstance(batch_inds, torch.Tensor):
             batch_inds = batch_inds.numpy()
-
+        if not isinstance(batch_inds, np.ndarray):
+            batch_inds = np.asarray(batch_inds)
+        
         all_adjs = []
         cur_tgt_nodes = batch_inds    
         for layer_index in range(self.num_layers):
@@ -64,7 +67,7 @@ class NeighborSampler(BaseSampler):
             all_adjs.insert(0, adj_sampled)
             cur_tgt_nodes = cur_src_nodes
         
-        all_adjs = self._post_process(all_adjs)
+        all_adjs = self._post_process(all_adjs, to_sparse_tensor=False)
      
         return cur_tgt_nodes, batch_inds, self._to_Block(all_adjs)  
 
@@ -115,7 +118,7 @@ class FastGCNSampler(BaseSampler):
 
         self.replace = kwargs.get("replace", False)
 
-    def sampling(self, batch_inds): 
+    def collate_fn(self, batch_inds): 
         """
         Input:
             batch_inds: array of batch node inds
@@ -128,6 +131,8 @@ class FastGCNSampler(BaseSampler):
         """
         if callable(batch_inds):
             batch_inds = batch_inds()
+        if not isinstance(batch_inds, np.ndarray):
+            batch_inds = np.asarray(batch_inds)
         all_adjs = []
 
         cur_out_nodes = batch_inds
@@ -137,7 +142,7 @@ class FastGCNSampler(BaseSampler):
             all_adjs.insert(0, cur_adj)
             cur_out_nodes = cur_in_nodes
 
-        all_adjs = self._post_process(all_adjs)
+        all_adjs = self._post_process(all_adjs, to_sparse_tensor=False)
 
         return cur_out_nodes, batch_inds, self._to_Block(all_adjs)
 
@@ -179,89 +184,81 @@ class ClusterGCNSampler(BaseSampler):
         self.sampler_name = "ClusterGCNSampler"
         self.sample_level = "graph"
         self.pre_sampling = True
-        self._train_idx = dataset.train_idx
-        self._val_idx = dataset.val_idx 
-        self._test_idx = dataset.test_idx
+        self._masks = {"train": dataset.train_mask, "val": dataset.val_mask, "test": dataset.test_mask}
         self._sampling_done = False
 
     def _pre_process(self, **kwargs):
 
         self.cluster_method = kwargs.get("cluster_method", "random")
         self.cluster_number = kwargs.get("cluster_number", 32)
+        self._save_dir = kwargs.get("save_dir", None)
+        if self._save_dir is not None:
+            self._save_path_pt = os.path.join(self._save_dir, f"partition_{self.cluster_method}_{self.cluster_number}.pt")
+            self._save_path_pkl = os.path.join(self._save_dir, f"partition_{self.cluster_method}_{self.cluster_number}.pkl")
+        else:
+            self._save_path_pt = self._save_path_pkl = None
 
-    def sampling(self, cluster_ind, training):
-        """
-        Decomposing the graph, creating Torch arrays.
-        """
+    def collate_fn(self, batch_inds, mode):
         if self._sampling_done is False:
-            if self.cluster_method == "metis":
-                print("\nMetis graph clustering started.\n")
-                # self._metis_clustering()
+            if self._save_dir is not None and os.path.exists(self._save_path_pt) and os.path.exists(self._save_path_pkl):
+                print("\nLoad from existing clusters.\n")
+                (self.perm_adjs, self.partptr, self.perm_node_idx) = torch.load(self._save_path_pt)
+                self.splitted_perm_adjs = pkl.load(open(self._save_path_pkl, "rb"))
             else:
-                print("\nRandom graph clustering started.\n")
-                self._random_clustering()
-            self._general_data_partitioning()
-            self._transfer_edges_and_nodes()
+                if self.cluster_method == "metis":
+                    print("\nMetis graph clustering started.\n")
+                    self._metis_clustering()
+                else:
+                    raise NotImplementedError
             
             self._sampling_done = True
         
-        cluster_ind = cluster_ind.item()
-        if training is True:
-            batch_out = [self.sg_train_nodes[cluster_ind]]
-        else:
-            batch_out = [self.sg_val_nodes[cluster_ind], self.sg_test_nodes[cluster_ind]]
+        if not isinstance(batch_inds, torch.Tensor):
+            batch_inds = torch.tensor(batch_inds)
         
-        return self.sg_nodes[cluster_ind], batch_out, self.sg_edges[cluster_ind]
-    
-    def _random_clustering(self):
-        """
-        Random clustering the nodes.
-        """
-        self.clusters = range(self.cluster_number)
-        self.cluster_membership = {node: random.choice(self.clusters) for node in self._adj.nodes()}
+        # stack len(batch_inds) subgraphs into one graph
+        start = self.partptr[batch_inds].tolist()
+        end = self.partptr[batch_inds + 1].tolist()
+        node_idx = torch.cat([torch.arange(s, e) for s, e in zip(start, end)])
+        global_node_idx = self.perm_node_idx[node_idx]
+        composed_sparse_mx = sp.block_diag([self.splitted_perm_adjs[batch_ind.item()] for batch_ind in batch_inds])
+        block = self._to_Block(composed_sparse_mx)
+        if mode in ["train", "val", "test"]:
+            mask = self._masks[mode][global_node_idx]
+            global_inds = global_node_idx[mask]
+            local_inds = mask_to_index(mask)
+            batch_out = torch.vstack([local_inds, global_inds])
+        else:
+            mode = mode.split("_")
+            batch_out = {}
+            for one_mode in mode:
+                mask = self._masks[one_mode][global_node_idx]
+                global_inds = global_node_idx[mask]
+                local_inds = mask_to_index(mask)
+                batch_out.update({one_mode: torch.vstack([local_inds, global_inds])})
+        return global_node_idx, batch_out, block
 
-    # def _metis_clustering(self):
-    #     """
-    #     Clustering the graph with Metis. For details see:
-    #     """
-    #     (st, parts) = metis.part_graph(self._adj, self.cluster_number)
-    #     self.clusters = list(set(parts))
-    #     self.cluster_membership = {node: membership for node, membership in enumerate(parts)}
-
-    def _general_data_partitioning(self):
-        """
-        Creating data partitions and train-test splits.
-        """
-        self.sg_nodes = {}
-        self.sg_edges = {}
-        self.sg_train_nodes = {cluster: [] for cluster in self.clusters}
-        self.sg_val_nodes = {cluster: [] for cluster in self.clusters}
-        self.sg_test_nodes = {cluster: [] for cluster in self.clusters}
-        for cluster in self.clusters: 
-            self.sg_nodes[cluster] = [node for node in sorted(self._adj.nodes()) if self.cluster_membership[node] == cluster]
-            subgraph = self._adj.subgraph(self.sg_nodes[cluster]) 
-            # map the global node inds to the local node inds
-            mapper = {node: i for i, node in enumerate(self.sg_nodes[cluster])}
-            self.sg_edges[cluster] = [[mapper[edge[0]], mapper[edge[1]]] for edge in subgraph.edges()] +  [[mapper[edge[1]], mapper[edge[0]]] for edge in subgraph.edges()]
-            for node in self.sg_nodes[cluster]:
-                if node in self._train_idx:
-                    self.sg_train_nodes[cluster].append([mapper[node], node])
-                elif node in self._val_idx:
-                    self.sg_val_nodes[cluster].append([mapper[node], node])
-                elif node in self._test_idx:
-                    self.sg_test_nodes[cluster].append([mapper[node], node])
-
-    def _transfer_edges_and_nodes(self):
-        """
-        Transfering the data to PyTorch format (except for sg_edges which are coo_matrices currently).
-        """
-        for cluster in self.clusters:
-            num_nodes = len(self.sg_nodes[cluster])
-            self.sg_nodes[cluster] = torch.LongTensor(self.sg_nodes[cluster])
-            row, col = np.array(self.sg_edges[cluster]).transpose()
-            self.sg_edges[cluster] = self._post_process(sp.coo_matrix((np.ones(row.shape[0]), (row, col)), 
-                                                                      shape=(num_nodes, num_nodes)))
-            self.sg_edges[cluster] = self._to_Block(self.sg_edges[cluster])
-            self.sg_train_nodes[cluster] = torch.LongTensor(self.sg_train_nodes[cluster]).transpose_(1, 0)
-            self.sg_val_nodes[cluster] = torch.LongTensor(self.sg_val_nodes[cluster]).transpose_(1, 0)
-            self.sg_test_nodes[cluster] = torch.LongTensor(self.sg_test_nodes[cluster]).transpose_(1, 0)
+    def _metis_clustering(self):
+        data = from_networkx(self._adj)
+        N, E = data.num_nodes, data.num_edges
+        adj = SparseTensor(
+            row=data.edge_index[0], col=data.edge_index[1],
+            value=torch.arange(E, device=data.edge_index.device),
+            sparse_sizes=(N, N))
+        self.perm_adjs, self.partptr, self.perm_node_idx = adj.partition(self.cluster_number, False) 
+        self.splitted_perm_adjs = []
+        for i in range(len(self.partptr)-1):
+            start, end = self.partptr[i], self.partptr[i+1]
+            node_idx = torch.arange(start, end)
+            perm_adj = self.perm_adjs.narrow(0, start, end-start)
+            perm_adj = perm_adj.index_select(1, node_idx)
+            row, col, _ = perm_adj.coo()
+            row, col = row.numpy(), col.numpy()
+            num_nodes = len(node_idx)
+            sparse_mx = sp.coo_matrix((np.ones_like(row), (row, col)), shape=(num_nodes, num_nodes))
+            sparse_mx = self._post_process(sparse_mx, to_sparse_tensor=False)
+            self.splitted_perm_adjs.append(sparse_mx)
+        if self._save_dir is not None:
+            torch.save((self.perm_adjs, self.partptr, self.perm_node_idx), self._save_path_pt)
+            pkl.dump(self.splitted_perm_adjs, open(self._save_path_pkl, "wb"))
+            print(f"\nSave Metis graph clustering results under the {self._save_dir} directory.\n")

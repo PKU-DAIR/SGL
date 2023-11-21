@@ -66,9 +66,6 @@ class BaseSampler:
             else:
                 raise ValueError(f"Don\'t support {prob_type} probability calculation. "
                                  "Consider pre-calculating the probability and transfer it to pre_probs.")
-
-    def sampling(self, *args):
-        raise NotImplementedError
     
     def _post_process(self, adjs, to_sparse_tensor=True):
         if isinstance(adjs, list):
@@ -85,3 +82,6 @@ class BaseSampler:
     
     def _to_Block(self, adjs):
         return Block(adjs)
+    
+    def collate_fn(self, *args):
+        raise NotImplementedError

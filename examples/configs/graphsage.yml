@@ -11,8 +11,6 @@ sampler:
     prob_type: "normalize"
     replace: True
     post_sampling_op: "RwGraphOp"
-  eval:
-    name: "FullSampler"
 model:
   name: "GraphSAGE"
   hidden_dim: 128
@@ -21,6 +19,7 @@ model:
 task:
   name: "NodeClassification_Sampling"
   train_batch_size: 2048
+  eval_batch_size: 64
   epochs: 20
   lr: 0.1
   weight_decay: 0.00005

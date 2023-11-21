@@ -3,6 +3,8 @@ from torch import Tensor
 import numpy as np
 from scipy.sparse import csr_matrix
 
+from sgl.utils import sparse_mx_to_torch_sparse_tensor
+
 # A lighter wrapper class for sampled adjacency matrices, 
 # as the Edge class seems contains useless information
 class Block:
@@ -11,6 +13,7 @@ class Block:
             self.__adjs = [adjs]
         else:
             self.__adjs = adjs
+        self.__device = None
    
     def __len__(self):
         return len(self.__adjs)
@@ -23,7 +26,12 @@ class Block:
         return self.__adjs[id]
 
     def to_device(self, device):
+        if self.__device == device:
+            return
+        if not isinstance(self.__adjs[0], torch.sparse.FloatTensor):
+            self.__adjs = [sparse_mx_to_torch_sparse_tensor(adj) for adj in self.__adjs]
         self.__adjs = [adj.to(device) for adj in self.__adjs]
+        self.__device = device
 
 
 # Base class for adjacency matrix

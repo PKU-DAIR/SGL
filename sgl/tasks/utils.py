@@ -48,10 +48,10 @@ def mini_batch_evaluate(model, val_loader, test_loader, labels, device):
 
     val_num = 0
     for batch in val_loader:
-        batch_in, batch_out, block = model.sampling(batch)
+        batch_in, batch_out, block = batch
         val_output = model.model_forward(batch_in, block, device)
-        if isinstance(batch_out, list):
-            local_inds, global_inds = batch_out[0]
+        if batch_out.dim() > 1:
+            local_inds, global_inds = batch_out
             pred = val_output[local_inds].max(1)[1].type_as(labels)
             correct_num_val += pred.eq(labels[global_inds]).double().sum()
             val_num += len(local_inds)
@@ -63,10 +63,10 @@ def mini_batch_evaluate(model, val_loader, test_loader, labels, device):
 
     test_num = 0
     for batch in test_loader:
-        batch_in, batch_out, block = model.sampling(batch)
+        batch_in, batch_out, block = batch
         test_output = model.model_forward(batch_in, block, device)
-        if isinstance(batch_out, list):
-            local_inds, global_inds = batch_out[1]
+        if batch_out.dim() > 1:
+            local_inds, global_inds = batch_out
             pred = test_output[local_inds].max(1)[1].type_as(labels)
             correct_num_test += pred.eq(labels[global_inds]).double().sum()
             test_num += len(local_inds)
@@ -99,11 +99,11 @@ def mini_batch_train(model, train_loader, labels, device, optimizer, loss_fn):
     train_num = 0
 
     for batch in train_loader:
-        batch_in, batch_out, block = model.sampling(batch)
+        batch_in, batch_out, block = batch
         optimizer.zero_grad()
         train_output = model.model_forward(batch_in, block, device) 
-        if isinstance(batch_out, list):
-            local_inds, global_inds = batch_out[0]
+        if batch_out.dim() > 1:
+            local_inds, global_inds = batch_out
             loss_train = loss_fn(train_output[local_inds], labels[global_inds])
             pred = train_output[local_inds].max(1)[1].type_as(labels)
             correct_num += pred.eq(labels[global_inds]).double().sum()

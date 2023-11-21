@@ -32,10 +32,13 @@ class LazyGNN(BaseSAMPLEModel):
     def preprocess(self, adj, x, val_dataloader=None, test_dataloader=None):
         if val_dataloader is None:
             norm_adj = self._pre_graph_op._construct_adj(adj)
-            norm_adj = sparse_mx_to_torch_sparse_tensor(norm_adj).to(self._device)
+            norm_adj = sparse_mx_to_torch_sparse_tensor(norm_adj)
+            # if evaluation on full-batch, then we can pre-move the full feature/adjacency matrix to the device to save time
             self._processed_block = Block(norm_adj)
+            self._processed_block.to_device(self._device)
+            self._processed_feature = x.to(self._device)
         else:
-            # If dataloader is provided, it means that we conduct minibatch evaluation.
+            # If val/test_dataloader is provided, it means that we conduct minibatch evaluation.
             # In such case, we could prepare evaluation minibatches in advance.
             self._val_samples = []
             with concurrent.futures.ThreadPoolExecutor(max_workers=int(torch.get_num_threads()*0.4)) as executor:
@@ -45,7 +48,7 @@ class LazyGNN(BaseSAMPLEModel):
             with concurrent.futures.ThreadPoolExecutor(max_workers=int(torch.get_num_threads()*0.4)) as executor:
                 self._test_sampling_jobs = [executor.submit(
                     self._eval_sampling_op.sampling, test_dataloader(bid)) for bid in range(len(test_dataloader))]
-        self._processed_feature = x.to(self._device)
+            self._processed_feature = x
 
     def generate_taus(self, T):
         self._taus = []

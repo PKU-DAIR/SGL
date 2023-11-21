@@ -29,10 +29,16 @@ class NodeClassification_Sampling(BaseTask):
         self.__eval_batch_size = eval_batch_size
         self.__mini_batch_train = True if train_batch_size is not None else False
         self.__mini_batch_eval = True if eval_batch_size is not None else False
-        self.__determined_sample = False
-        if "graph_number" in kwargs.keys():
-            self.__graph_number = kwargs["graph_number"]
-            self.__determined_sample = True
+        self.__train_determined_sample = False
+        self.__eval_determined_sample = False
+        if "train_graph_number" in kwargs.keys():
+            self.__train_graph_number = kwargs["train_graph_number"]
+            self.__train_determined_sample = True
+        if "eval_graph_number" in kwargs.keys():
+            self.__eval_graph_number = kwargs["eval_graph_number"]
+            self.__eval_determined_sample = True
+        self.__train_num_workers = kwargs.get("train_num_workers", 0)
+        self.__eval_num_workers = kwargs.get("eval_num_workers", 0)
         self.__test_acc = self._execute()
 
     @property
@@ -43,31 +49,33 @@ class NodeClassification_Sampling(BaseTask):
         set_seed(self.__seed)
 
         pre_time_st = time.time()
-        self.__model.preprocess(adj=self.__dataset.adj, x=self.__dataset.x)
+        self.__model.preprocess(adj=self.__dataset.adj, x=self.__dataset.x, mini_batch_eval=self.__mini_batch_eval, device=self.__device)
         pre_time_ed = time.time()
         print(f"Preprocessing done in {(pre_time_ed - pre_time_st):.4f}s")
-        
-        if self.__determined_sample:
-            self.__train_loader = DataLoader(
-                    range(self.__graph_number), batch_size=1, shuffle=True, drop_last=False)
-            self.__val_loader = self.__train_loader
-            self.__test_loader = self.__train_loader
-            self.__all_eval_loader = self.__train_loader
-        else:
-            if self.__mini_batch_train:
+
+        if self.__mini_batch_train:
+            if self.__train_determined_sample:
                 self.__train_loader = DataLoader(
-                        self.__dataset.train_idx, batch_size=self.__train_batch_size, shuffle=True, drop_last=False)
-            if self.__mini_batch_eval:
+                        range(self.__train_graph_number), batch_size=self.__train_batch_size, num_workers=self.__train_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "train"), shuffle=True, drop_last=False)
+            else:
+                self.__train_loader = DataLoader(
+                        self.__dataset.train_idx, batch_size=self.__train_batch_size, num_workers=self.__train_num_workers, collate_fn=self.__model.train_collate_fn, shuffle=True, drop_last=False)
+        
+        if self.__mini_batch_eval:
+            if self.__eval_determined_sample:
                 self.__val_loader = DataLoader(
-                    self.__dataset.val_idx, batch_size=self.__eval_batch_size, shuffle=False, drop_last=False)
+                        range(self.__eval_graph_number), batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "val"), shuffle=False, drop_last=False)
                 self.__test_loader = DataLoader(
-                    self.__dataset.test_idx, batch_size=self.__eval_batch_size, shuffle=False, drop_last=False)
-                if self.__model.evaluate_mode == "full":
-                    self.__all_eval_loader = DataLoader(
-                        self.__dataset.node_ids, batch_size=self.__eval_batch_size, shuffle=False, drop_last=False)
-                else:
-                    self.__all_eval_loader = DataLoader(
-                        self.__dataset.test_idx, batch_size=self.__eval_batch_size, shuffle=False, drop_last=False)
+                        range(self.__eval_graph_number), batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "test"), shuffle=False, drop_last=False)
+                self.__all_eval_loader = DataLoader(
+                        range(self.__eval_graph_number), batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "val_test"), shuffle=False, drop_last=False)
+            else:
+                self.__val_loader = DataLoader(
+                        self.__dataset.val_idx, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False)
+                self.__test_loader = DataLoader(
+                        self.__dataset.test_idx, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False)
+                self.__all_eval_loader = DataLoader(
+                        self.__dataset.node_ids, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False)
                 
         self.__model = self.__model.to(self.__device)
         self.__labels = self.__labels.to(self.__device)
@@ -115,14 +123,14 @@ class NodeClassification_Sampling(BaseTask):
 
     def _postprocess(self):
         self.__model.eval()
-        if self.__model.evaluate_mode == "full":
+        if self.__eval_determined_sample is False:
             if self.__mini_batch_eval is False:
                 outputs = self.__model.model_forward(
                    self.__dataset.node_ids, self.__model.processed_block, self.__device).to("cpu")
             else:
                 outputs = []
                 for batch in self.__all_eval_loader:
-                    batch_in, batch_out, block = self.__model.sampling(batch)
+                    batch_in, batch_out, block = batch
                     output = self.__model.model_forward(batch_in, block, self.__device)
                     outputs.append(output)
                 outputs = torch.vstack(outputs)
@@ -134,15 +142,14 @@ class NodeClassification_Sampling(BaseTask):
             acc_test = accuracy(
                 final_output[self.__dataset.test_idx], self.__labels[self.__dataset.test_idx])           
         else:
-            # ClusterGCN
             val_outputs, val_labels = [], []
             test_outputs, test_labels = [], []
             for batch in self.__all_eval_loader:
-                batch_in, batch_out, block = self.__model.sampling(batch)
+                batch_in, batch_out, block = batch
                 output = self.__model.model_forward(batch_in, block, self.__device)
                 output = self.__model.postprocess(block, output)
-                val_local_inds, val_global_inds = batch_out[0]
-                test_local_inds, test_global_inds = batch_out[1]
+                val_local_inds, val_global_inds = batch_out["val"]
+                test_local_inds, test_global_inds = batch_out["test"]
                 val_outputs.append(output[val_local_inds])
                 val_labels.append(self.__labels[val_global_inds])
                 test_outputs.append(output[test_local_inds])
