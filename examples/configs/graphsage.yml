@@ -7,21 +7,30 @@ sampler:
   training:
     name: "NeighborSampler"
     inductive: False
-    layer_sizes: "5,5"
+    layer_sizes: "10,5"
     prob_type: "normalize"
-    replace: True
+    replace: False
     post_sampling_op: "RwGraphOp"
+  # eval:
+  #   name: "NeighborSampler"
+  #   inductive: False
+  #   layer_sizes: "-1"
+  #   prob_type: "normalize"
+  #   post_sampling_op: "RwGraphOp"
 model:
   name: "GraphSAGE"
-  hidden_dim: 128
+  hidden_dim: 256
   dropout: 0.5
   num_layers: 2
 task:
   name: "NodeClassification_Sampling"
-  train_batch_size: 2048
-  eval_batch_size: 64
+  train_batch_size: 1024
+  train_num_workers: 5
+  # eval_batch_size: 1024
+  # eval_num_workers: 5
+  # eval_together: True
   epochs: 20
-  lr: 0.1
+  lr: 0.03
   weight_decay: 0.00005
   loss_fn: "nll_loss"
 

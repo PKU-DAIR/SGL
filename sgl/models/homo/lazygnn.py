@@ -43,11 +43,11 @@ class LazyGNN(BaseSAMPLEModel):
             self._val_samples = []
             with concurrent.futures.ThreadPoolExecutor(max_workers=int(torch.get_num_threads()*0.4)) as executor:
                 self._val_sampling_jobs = [executor.submit(
-                    self._eval_sampling_op.sampling, val_dataloader(bid)) for bid in range(len(val_dataloader))]
+                    self._eval_sampling_op.collate_fn, val_dataloader(bid)) for bid in range(len(val_dataloader))]
             self._test_samples = []
             with concurrent.futures.ThreadPoolExecutor(max_workers=int(torch.get_num_threads()*0.4)) as executor:
                 self._test_sampling_jobs = [executor.submit(
-                    self._eval_sampling_op.sampling, test_dataloader(bid)) for bid in range(len(test_dataloader))]
+                    self._eval_sampling_op.collate_fn, test_dataloader(bid)) for bid in range(len(test_dataloader))]
             self._processed_feature = x
 
     def generate_taus(self, T):
@@ -67,12 +67,12 @@ class LazyGNN(BaseSAMPLEModel):
             return self._base_model(x, block)
         else:
             return self._base_model(self._processed_feature, self._processed_block)
-    
+        
     def flash_sampling(self, total_iter, dataloader):
         min_iter, max_iter = 1, self._max_threads
         count_iter, max_cycle = 0, max(self._taus)
         pre_cycle = np.asarray(list(itertools.accumulate(self._taus)))
-        sampling_func = self._training_sampling_op.sampling
+        sampling_func = self._training_sampling_op.collate_fn
 
         while count_iter < total_iter:
             # adaptively increase the number of sampled subgraphs

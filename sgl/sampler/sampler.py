@@ -4,7 +4,7 @@ import numpy as np
 import pickle as pkl
 import networkx as nx
 import scipy.sparse as sp
-from torch_sparse import SparseTensor, cat
+from torch_sparse import SparseTensor
 from torch_geometric.utils import from_networkx, mask_to_index
 
 from sgl.sampler.base_sampler import BaseSampler
@@ -80,8 +80,8 @@ class NeighborSampler(BaseSampler):
         
         current_layer_adj = self._adj[prev_nodes, :]
 
-        if layer_size == -1:
-            # in case layer_size == -1, we simply keep all the neighbors
+        if layer_size < 0:
+            # in case layer_size < 0, we simply keep all the neighbors
             next_nodes = np.unique(current_layer_adj.indices)
             
         else:
@@ -91,6 +91,8 @@ class NeighborSampler(BaseSampler):
 
             for start, stop in row_start_stop:
                 neigh_index = current_layer_adj.indices[start:stop]
+                if neigh_index.size == 0:
+                    continue
                 probs = self.probs[neigh_index] / np.sum(self.probs[neigh_index])
                 num_samples = np.min([neigh_index.size, layer_size]) if self.replace is False else layer_size
                 sampled_nodes = np.random.choice(neigh_index, num_samples, replace=self.replace, p=probs)

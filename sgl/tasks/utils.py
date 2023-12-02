@@ -33,88 +33,69 @@ def add_labels(features, labels, idx, num_classes):
     onehot[idx, labels[idx]] = 1
     return np.concatenate([features, onehot], axis=-1)
 
-def evaluate(model, all_idx, val_idx, test_idx, labels, device):
+@torch.no_grad()
+def evaluate(model, val_idx, test_idx):
     model.eval()
-    output = model.model_forward(all_idx, model.processed_block, device)
+    output, y = model(model.processed_feature, model.processed_block)
 
-    acc_val = accuracy(output[val_idx], labels[val_idx])
-    acc_test = accuracy(output[test_idx], labels[test_idx])
+    acc_val = accuracy(output[val_idx], y[val_idx])
+    acc_test = accuracy(output[test_idx], y[test_idx])
     return acc_val, acc_test
 
-
-def mini_batch_evaluate(model, val_loader, test_loader, labels, device):
+@torch.no_grad()
+def mini_batch_evaluate(model, val_loader, test_loader, device):
     model.eval()
     correct_num_val, correct_num_test = 0, 0
 
     val_num = 0
     for batch in val_loader:
-        batch_in, batch_out, block = batch
-        val_output = model.model_forward(batch_in, block, device)
-        if batch_out.dim() > 1:
-            local_inds, global_inds = batch_out
-            pred = val_output[local_inds].max(1)[1].type_as(labels)
-            correct_num_val += pred.eq(labels[global_inds]).double().sum()
-            val_num += len(local_inds)
-        else:
-            pred = val_output.max(1)[1].type_as(labels)
-            correct_num_val += pred.eq(labels[batch_out]).double().sum()
-            val_num += len(batch_out)
+        val_output, out_y = model.mini_batch_prepare_forward(batch, device)
+        pred = val_output.max(1)[1].type_as(out_y)
+        correct_num_val += pred.eq(out_y).double().sum()
+        val_num += len(out_y)
+        
     acc_val = correct_num_val / val_num
 
     test_num = 0
     for batch in test_loader:
-        batch_in, batch_out, block = batch
-        test_output = model.model_forward(batch_in, block, device)
-        if batch_out.dim() > 1:
-            local_inds, global_inds = batch_out
-            pred = test_output[local_inds].max(1)[1].type_as(labels)
-            correct_num_test += pred.eq(labels[global_inds]).double().sum()
-            test_num += len(local_inds)
-        else:
-            pred = test_output.max(1)[1].type_as(labels)
-            correct_num_test += pred.eq(labels[batch_out]).double().sum()
-            test_num += len(batch_out)
+        test_output, out_y = model.mini_batch_prepare_forward(batch, device)
+        pred = test_output.max(1)[1].type_as(out_y)
+        correct_num_test += pred.eq(out_y).double().sum()
+        test_num += len(out_y)
     acc_test = correct_num_test / test_num
 
     return acc_val.item(), acc_test.item()
 
 
-def train(model, all_idx, train_idx, labels, device, optimizer, loss_fn):
+def train(model, train_idx, optimizer, loss_fn):
     model.train()
     optimizer.zero_grad()
 
-    train_output = model.model_forward(all_idx, model.processed_block, device)
-    loss_train = loss_fn(train_output[train_idx], labels[train_idx])
-    acc_train = accuracy(train_output[train_idx], labels[train_idx])
+    train_output, out_y = model.full_batch_prepare_forward(train_idx)
+    loss_train = loss_fn(train_output, out_y)
+    acc_train = accuracy(train_output, out_y)
     loss_train.backward()
     optimizer.step()
 
     return loss_train.item(), acc_train
 
 
-def mini_batch_train(model, train_loader, labels, device, optimizer, loss_fn):
+def mini_batch_train(model, train_loader, inductive, device, optimizer, loss_fn):
     model.train()
     correct_num = 0
     loss_train_sum = 0.
     train_num = 0
 
     for batch in train_loader:
-        batch_in, batch_out, block = batch
         optimizer.zero_grad()
-        train_output = model.model_forward(batch_in, block, device) 
-        if batch_out.dim() > 1:
-            local_inds, global_inds = batch_out
-            loss_train = loss_fn(train_output[local_inds], labels[global_inds])
-            pred = train_output[local_inds].max(1)[1].type_as(labels)
-            correct_num += pred.eq(labels[global_inds]).double().sum()
-            loss_train_sum += loss_train.item()
-            train_num += len(local_inds)
-        else:
-            loss_train = loss_fn(train_output, labels[batch_out])
-            pred = train_output.max(1)[1].type_as(labels)
-            correct_num += pred.eq(labels[batch_out]).double().sum()
-            loss_train_sum += loss_train.item()
-            train_num += len(batch_out)
+
+        train_output, out_y = model.mini_batch_prepare_forward(batch, device, inductive=inductive)
+        loss_train = loss_fn(train_output, out_y)
+        pred = train_output.max(1)[1].type_as(out_y)
+        correct_num += pred.eq(out_y).double().sum()
+        loss_train_sum += loss_train.item()
+        train_num += len(out_y)
+        
         loss_train.backward()
         optimizer.step()
 

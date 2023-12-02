@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from scipy.sparse.linalg import norm as sparse_norm
 
@@ -44,28 +45,35 @@ class BaseSampler:
         self.num_layers = len(self.layer_sizes)
 
     def _calc_probs(self, **kwargs):
-        if "pre_probs" in kwargs.keys():
-            self.probs = kwargs.pop("pre_probs")
+        prob_type = kwargs.get("prob_type", "normalize")
+        save_dir = kwargs.get("save_dir", None)
+        if save_dir is not None:
+            pre_calc_path = os.path.join(save_dir, f"{prob_type}_sample_probs.npy")
+            if os.path.exists(pre_calc_path):
+                self.probs = np.load(pre_calc_path)
+                print(f"Load from pre-calculated sampling probability from {str(pre_calc_path)}.")
+                return
+        if prob_type == "normalize":
+            col_norm = sparse_norm(self._adj, axis=0)
+            self.probs = col_norm / np.sum(col_norm)
+        elif prob_type == "uniform":
+            self.probs = np.ones(self._adj.shape[1])
+        elif prob_type == "locality":
+            """
+            This sampling strategy refers to GNNSampler [https://github.com/ICT-GIMLab/GNNSampler]
+            """
+            min_neighs = kwargs.get("min_neighs", 2)
+            sim_threshold = kwargs.get("sim_threshold", 0.1)
+            step = kwargs.get("step", 1)
+            low_quality_score = kwargs.get("low_quality_score", 0.1)
+            locality_score = adj_train_analysis(self._adj, min_neighs, sim_threshold, step, low_quality_score)
+            self.probs = locality_score / np.sum(locality_score)
         else:
-            prob_type = kwargs.get("prob_type", "normalize")
-            if prob_type == "normalize":
-                col_norm = sparse_norm(self._adj, axis=0)
-                self.probs = col_norm / np.sum(col_norm)
-            elif prob_type == "uniform":
-                self.probs = np.ones(self._adj.shape[1])
-            elif prob_type == "locality":
-                """
-                This sampling strategy refers to GNNSampler [https://github.com/ICT-GIMLab/GNNSampler]
-                """
-                min_neighs = kwargs.get("min_neighs", 2)
-                sim_threshold = kwargs.get("sim_threshold", 0.1)
-                step = kwargs.get("step", 1)
-                low_quality_score = kwargs.get("low_quality_score", 0.1)
-                locality_score = adj_train_analysis(self._adj, min_neighs, sim_threshold, step, low_quality_score)
-                self.probs = locality_score / np.sum(locality_score)
-            else:
-                raise ValueError(f"Don\'t support {prob_type} probability calculation. "
-                                 "Consider pre-calculating the probability and transfer it to pre_probs.")
+            raise ValueError(f"Don\'t support {prob_type} probability calculation. "
+                                "Consider pre-calculating the probability and transfer it to pre_probs.")
+        if save_dir is not None:
+            np.save(open(pre_calc_path, "wb"), self.probs)
+            print(f"Save the sampling probability into {str(pre_calc_path)}.")
     
     def _post_process(self, adjs, to_sparse_tensor=True):
         if isinstance(adjs, list):

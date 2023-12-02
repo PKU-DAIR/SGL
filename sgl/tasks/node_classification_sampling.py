@@ -12,11 +12,10 @@ from sgl.tasks.utils import accuracy, set_seed, train, mini_batch_train, evaluat
 
 class NodeClassification_Sampling(BaseTask):
     def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn="nll_loss", seed=42,
-                 train_batch_size=None, eval_batch_size=None, **kwargs):
+                 inductive=False, train_batch_size=None, eval_batch_size=None, **kwargs):
         super(NodeClassification_Sampling, self).__init__()
 
         self.__dataset = dataset
-        self.__labels = self.__dataset.y
 
         self.__model = model
         self.__optimizer = Adam(model.parameters(), lr=lr,
@@ -25,12 +24,14 @@ class NodeClassification_Sampling(BaseTask):
         self.__loss_fn = getattr(F, loss_fn) if isinstance(loss_fn, str) else loss_fn
         self.__device = device
         self.__seed = seed
+        self.__inductive = inductive
         self.__train_batch_size= train_batch_size
         self.__eval_batch_size = eval_batch_size
         self.__mini_batch_train = True if train_batch_size is not None else False
         self.__mini_batch_eval = True if eval_batch_size is not None else False
         self.__train_determined_sample = False
         self.__eval_determined_sample = False
+        self.__eval_together = kwargs.get("eval_together", False)
         if "train_graph_number" in kwargs.keys():
             self.__train_graph_number = kwargs["train_graph_number"]
             self.__train_determined_sample = True
@@ -47,9 +48,13 @@ class NodeClassification_Sampling(BaseTask):
 
     def _execute(self):
         set_seed(self.__seed)
-
+        
         pre_time_st = time.time()
-        self.__model.preprocess(adj=self.__dataset.adj, x=self.__dataset.x, mini_batch_eval=self.__mini_batch_eval, device=self.__device)
+        mini_batch = self.__mini_batch_train and self.__mini_batch_eval
+        kwargs = {"mini_batch": mini_batch}
+        if self.__inductive is True:
+            kwargs.update({"inductive": self.__inductive, "train_idx": self.__dataset.train_idx})
+        self.__model.preprocess(adj=self.__dataset.adj, x=self.__dataset.x, y=self.__dataset.y, device=self.__device, **kwargs)
         pre_time_ed = time.time()
         print(f"Preprocessing done in {(pre_time_ed - pre_time_st):.4f}s")
 
@@ -58,8 +63,12 @@ class NodeClassification_Sampling(BaseTask):
                 self.__train_loader = DataLoader(
                         range(self.__train_graph_number), batch_size=self.__train_batch_size, num_workers=self.__train_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "train"), shuffle=True, drop_last=False)
             else:
-                self.__train_loader = DataLoader(
-                        self.__dataset.train_idx, batch_size=self.__train_batch_size, num_workers=self.__train_num_workers, collate_fn=self.__model.train_collate_fn, shuffle=True, drop_last=False)
+                if self.__inductive is False:
+                    self.__train_loader = DataLoader(
+                            self.__dataset.train_idx, batch_size=self.__train_batch_size, num_workers=self.__train_num_workers, collate_fn=self.__model.train_collate_fn, shuffle=True, drop_last=False)
+                else:
+                    self.__train_loader = DataLoader(
+                            range(len(self.__dataset.train_idx)), batch_size=self.__train_batch_size, num_workers=self.__train_num_workers, collate_fn=self.__model.train_collate_fn, shuffle=True, drop_last=False)
         
         if self.__mini_batch_eval:
             if self.__eval_determined_sample:
@@ -70,15 +79,15 @@ class NodeClassification_Sampling(BaseTask):
                 self.__all_eval_loader = DataLoader(
                         range(self.__eval_graph_number), batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "val_test"), shuffle=False, drop_last=False)
             else:
-                self.__val_loader = DataLoader(
-                        self.__dataset.val_idx, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False)
-                self.__test_loader = DataLoader(
-                        self.__dataset.test_idx, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False)
+                if self.__eval_together is False:
+                    self.__val_loader = DataLoader(
+                            self.__dataset.val_idx, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False)
+                    self.__test_loader = DataLoader(
+                            self.__dataset.test_idx, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False)
                 self.__all_eval_loader = DataLoader(
                         self.__dataset.node_ids, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False)
-                
+              
         self.__model = self.__model.to(self.__device)
-        self.__labels = self.__labels.to(self.__device)
 
         t_total = time.time()
         best_val = 0.
@@ -87,18 +96,22 @@ class NodeClassification_Sampling(BaseTask):
         for epoch in range(self.__epochs):
             t = time.time()
             if self.__mini_batch_train:
-                loss_train, acc_train = mini_batch_train(self.__model, self.__train_loader, self.__labels, self.__device, 
+                loss_train, acc_train = mini_batch_train(self.__model, self.__train_loader, self.__inductive, self.__device, 
                                                          self.__optimizer, self.__loss_fn)
             else:
-                loss_train, acc_train = train(self.__model, self.__dataset.node_ids, self.__dataset.train_idx, self.__labels, self.__device,
-                                            self.__optimizer, self.__loss_fn)
+                loss_train, acc_train = train(self.__model, self.__dataset.train_idx, self.__optimizer, self.__loss_fn)
             
             if self.__mini_batch_eval:
-                acc_val, acc_test = mini_batch_evaluate(self.__model, self.__val_loader, self.__test_loader, 
-                                                        self.__labels, self.__device)
+                if self.__eval_together is False:
+                    acc_val, acc_test = mini_batch_evaluate(self.__model, self.__val_loader, self.__test_loader, self.__device)
+                else:
+                    self.__model.eval()
+                    outputs = self.__model.inference(self.__all_eval_loader, self.__device)
+                    acc_train = accuracy(outputs[self.__dataset.train_idx], self.__dataset.y[self.__dataset.train_idx])
+                    acc_val = accuracy(outputs[self.__dataset.val_idx], self.__dataset.y[self.__dataset.val_idx])
+                    acc_test = accuracy(outputs[self.__dataset.test_idx], self.__dataset.y[self.__dataset.test_idx])
             else:
-                acc_val, acc_test = evaluate(self.__model, self.__dataset.node_ids, self.__dataset.val_idx, self.__dataset.test_idx,
-                                            self.__labels, self.__device)
+                acc_val, acc_test = evaluate(self.__model, self.__dataset.val_idx, self.__dataset.test_idx)
 
             print('Epoch: {:03d}'.format(epoch + 1),
                 'loss_train: {:.4f}'.format(loss_train),
@@ -125,22 +138,25 @@ class NodeClassification_Sampling(BaseTask):
         self.__model.eval()
         if self.__eval_determined_sample is False:
             if self.__mini_batch_eval is False:
-                outputs = self.__model.model_forward(
-                   self.__dataset.node_ids, self.__model.processed_block, self.__device).to("cpu")
+                outputs, labels = self.__model.full_batch_prepare_forward(
+                   self.__dataset.node_ids)
             else:
-                outputs = []
-                for batch in self.__all_eval_loader:
-                    batch_in, batch_out, block = batch
-                    output = self.__model.model_forward(batch_in, block, self.__device)
-                    outputs.append(output)
-                outputs = torch.vstack(outputs)
+                outputs = self.__model.inference(self.__all_eval_loader, self.__device)
+                labels = self.__dataset.y
+                # outputs, labels = [], []
+                # for batch in self.__all_eval_loader:
+                #     output, label = self.__model.mini_batch_prepare_forward(batch, self.__device, transfer_y_to_device=False)
+                #     outputs.append(output.cpu())
+                #     labels.append(label)
+                # outputs = torch.vstack(outputs)
+                # labels = torch.cat(labels)
 
-            # TODO: self.__model.postprocess now directly returns the original outputs
+            # TODO: self.__model.postprocess now directly returns the raw outputs
             final_output = self.__model.postprocess(self.__dataset.adj, outputs)
             acc_val = accuracy(
-                final_output[self.__dataset.val_idx], self.__labels[self.__dataset.val_idx])
+                final_output[self.__dataset.val_idx], labels[self.__dataset.val_idx])
             acc_test = accuracy(
-                final_output[self.__dataset.test_idx], self.__labels[self.__dataset.test_idx])           
+                final_output[self.__dataset.test_idx], labels[self.__dataset.test_idx])           
         else:
             val_outputs, val_labels = [], []
             test_outputs, test_labels = [], []
@@ -166,7 +182,7 @@ class NodeClassification_Sampling(BaseTask):
 
 class NodeClassification_RecycleSampling(BaseTask):
     def __init__(self, dataset, model, lr, weight_decay, num_iters, device, loss_fn="nll_loss", seed=42,
-                 train_batch_size=1024, eval_batch_size=None):
+                 train_batch_size=1024, eval_batch_size=None, **kwargs):
         super(NodeClassification_RecycleSampling, self).__init__()
 
         self.__dataset = dataset
@@ -187,6 +203,7 @@ class NodeClassification_RecycleSampling(BaseTask):
         else:
            self.__val_loader = self.__test_loader = None
            self.__eval_minibatch = False
+        
         self.__test_acc = self._execute()
 
     @property

@@ -285,6 +285,25 @@ class SAGE(nn.Module):
             raise ValueError('The sampling layer must be equal to GNN layer.')
         
         return F.log_softmax(repr, dim=1)
+    
+    def inference(self, x_all, subgraph_loader, device):
+        # Compute representations of nodes layer by layer, using *all*
+        # available edges. This leads to faster computation in contrast to
+        # immediately computing the final representations of each batch.
+        for i, conv in enumerate(self.gcs):
+            xs = []
+            for batch in subgraph_loader:
+                batch_in, _, block = batch
+                block.to_device(device)
+                x = x_all[batch_in].to(device)
+                x = conv(x, block[0]) # one-layer sampling
+                if i != self.nlayers - 1:
+                    x = F.relu(x)
+                xs.append(x.cpu())
+
+            x_all = torch.cat(xs, dim=0)
+
+        return x_all
 
 class GCN(nn.Module):
     def __init__(self, nfeat, nhid, nclass, layer=GCNConv, nlayers=2, dropout=0.5):
@@ -319,3 +338,22 @@ class GCN(nn.Module):
             raise ValueError('The sampling layer must be equal to GNN layer.')
         
         return F.log_softmax(repr, dim=1)
+    
+    def inference(self, x_all, subgraph_loader, device):
+        # Compute representations of nodes layer by layer, using *all*
+        # available edges. This leads to faster computation in contrast to
+        # immediately computing the final representations of each batch.
+        for i, conv in enumerate(self.gcs):
+            xs = []
+            for batch in subgraph_loader:
+                batch_in, _, block = batch
+                block.to_device(device)
+                x = x_all[batch_in].to(device)
+                x = conv(x, block[0]) # one-layer sampling
+                if i != self.nlayers - 1:
+                    x = F.relu(x)
+                xs.append(x.cpu())
+
+            x_all = torch.cat(xs, dim=0)
+
+        return x_all

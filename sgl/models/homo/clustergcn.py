@@ -9,3 +9,12 @@ class ClusterGCN(BaseSAMPLEModel):
         self._training_sampling_op = training_sampler
         self._eval_sampling_op = eval_sampler
         self._base_model = GCN(nfeat=nfeat, nhid=hidden_dim, nclass=nclass, nlayers=num_layers, dropout=dropout).to(device)
+
+    def mini_batch_prepare_forward(self, batch, device):
+        batch_in, batch_out, block = batch
+        local_inds, global_inds = batch_out
+        in_x = self._processed_feature[batch_in].to(device)
+        y_truth = self._vanilla_y[global_inds].to(device)
+        block.to_device(device)
+        y_pred = self._base_model(in_x, block)[local_inds]
+        return y_pred, y_truth

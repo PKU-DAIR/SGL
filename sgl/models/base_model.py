@@ -87,49 +87,88 @@ class BaseSAMPLEModel(nn.Module):
         return self._processed_feature
 
     @property
-    def collate_fn(self):
-        if self.training:
-            return self._training_sampling_op.collate_fn 
-        else:
-            return self._eval_sampling_op.collate_fn
+    def train_collate_fn(self):
+        return self._training_sampling_op.collate_fn 
+
+    @property
+    def eval_collate_fn(self):
+        return self._eval_sampling_op.collate_fn
     
-    def sampling(self, batch_inds):      
-        if self.training:
-            return self._training_sampling_op.sampling(batch_inds)
+    def mini_batch_prepare_forward(self, batch, device, inductive=False, transfer_y_to_device=True):
+        batch_in, batch_out, block = batch
+        
+        if inductive is False:
+            in_x = self._processed_feature[batch_in].to(device)
+            y_truth = self._vanilla_y[batch_out]
         else:
-            return self._eval_sampling_op.sampling(batch_inds)
-       
-    def preprocess(self, adj, x, mini_batch_eval, device):
+            in_x = self._processed_train_feature[batch_in].to(device)
+            y_truth = self._vanilla_train_y[batch_out]
+        
+        if transfer_y_to_device is True:
+            y_truth = y_truth.to(device)
+        
+        block.to_device(device)
+        
+        y_pred = self._base_model(in_x, block)
+        
+        return y_pred, y_truth
+    
+    def full_batch_prepare_forward(self, node_idx):
+        y_pred = self._base_model(self._processed_feature, self._processed_block)[node_idx]
+        y_truth = self._vanilla_y[node_idx]
+        return y_pred, y_truth
+     
+    def inference(self, dataloader, device):
+        preds = self._base_model.inference(self.processed_feature, dataloader, device)
+        return preds
+
+    def preprocess(self, adj, x, y, device, **kwargs):
         if self._pre_graph_op is not None:
             norm_adj = self._pre_graph_op._construct_adj(adj)
         else:
             norm_adj = adj 
         norm_adj = sparse_mx_to_torch_sparse_tensor(norm_adj)
         self._processed_block = Block(norm_adj)
-        
+
         if hasattr(self, "_pre_feature_op"):
             self._processed_feature = self._pre_feature_op._transform_x(x)
         else:
             self._processed_feature = x
 
-        if mini_batch_eval is False:
+        self._vanilla_y = y
+        mini_batch = kwargs.get("mini_batch", True)
+        if mini_batch is False:
             self._processed_block.to_device(device)
             self._processed_feature = self._processed_feature.to(device)
+            self._vanilla_y = self._vanilla_y.to(device)
+        
+        inductive = kwargs.get("inductive", False)
+        if inductive is True:
+            train_idx = kwargs.get("train_idx", None)
+            if train_idx is None:
+                raise ValueError(f"For inductive learning, "
+                                 "please pass train idx "
+                                 "as the parameters of preprocess function.")
+            if hasattr(self, "_pre_feature_op"):
+                self._processed_train_feature = self._pre_feature_op._transform_x(x[train_idx])
+            else:
+                self._processed_train_feature = x[train_idx]
+            self._vanilla_train_y = y[train_idx]
+            
     
     def postprocess(self, adj, output):
         if self._post_graph_op is not None:
             raise NotImplementedError
         return output
 
-    # a wrapper of the forward function
     def model_forward(self, batch_in, block, device):
-        return self.forward(batch_in, block, device)
-
-    def forward(self, batch_in, block, device):  
         x = self._processed_feature[batch_in].to(device)
         block.to_device(device)
-        output = self._base_model(x, block)
-        return output
+        return self.forward(x, block)
+    
+    def forward(self, x, block):  
+        return self._base_model(x, block), self._vanilla_y
+    
     
 class BaseHeteroSGAPModel(nn.Module):
     def __init__(self, prop_steps, feat_dim, output_dim):
