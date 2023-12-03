@@ -264,3 +264,6 @@ class ClusterGCNSampler(BaseSampler):
             torch.save((self.perm_adjs, self.partptr, self.perm_node_idx), self._save_path_pt)
             pkl.dump(self.splitted_perm_adjs, open(self._save_path_pkl, "wb"))
             print(f"\nSave Metis graph clustering results under the {self._save_dir} directory.\n")
+
+class GraphSaintSampler(BaseSampler):
+    pass
