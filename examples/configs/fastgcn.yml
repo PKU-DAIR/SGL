@@ -10,7 +10,7 @@ sampler:
     pre_sampling_op: "LaplacianGraphOp"
     layer_sizes: "2048,2048"
     prob_type: "normalize"
-    replace: True
+    replace: False
 model:
   name: "FastGCN"
   hidden_dim: 128

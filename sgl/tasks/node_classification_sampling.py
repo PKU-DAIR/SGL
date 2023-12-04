@@ -143,13 +143,6 @@ class NodeClassification_Sampling(BaseTask):
             else:
                 outputs = self.__model.inference(self.__all_eval_loader, self.__device)
                 labels = self.__dataset.y
-                # outputs, labels = [], []
-                # for batch in self.__all_eval_loader:
-                #     output, label = self.__model.mini_batch_prepare_forward(batch, self.__device, transfer_y_to_device=False)
-                #     outputs.append(output.cpu())
-                #     labels.append(label)
-                # outputs = torch.vstack(outputs)
-                # labels = torch.cat(labels)
 
             # TODO: self.__model.postprocess now directly returns the raw outputs
             final_output = self.__model.postprocess(self.__dataset.adj, outputs)

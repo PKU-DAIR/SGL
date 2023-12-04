@@ -7,8 +7,7 @@ import scipy.sparse as sp
 from torch_sparse import SparseTensor
 from torch_geometric.utils import from_networkx, mask_to_index
 
-from sgl.sampler.base_sampler import BaseSampler
-from sampling_ops import NodeWiseOneLayer
+from sgl.sampler.base_sampler import BaseSampler, NodeWiseSampler, LayerWiseSampler
 
 class FullSampler(BaseSampler):
     def __init__(self, adj, **kwargs):
@@ -25,10 +24,10 @@ class FullSampler(BaseSampler):
     def sampling(self):
         return self.full_batch, self.full_batch, self.full_block
 
-class NeighborSampler(BaseSampler):
+class NeighborSampler(NodeWiseSampler):
     def __init__(self, adj, **kwargs):
         """
-        Node-wise neighbor sampler
+        Neighborhood sampler
         """
         super(NeighborSampler, self).__init__(adj, **kwargs)
         self.sampler_name = "NeighborSampler"
@@ -48,7 +47,7 @@ class NeighborSampler(BaseSampler):
         Input:
             batch_inds: array of batch node inds
         Method:
-            Neighbor sampling
+            Neighborhood sampling
         Outputs:
             batch_in: global node index of each source node in the first aggregation layer
             batch_out: global node index of each target node in the last aggregation layer
@@ -62,12 +61,10 @@ class NeighborSampler(BaseSampler):
             batch_inds = np.asarray(batch_inds)
         
         all_adjs = []
-        indptr, indices, values = self._adj.indptr, self._adj.indices, self._adj.data
 
         cur_tgt_nodes = batch_inds    
         for layer_index in range(self.num_layers):
-            cur_src_nodes, (s_indptr, s_indices, s_data) = NodeWiseOneLayer(cur_tgt_nodes, indptr, indices, values, self.layer_sizes[layer_index], self.probs, True, self.replace)
-            adj_sampled = sp.csr_matrix((s_data, s_indices, s_indptr), shape=(len(cur_tgt_nodes), len(cur_src_nodes)))
+            cur_src_nodes, adj_sampled = self.one_layer_sampling(cur_tgt_nodes, self.layer_sizes[layer_index], True)
             all_adjs.insert(0, adj_sampled)
             cur_tgt_nodes = cur_src_nodes
         
@@ -75,7 +72,7 @@ class NeighborSampler(BaseSampler):
      
         return cur_tgt_nodes, batch_inds, self._to_Block(all_adjs)  
 
-class FastGCNSampler(BaseSampler):
+class FastGCNSampler(LayerWiseSampler):
     def __init__(self, adj, **kwargs):   
         super(FastGCNSampler, self).__init__(adj, **kwargs) 
         self.sampler_name = "FastGCNSampler"
@@ -109,39 +106,14 @@ class FastGCNSampler(BaseSampler):
 
         cur_out_nodes = batch_inds
         for layer_index in range(self.num_layers):
-            cur_in_nodes, cur_adj = self._one_layer_sampling(
-                cur_out_nodes, self.layer_sizes[layer_index])
+            cur_in_nodes, cur_adj = self.one_layer_sampling(
+                cur_out_nodes, self.layer_sizes[layer_index], self.probs)
             all_adjs.insert(0, cur_adj)
             cur_out_nodes = cur_in_nodes
 
         all_adjs = self._post_process(all_adjs, to_sparse_tensor=False)
 
         return cur_out_nodes, batch_inds, self._to_Block(all_adjs)
-
-    def _one_layer_sampling(self, v_indices, output_size):
-        """
-        Inputs:
-            v_indices: array of target node inds of the current layer
-            output_size: size of the source nodes to be sampled
-        Outputs:
-            u_samples: array of source node inds of the current layer
-            support: normalized sparse adjacency matrix of the current layer
-        """
-        support = self._adj[v_indices, :]
-        neis = np.nonzero(np.sum(support, axis=0))[1]
-        p1 = self.probs[neis]
-        p1 = p1 / np.sum(p1)
-        if self.replace is False:
-            output_size = min(len(neis), output_size)
-        sampled = np.random.choice(np.arange(np.size(neis)),
-                                   output_size, self.replace, p1) 
-
-        u_sampled = neis[sampled]
-        support = support[:, u_sampled]
-        sampled_p1 = p1[sampled]
-
-        support = support.dot(sp.diags(1.0 / (sampled_p1 * output_size)))
-        return u_sampled, support
     
 class ClusterGCNSampler(BaseSampler):
     """

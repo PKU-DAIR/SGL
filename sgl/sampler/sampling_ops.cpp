@@ -4,11 +4,6 @@
 
 std::mt19937 gen;
 
-// BatchSamples NodeWiseMultiLayers(PyArrInt batch_inds, PyArrInt indptr, PyArrInt indices, PyArrFloat values, PyArrInt layer_sizes, PyArrFloat probability, bool biased, bool replace) {
-//     py::buffer_info buf_batch_inds = batch_inds.request();
-
-// }
-
 SingleSample NodeWiseOneLayer(PyArrInt prev_nodes, PyArrInt indptr, PyArrInt indices, PyArrFloat values, int32_t layer_size, PyArrFloat probability, bool biased, bool replace) {
     py::buffer_info buf_prev_nodes = prev_nodes.request();
     py::buffer_info buf_indptr = indptr.request();
@@ -143,7 +138,7 @@ SingleSample NodeWiseOneLayer(PyArrInt prev_nodes, PyArrInt indptr, PyArrInt ind
                     int32_t index = 0;
                     std::transform(vals.begin(), vals.end(), std::back_inserter(valIndices), [&index](auto v) { return std::pair<float, int32_t>(v, index++); });
                     std::sort(valIndices.begin(), valIndices.end(), [](auto x, auto y) { return x.first > y.first; });
-                    std::vector<int64_t> candidates;
+                    std::vector<int32_t> candidates;
                     std::transform(valIndices.begin(), valIndices.end(), std::back_inserter(candidates), [](auto v) { return v.second; });
                     for(int32_t j = 0; j < layer_size; j++) {
                         e = start_ + candidates[j];
@@ -222,6 +217,91 @@ SingleSample NodeWiseOneLayer(PyArrInt prev_nodes, PyArrInt indptr, PyArrInt ind
     return std::make_pair(out_n_ids, out_adj);
 }
 
+PyArrInt LayerWiseOneLayer(PyArrInt indices, int32_t layer_size, PyArrFloat probability, bool biased, bool replace) {
+    py::buffer_info buf_indices = indices.request();
+    py::buffer_info buf_probability = probability.request();
+
+    int32_t* ptr_indices = static_cast<int32_t *> (buf_indices.ptr);
+    float* ptr_probability = static_cast<float *> (buf_probability.ptr);
+
+    std::vector<int32_t> neighbors(ptr_indices, ptr_indices + indices.size());
+    std::sort(neighbors.begin(), neighbors.end());
+    neighbors.erase(std::unique(neighbors.begin(), neighbors.end()), neighbors.end());
+    std::vector<int32_t> n_ids;
+    int32_t e, c, num_neighbors = neighbors.size();
+
+    if (layer_size < 0) {
+        // No sampling
+        n_ids.insert(n_ids.end(), neighbors.begin(), neighbors.end());
+    } else if (replace) {
+        // Sample with replacement
+        n_ids.resize(layer_size);
+        if (biased) {
+            std::vector<float> selectedProbability(num_neighbors);
+            std::transform(neighbors.begin(), neighbors.end(), selectedProbability.begin(),
+                   [&ptr_probability](int index) { return ptr_probability[index]; }); 
+            
+            #pragma omp parallel for schedule(static)
+            for (int32_t j = 0; j < layer_size; j++) {
+                std::discrete_distribution<> d(selectedProbability.begin(), selectedProbability.end());
+                e = d(gen);
+                c = neighbors[e];
+                n_ids[j] = c;
+            }       
+        } else {
+            #pragma omp parallel for schedule(static)
+            for (int32_t j = 0; j < layer_size; j++) {
+                e = rand() % num_neighbors;
+                c = neighbors[e];
+                n_ids[j] = c;
+            }
+        }
+    } else {
+        // Sample without replacement
+        if (num_neighbors <= layer_size) {
+            n_ids.insert(n_ids.end(), neighbors.begin(), neighbors.end());
+        } else if (biased) {
+            std::vector<float> selectedProbability(num_neighbors);
+            std::transform(neighbors.begin(), neighbors.end(), selectedProbability.begin(),
+                   [&ptr_probability](int index) { return ptr_probability[index]; }); 
+            std::discrete_distribution<> d(selectedProbability.begin(), selectedProbability.end());
+            std::uniform_real_distribution<float> dist(0.0, 1.0);
+            std::vector<float> vals;
+            std::generate_n(std::back_inserter(vals), num_neighbors, [&dist]() { return dist(gen); });
+            std::transform(vals.begin(), vals.end(), selectedProbability.begin(), vals.begin(), [&](auto r, auto prob) { return std::pow(r, 1. / prob); });
+            std::vector<std::pair<float, int32_t>> valIndices;
+            int32_t index = 0;
+            std::transform(vals.begin(), vals.end(), std::back_inserter(valIndices), [&index](auto v) { return std::pair<float, int32_t>(v, index++); });
+            std::sort(valIndices.begin(), valIndices.end(), [](auto x, auto y) { return x.first > y.first; });
+            std::vector<int32_t> candidates;
+            std::transform(valIndices.begin(), valIndices.end(), std::back_inserter(candidates), [](auto v) { return v.second; });
+
+            n_ids.resize(layer_size);
+            #pragma omp parallel for schedule(static)
+            for (int32_t j = 0; j < layer_size; j++) {
+                c = candidates[j];
+                n_ids[j] = c;
+            }
+        } else {
+            std::unordered_set<int32_t> perm;
+            for (int32_t j = num_neighbors - layer_size; j < num_neighbors; j++) {
+                if (!perm.insert(rand() % j).second) perm.insert(j);
+            }          
+            for (const int32_t &p: perm) {
+                c = neighbors[p];
+                n_ids.push_back(c);
+            }
+        }
+    }
+
+    PyArrInt out_n_ids(n_ids.size());
+    py::buffer_info buf_out_n_ids = out_n_ids.request();
+    int32_t *ptr_out_n_ids = static_cast<int32_t *>(buf_out_n_ids.ptr);
+    std::copy(n_ids.begin(), n_ids.end(), ptr_out_n_ids);   
+    return out_n_ids;
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("NodeWiseOneLayer", &NodeWiseOneLayer);
+    m.def("LayerWiseOneLayer", &LayerWiseOneLayer);
 }

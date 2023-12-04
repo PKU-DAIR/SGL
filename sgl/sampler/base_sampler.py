@@ -1,11 +1,14 @@
 import os
 import numpy as np
+import scipy.sparse as sp
 from scipy.sparse.linalg import norm as sparse_norm
 
 from sgl.data.base_data import Block
 import sgl.operators.graph_op as GraphOps
 from sgl.sampler.utils import adj_train_analysis
 from sgl.utils import sparse_mx_to_torch_sparse_tensor
+
+from sampling_ops import NodeWiseOneLayer
 
 class BaseSampler:
     def __init__(self, adj, **kwargs):
@@ -93,3 +96,42 @@ class BaseSampler:
     
     def collate_fn(self, *args):
         raise NotImplementedError
+    
+class NodeWiseSampler(BaseSampler):
+    def __init__(self, adj, **kwargs):
+        super(NodeWiseSampler, self).__init__(adj, **kwargs)
+        self.__indptr = self._adj.indptr
+        self.__indices = self._adj.indices
+        self.__values = self._adj.data
+
+    def one_layer_sampling(self, target_nodes, layer_size, biased):
+        source_nodes, (s_indptr, s_indices, s_data) = NodeWiseOneLayer(target_nodes, self.__indptr, self.__indices, self.__values, layer_size, self.probs, biased, self.replace)
+        adj_sampled = sp.csr_matrix((s_data, s_indices, s_indptr), shape=(len(target_nodes), len(source_nodes)))
+        return source_nodes, adj_sampled
+    
+class LayerWiseSampler(BaseSampler):
+    def __init__(self, adj, **kwargs):
+        super(LayerWiseSampler, self).__init__(adj, **kwargs)
+
+    def one_layer_sampling(self, target_nodes, layer_size, probability):
+        subgraph_adj = self._adj[target_nodes, :]
+        neis = np.nonzero(np.sum(subgraph_adj, axis=0))[1]
+        p1 = probability[neis]
+        p1 = p1 / np.sum(p1)
+
+        if self.replace is False:
+            layer_size = min(len(neis), layer_size)
+        
+        local_nids = np.random.choice(np.arange(np.size(neis)),
+                                   layer_size, self.replace, p1)
+        
+        source_nodes = neis[local_nids]
+        subgraph_adj = subgraph_adj[:, source_nodes]
+        sampled_p1 = p1[local_nids]
+
+        subgraph_adj = subgraph_adj.dot(sp.diags(1.0 / (sampled_p1 * layer_size)))
+        return source_nodes, subgraph_adj
+    
+class GraphWiseSampler(BaseSampler):
+    def __init__(self, adj, **kwargs):
+        super(GraphWiseSampler, self).__init__(adj, **kwargs)
