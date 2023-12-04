@@ -57,7 +57,7 @@ class NodeClassification_Sampling(BaseTask):
         self.__model.preprocess(adj=self.__dataset.adj, x=self.__dataset.x, y=self.__dataset.y, device=self.__device, **kwargs)
         pre_time_ed = time.time()
         print(f"Preprocessing done in {(pre_time_ed - pre_time_st):.4f}s")
-
+        
         if self.__mini_batch_train:
             if self.__train_determined_sample:
                 self.__train_loader = DataLoader(

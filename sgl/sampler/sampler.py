@@ -8,6 +8,7 @@ from torch_sparse import SparseTensor
 from torch_geometric.utils import from_networkx, mask_to_index
 
 from sgl.sampler.base_sampler import BaseSampler
+from sampling_ops import NodeWiseOneLayer
 
 class FullSampler(BaseSampler):
     def __init__(self, adj, **kwargs):
@@ -61,49 +62,18 @@ class NeighborSampler(BaseSampler):
             batch_inds = np.asarray(batch_inds)
         
         all_adjs = []
+        indptr, indices, values = self._adj.indptr, self._adj.indices, self._adj.data
+
         cur_tgt_nodes = batch_inds    
         for layer_index in range(self.num_layers):
-            cur_src_nodes, adj_sampled = self._one_layer_sampling(cur_tgt_nodes, self.layer_sizes[layer_index])
+            cur_src_nodes, (s_indptr, s_indices, s_data) = NodeWiseOneLayer(cur_tgt_nodes, indptr, indices, values, self.layer_sizes[layer_index], self.probs, True, self.replace)
+            adj_sampled = sp.csr_matrix((s_data, s_indices, s_indptr), shape=(len(cur_tgt_nodes), len(cur_src_nodes)))
             all_adjs.insert(0, adj_sampled)
             cur_tgt_nodes = cur_src_nodes
         
         all_adjs = self._post_process(all_adjs, to_sparse_tensor=False)
      
         return cur_tgt_nodes, batch_inds, self._to_Block(all_adjs)  
-
-    def _one_layer_sampling(self, prev_nodes, layer_size=-1):
-        """
-        Inputs:
-            v_indices: array of target node inds of the current layer
-            layer_size: size of sampled neighbors as the source nodes
-        """  
-        
-        current_layer_adj = self._adj[prev_nodes, :]
-
-        if layer_size < 0:
-            # in case layer_size < 0, we simply keep all the neighbors
-            next_nodes = np.unique(current_layer_adj.indices)
-            
-        else:
-            next_nodes = []
-
-            row_start_stop = np.lib.stride_tricks.as_strided(current_layer_adj.indptr, shape=(current_layer_adj.shape[0], 2), strides=2*current_layer_adj.indptr.strides)
-
-            for start, stop in row_start_stop:
-                neigh_index = current_layer_adj.indices[start:stop]
-                if neigh_index.size == 0:
-                    continue
-                probs = self.probs[neigh_index] / np.sum(self.probs[neigh_index])
-                num_samples = np.min([neigh_index.size, layer_size]) if self.replace is False else layer_size
-                sampled_nodes = np.random.choice(neigh_index, num_samples, replace=self.replace, p=probs)
-                next_nodes.append(sampled_nodes)
-            
-            next_nodes = np.unique(np.concatenate(next_nodes))
-        
-        next_nodes = np.setdiff1d(next_nodes, prev_nodes)
-        next_nodes = np.concatenate((prev_nodes, next_nodes))
-        
-        return next_nodes, current_layer_adj[:, next_nodes]
 
 class FastGCNSampler(BaseSampler):
     def __init__(self, adj, **kwargs):   

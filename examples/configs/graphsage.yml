@@ -25,7 +25,7 @@ model:
 task:
   name: "NodeClassification_Sampling"
   train_batch_size: 1024
-  train_num_workers: 5
+  train_num_workers: 0
   # eval_batch_size: 1024
   # eval_num_workers: 5
   # eval_together: True
