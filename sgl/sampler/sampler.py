@@ -19,14 +19,6 @@ class NeighborSampler(NodeWiseSampler):
         self.sampler_name = "NeighborSampler"
         self.sample_level = "node"
         self.pre_sampling = False
-
-    def _pre_process(self, **kwargs):
-
-        self._get_sample_sizes(**kwargs)
-
-        self._calc_probs(**kwargs)
-        
-        self.replace = kwargs.get("replace", True)
     
     def collate_fn(self, batch_inds):
         """
@@ -64,14 +56,6 @@ class FastGCNSampler(LayerWiseSampler):
         self.sampler_name = "FastGCNSampler"
         self.sample_level = "layer"
         self.pre_sampling = False
-
-    def _pre_process(self, **kwargs):
-
-        self._get_sample_sizes(**kwargs)
-
-        self._calc_probs(**kwargs)
-
-        self.replace = kwargs.get("replace", False)
 
     def collate_fn(self, batch_inds): 
         """

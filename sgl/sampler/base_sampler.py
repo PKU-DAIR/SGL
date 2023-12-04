@@ -121,14 +121,25 @@ class NodeWiseSampler(BaseSampler):
         self.__indices = self._adj.indices
         self.__values = self._adj.data
 
-    def one_layer_sampling(self, target_nodes, layer_size, biased):
+    def _pre_process(self, **kwargs):
+        self._get_sample_sizes(**kwargs)
+        self._calc_probs(**kwargs)     
+        self.replace = kwargs.get("replace", True)
+
+    def one_layer_sampling(self, target_nodes, layer_size, biased):        
         source_nodes, (s_indptr, s_indices, s_data) = NodeWiseOneLayer(target_nodes, self.__indptr, self.__indices, self.__values, layer_size, self.probs, biased, self.replace)
         subgraph_adj = sp.csr_matrix((s_data, s_indices, s_indptr), shape=(len(target_nodes), len(source_nodes)))
+        
         return source_nodes, subgraph_adj
     
 class LayerWiseSampler(BaseSampler):
     def __init__(self, adj, **kwargs):
         super(LayerWiseSampler, self).__init__(adj, **kwargs)
+
+    def _pre_process(self, **kwargs):
+        self._get_sample_sizes(**kwargs)
+        self._calc_probs(**kwargs)
+        self.replace = kwargs.get("replace", False)
 
     def one_layer_sampling(self, target_nodes, layer_size, probability):
         subgraph_adj = self._adj[target_nodes, :]
