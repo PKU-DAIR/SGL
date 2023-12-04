@@ -4,6 +4,7 @@ import numpy as np
 import pickle as pkl
 import networkx as nx
 import scipy.sparse as sp
+
 from torch_sparse import SparseTensor
 from torch_geometric.utils import from_networkx, mask_to_index
 
@@ -265,5 +266,93 @@ class ClusterGCNSampler(BaseSampler):
             pkl.dump(self.splitted_perm_adjs, open(self._save_path_pkl, "wb"))
             print(f"\nSave Metis graph clustering results under the {self._save_dir} directory.\n")
 
-class GraphSaintSampler(BaseSampler):
-    pass
+class GraphSAINTSampler(BaseSampler):
+    '''
+        sample the wholo graph, feature and label as GraphSAINT method
+    '''
+    def __init__(self, adj, **kwargs):
+        """
+        Inputs:
+            adj: adj of dgl Graph:sp.matrix
+            kwargs: some params
+        """
+        self.replace = True
+        self.node_budget = kwargs['nodebudget']
+
+        super(GraphSAINTSampler, self).__init__(adj, **kwargs)
+
+        self.sampler_name = "GraphSaintSampler"
+        self.sample_level = "graph"
+        self.pre_sampling = False
+
+    def _pre_process(self, **kwargs):
+        if kwargs['samplertype'] == "Node":
+            self._calc_probs(**kwargs)
+            self.sample = self.node_sample
+        else:
+            raise NotImplementedError
+
+        self._calc_norm(**kwargs)
+
+    def node_sample(self):
+        """
+        Inputs:
+            batch_ids: is not used in this method
+
+        method: sample fixed size of nodes as a subgraph
+
+        Outputs:
+            batch_in: global node index
+            batch_out: global node index
+            block: sampled adjs in the form of sparse tensors wrapped in Block class
+        """
+
+        p = self.probs
+        sampled = np.random.choice(np.arange(np.size(p)), self.node_budget, self.replace, p)
+        sampled = np.unique(sampled)
+
+        adj = self._adj[sampled, :].tocsc()
+        adj = adj[:, sampled].tocsr()
+        return sampled, adj
+
+    def _calc_norm(self, **kwargs):
+        """
+        methods: calculate the norm to estimate embedding and loss
+        """
+        times = kwargs['pre_sampling_graphs']
+
+        node_value = np.zeros(np.size(self.probs))
+        edge_value = sp.lil_matrix((np.size(self.probs),np.size(self.probs)))
+
+        for _ in range(times):
+            sampled, adj = self.sample()
+            adj = adj.tocoo()
+            for row, col in zip(adj.row, adj.col):
+                edge_value[sampled[row],sampled[col]] += 1
+            node_value[sampled] += 1
+
+        edge_value = edge_value.tocsr().dot(sp.diags(1.0 / np.maximum(node_value, 1)))
+        
+        self.aggr_norm = edge_value
+        self.loss_norm = torch.FloatTensor(np.maximum(node_value, 1))
+        return
+
+    def collate_fn(self, batch_ids):
+        """
+        Inputs: 
+            batch_ids: is not used in this method
+
+        method: sample fixed size of nodes as a subgraph
+        
+        Outputs: batch_in: global node index
+                 batch_out: global node index
+                 block: sampled adjs in the form of sparse tensors wrapped in Block class
+        """
+        sampled, adj = self.sample()
+        sampled_aggr_norm = self.aggr_norm[sampled, :].tocsc()
+        sampled_aggr_norm = sampled_aggr_norm[:, sampled]
+        adj = adj.multiply(sampled_aggr_norm.transpose())
+
+        self.index = sampled
+
+        return sampled,sampled,self._to_Block(adj)
