@@ -60,6 +60,7 @@ class NodeClassification_Sampling(BaseTask):
         
         if self.__mini_batch_train:
             if self.__train_determined_sample:
+                self.__model.pre_sample("train")
                 self.__train_loader = DataLoader(
                         range(self.__train_graph_number), batch_size=self.__train_batch_size, num_workers=self.__train_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "train"), shuffle=True, drop_last=False)
             else:
@@ -72,6 +73,7 @@ class NodeClassification_Sampling(BaseTask):
         
         if self.__mini_batch_eval:
             if self.__eval_determined_sample:
+                self.__model.pre_sample("eval")
                 self.__val_loader = DataLoader(
                         range(self.__eval_graph_number), batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "val"), shuffle=False, drop_last=False)
                 self.__test_loader = DataLoader(
@@ -86,7 +88,7 @@ class NodeClassification_Sampling(BaseTask):
                             self.__dataset.test_idx, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False)
                 self.__all_eval_loader = DataLoader(
                         self.__dataset.node_ids, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False)
-              
+
         self.__model = self.__model.to(self.__device)
 
         t_total = time.time()

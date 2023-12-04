@@ -10,6 +10,12 @@ class ClusterGCN(BaseSAMPLEModel):
         self._eval_sampling_op = eval_sampler
         self._base_model = GCN(nfeat=nfeat, nhid=hidden_dim, nclass=nclass, nlayers=num_layers, dropout=dropout).to(device)
 
+    def pre_sample(self, mode="train"):
+        if mode == "train":
+            self._training_sampling_op.multiple_graphs_sampling()
+        else:
+            self._eval_sampling_op.multiple_graphs_sampling()
+
     def mini_batch_prepare_forward(self, batch, device, **kwargs):
         batch_in, batch_out, block = batch
         local_inds, global_inds = batch_out

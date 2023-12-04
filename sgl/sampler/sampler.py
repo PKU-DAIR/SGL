@@ -7,22 +7,8 @@ import scipy.sparse as sp
 from torch_sparse import SparseTensor
 from torch_geometric.utils import from_networkx, mask_to_index
 
-from sgl.sampler.base_sampler import BaseSampler, NodeWiseSampler, LayerWiseSampler
+from sgl.sampler.base_sampler import NodeWiseSampler, LayerWiseSampler, GraphWiseSampler
 
-class FullSampler(BaseSampler):
-    def __init__(self, adj, **kwargs):
-        """
-        In fact, this sampler simply returns the full graph.
-        """
-        super(FullSampler, self).__init__(adj, **kwargs)
-        self.sampler_name = "FullSampler"
-        self.sample_level = "graph"
-        self.pre_sampling = False
-        self.full_batch = kwargs.get("node_ids", range(self._adj.shape[0]))
-        self.full_block = self._to_Block(self._adj)
-
-    def sampling(self):
-        return self.full_batch, self.full_batch, self.full_block
 
 class NeighborSampler(NodeWiseSampler):
     def __init__(self, adj, **kwargs):
@@ -115,7 +101,7 @@ class FastGCNSampler(LayerWiseSampler):
 
         return cur_out_nodes, batch_inds, self._to_Block(all_adjs)
     
-class ClusterGCNSampler(BaseSampler):
+class ClusterGCNSampler(GraphWiseSampler):
     """
     Clustering the graph, feature set and target.
     """
@@ -127,36 +113,30 @@ class ClusterGCNSampler(BaseSampler):
         super(ClusterGCNSampler, self).__init__(nx.from_scipy_sparse_matrix(dataset.adj), **kwargs)
         self.sampler_name = "ClusterGCNSampler"
         self.sample_level = "graph"
-        self.pre_sampling = True
+        self.pre_sampling = True # conduct sampling only once before training
+        self.sampling_done = False
         self._masks = {"train": dataset.train_mask, "val": dataset.val_mask, "test": dataset.test_mask}
-        self._sampling_done = False
+
+    @property 
+    def sample_graph_ops(self):
+        if self.cluster_method == "metis":
+            return self._metis_clustering
+        else:
+            raise NotImplementedError
 
     def _pre_process(self, **kwargs):
-
-        self.cluster_method = kwargs.get("cluster_method", "random")
+        
+        self.cluster_method = kwargs.get("cluster_method", "metis")
         self.cluster_number = kwargs.get("cluster_number", 32)
+        
         self._save_dir = kwargs.get("save_dir", None)
         if self._save_dir is not None:
-            self._save_path_pt = os.path.join(self._save_dir, f"partition_{self.cluster_method}_{self.cluster_number}.pt")
-            self._save_path_pkl = os.path.join(self._save_dir, f"partition_{self.cluster_method}_{self.cluster_number}.pkl")
+            self._save_path_pt = os.path.join(self._save_dir, f"cluster_partition_{self.cluster_method}_{self.cluster_number}.pt")
+            self._save_path_pkl = os.path.join(self._save_dir, f"cluster_partition_{self.cluster_method}_{self.cluster_number}.pkl")
         else:
             self._save_path_pt = self._save_path_pkl = None
 
     def collate_fn(self, batch_inds, mode):
-        if self._sampling_done is False:
-            if self._save_dir is not None and os.path.exists(self._save_path_pt) and os.path.exists(self._save_path_pkl):
-                print("\nLoad from existing clusters.\n")
-                (self.perm_adjs, self.partptr, self.perm_node_idx) = torch.load(self._save_path_pt)
-                self.splitted_perm_adjs = pkl.load(open(self._save_path_pkl, "rb"))
-            else:
-                if self.cluster_method == "metis":
-                    print("\nMetis graph clustering started.\n")
-                    self._metis_clustering()
-                else:
-                    raise NotImplementedError
-            
-            self._sampling_done = True
-        
         if not isinstance(batch_inds, torch.Tensor):
             batch_inds = torch.tensor(batch_inds)
         

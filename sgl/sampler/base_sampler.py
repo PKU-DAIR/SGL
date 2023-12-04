@@ -1,5 +1,7 @@
 import os
+import torch
 import numpy as np
+import pickle as pkl
 import scipy.sparse as sp
 from scipy.sparse.linalg import norm as sparse_norm
 
@@ -96,7 +98,22 @@ class BaseSampler:
     
     def collate_fn(self, *args):
         raise NotImplementedError
-    
+
+class FullSampler(BaseSampler):
+    def __init__(self, adj, **kwargs):
+        """
+        In fact, this sampler simply returns the full graph.
+        """
+        super(FullSampler, self).__init__(adj, **kwargs)
+        self.sampler_name = "FullSampler"
+        self.sample_level = "graph"
+        self.pre_sampling = False
+        self.full_batch = kwargs.get("node_ids", range(self._adj.shape[0]))
+        self.full_block = self._to_Block(self._adj)
+
+    def sampling(self):
+        return self.full_batch, self.full_batch, self.full_block
+ 
 class NodeWiseSampler(BaseSampler):
     def __init__(self, adj, **kwargs):
         super(NodeWiseSampler, self).__init__(adj, **kwargs)
@@ -106,8 +123,8 @@ class NodeWiseSampler(BaseSampler):
 
     def one_layer_sampling(self, target_nodes, layer_size, biased):
         source_nodes, (s_indptr, s_indices, s_data) = NodeWiseOneLayer(target_nodes, self.__indptr, self.__indices, self.__values, layer_size, self.probs, biased, self.replace)
-        adj_sampled = sp.csr_matrix((s_data, s_indices, s_indptr), shape=(len(target_nodes), len(source_nodes)))
-        return source_nodes, adj_sampled
+        subgraph_adj = sp.csr_matrix((s_data, s_indices, s_indptr), shape=(len(target_nodes), len(source_nodes)))
+        return source_nodes, subgraph_adj
     
 class LayerWiseSampler(BaseSampler):
     def __init__(self, adj, **kwargs):
@@ -135,3 +152,20 @@ class LayerWiseSampler(BaseSampler):
 class GraphWiseSampler(BaseSampler):
     def __init__(self, adj, **kwargs):
         super(GraphWiseSampler, self).__init__(adj, **kwargs)
+
+    @property
+    def sample_graph_ops(self):
+        # Each subclass must implement its own sample operations
+        raise NotImplementedError
+    
+    def multiple_graphs_sampling(self):
+        if self.pre_sampling is False or self.sampling_done is False:
+            if self._save_dir is not None and os.path.exists(self._save_path_pt) and os.path.exists(self._save_path_pkl):
+                print("\nLoad from existing subgraphs.\n")
+                (self.perm_adjs, self.partptr, self.perm_node_idx) = torch.load(self._save_path_pt)
+                self.splitted_perm_adjs = pkl.load(open(self._save_path_pkl, "rb"))
+            else:
+                self.sample_graph_ops()        
+            self.sampling_done = True    
+        else:
+            print("\nSubgraphs already existed.\n")
