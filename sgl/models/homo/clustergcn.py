@@ -10,7 +10,13 @@ class ClusterGCN(BaseSAMPLEModel):
         self._eval_sampling_op = eval_sampler
         self._base_model = GCN(nfeat=nfeat, nhid=hidden_dim, nclass=nclass, nlayers=num_layers, dropout=dropout).to(device)
 
-    def mini_batch_prepare_forward(self, batch, device, inductive = False):
+    def pre_sample(self, mode="train"):
+        if mode == "train":
+            self._training_sampling_op.multiple_graphs_sampling()
+        else:
+            self._eval_sampling_op.multiple_graphs_sampling()
+
+    def mini_batch_prepare_forward(self, batch, device, **kwargs):
         batch_in, batch_out, block = batch
         local_inds, global_inds = batch_out
         in_x = self._processed_feature[batch_in].to(device)
@@ -18,7 +24,9 @@ class ClusterGCN(BaseSAMPLEModel):
         block.to_device(device)
         y_pred = self._base_model(in_x, block)[local_inds]
         return y_pred, y_truth
-
-    @property
-    def collate_fn(self):
-        return self._training_sampling_op.collate_fn
+    
+    def collate_fn(self, batch_inds, mode):
+        if self.training:
+            return self._training_sampling_op.collate_fn(batch_inds, mode)
+        else:
+            return self._eval_sampling_op.collate_fn(batch_inds, mode)

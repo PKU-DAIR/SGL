@@ -1,5 +1,7 @@
+__pycache__/
 
-*.pyc
-*.pyc
-*.pyc
-*.pyc
+
+*.egg-info/
+
+build/
+dist/

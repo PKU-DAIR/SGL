@@ -1,9 +1,12 @@
-from .sampler import FastGCNSampler, ClusterGCNSampler, NeighborSampler, FullSampler , GraphSAINTSampler
+from .sampler import FastGCNSampler, ClusterGCNSampler, NeighborSampler
+from .base_sampler import FullSampler, NodeWiseSampler, LayerWiseSampler, GraphWiseSampler
 
 __all__ = [
     "FastGCNSampler",
     "ClusterGCNSampler",
     "NeighborSampler",
     "FullSampler",
-    "GraphSAINTSampler"
+    "NodeWiseSampler",
+    "LayerWiseSampler",
+    "GraphWiseSampler"
 ]
