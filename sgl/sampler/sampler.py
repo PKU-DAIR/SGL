@@ -172,66 +172,148 @@ class ClusterGCNSampler(GraphWiseSampler):
             pkl.dump(self.splitted_perm_adjs, open(self._save_path_pkl, "wb"))
             print(f"\nSave Metis graph clustering results under the {self._save_dir} directory.\n")
 
-class GraphSAINTSampler(BaseSampler):
+class GraphSAINTSampler(GraphWiseSampler):
     '''
-        sample the wholo graph, feature and label as GraphSAINT method
+    sample the wholo graph, feature set and label as GraphSAINT method
     '''
-    def __init__(self, adj, **kwargs):
+    def __init__(self, dataset, **kwargs):
         """
         Inputs:
-            adj: adj of dgl Graph:sp.matrix
-            kwargs: some params
+            adj: Adjacency matrix: scipy.sparse.csr_matrix
         """
+        super(GraphSAINTSampler, self).__init__(dataset.adj, **kwargs)
+
         self.replace = True
-        self.node_budget = kwargs['nodebudget']
-
-        super(GraphSAINTSampler, self).__init__(adj, **kwargs)
-
         self.sampler_name = "GraphSaintSampler"
         self.sample_level = "graph"
         self.pre_sampling = False
+        self._masks = {"train": dataset.train_mask, "val": dataset.val_mask, "test": dataset.test_mask}
 
-    def _pre_process(self, **kwargs):
-        if kwargs['samplertype'] == "Node":
+        self.n = dataset.adj.shape[0]
+        self.e = dataset.adj.nnz
+        self.pre_sampling_times = kwargs.get("pre_sampling_graphs", 1)
+        self.used_sample_graphs = 0
+
+        if kwargs['sampler_type'] == "Node":
+            kwargs.update({"prob_type": "normalize"})
             self._calc_probs(**kwargs)
-            self.sample = self.node_sample
+            self.node_probs = self.probs
+            self.node_budget = kwargs['nodebudget']
+            self.sample_graph_type = "Node"
+        elif kwargs['sampler_type'] == 'Edge':
+            self._calc_edge_probs()
+            self.edge_budget = kwargs['edgebudget']
+            self.sample_graph_type = "Edge"
+        elif kwargs['sampler_type'] == 'RandomWalk':
+            self.r = kwargs['r']
+            self.h = kwargs['h']
+            self.sample_graph_type = "RandomWalk"
         else:
             raise NotImplementedError
 
-        self._calc_norm(**kwargs)
+    @property
+    def sample_graph_ops(self):
+        if self.sample_graph_type == "Node":
+            return self.node_sampler()
+        elif self.sample_graph_type == "Edge":
+            return self.edge_sampler()
+        elif self.sample_graph_type == "RandomWalk":
+            return self.random_walk_sampler()
+        else:
+            raise NotImplementedError
 
-    def node_sample(self):
+    def node_sampler(self):
         """
-        Inputs:
-            batch_ids: is not used in this method
-
-        method: sample fixed size of nodes as a subgraph
+        method: sample fixed size of nodes as a subgraph with node_probs
 
         Outputs:
-            batch_in: global node index
-            batch_out: global node index
-            block: sampled adjs in the form of sparse tensors wrapped in Block class
+            sampled_node: global node index
+            block: sampled adjs, csr sparse matrix
         """
 
-        p = self.probs
-        sampled = np.random.choice(np.arange(np.size(p)), self.node_budget, self.replace, p)
-        sampled = np.unique(sampled)
+        p = self.node_probs
+       
+        sampled_node = np.random.choice(a=self.n, size=self.node_budget, replace=self.replace, p=p)
+        sampled_node = np.unique(sampled_node)
 
-        adj = self._adj[sampled, :].tocsc()
-        adj = adj[:, sampled].tocsr()
-        return sampled, adj
+        subadj = self._adj[sampled_node, :]
+        subadj = subadj[:, sampled_node]
+        return sampled_node, subadj
 
-    def _calc_norm(self, **kwargs):
+    def _calc_edge_probs(self):
+        """
+        method: calculate edge probablity as 1/d(u)+1/d(v)
+        """
+        degrees = self._adj.sum(axis=1).A1
+        edges = self._adj.nonzero()
+        start_degrees = degrees[edges[0]]
+        end_degrees = degrees[edges[1]]
+
+        self.edge_probs = 1 / start_degrees + 1 / end_degrees
+        self.edge_probs = self.edge_probs / np.sum(self.edge_probs)
+        return
+
+    def edge_sampler(self):
+        """
+        method: sample fixed size of edges as a subgraph with edge_probs
+
+        Outputs:
+            sampled_node: global node index
+            block: sampled adjs, csr sparse matrix
+        """
+
+        p = self.edge_probs
+        sampled_edges = np.random.choice(a=self.e, size=self.edge_budget, replace=self.replace, p=p)
+        sampled_edges = np.unique(sampled_edges)
+
+        edges = self._adj.nonzero()
+        sampled_start = edges[0][sampled_edges]
+        sampled_end = edges[1][sampled_edges]
+
+        sampled_node = np.unique(np.concatenate([sampled_start,sampled_end]))
+        
+        subadj = self._adj[sampled_node, :]
+        subadj = subadj[:, sampled_node]
+
+        return sampled_node, subadj
+
+    def random_walk_sampler(self):
+        """
+            method: sample like random walk
+
+            Outputs:
+                sampled_node: global node index
+                block: sampled adjs, csr sparse matrix
+        """
+        root_nodes = np.random.choice(a=self.n, size=self.r, replace = self.replace)
+        sampled_node = []
+        for v in root_nodes:
+            sampled_node.append(v)
+            
+            neighbors = self._adj.indices[self._adj.indptr[v]:self._adj.indptr[v+1]]
+            sampled_nei = np.random.choice(a=neighbors, size=self.h, replace=self.replace)
+            
+            sampled_node.extend(sampled_nei.tolist())
+
+        sampled_node = np.unique(np.array(sampled_node))
+        
+        subadj = self._adj[sampled_node, :]
+        subadj = subadj[:, sampled_node]
+
+        return sampled_node, subadj
+
+    def _calc_norm(self):
         """
         methods: calculate the norm to estimate embedding and loss
         """
-        times = kwargs['pre_sampling_graphs']
+        self.sampled_graphs = []
 
-        node_value = np.zeros(np.size(self.probs))
-        edge_value = sp.lil_matrix((np.size(self.probs),np.size(self.probs)))
+        node_value = np.zeros(self.n)
+        edge_value = sp.lil_matrix((self.n,self.n))
 
-        for _ in range(times):
-            sampled, adj = self.sample()
+        for _ in range(self.pre_sampling_times):
+            sampled, adj = self.sample_graph_ops
+            self.sampled_graphs.append((sampled,adj))
             adj = adj.tocoo()
             for row, col in zip(adj.row, adj.col):
                 edge_value[sampled[row],sampled[col]] += 1
@@ -243,22 +325,50 @@ class GraphSAINTSampler(BaseSampler):
         self.loss_norm = torch.FloatTensor(np.maximum(node_value, 1))
         return
 
-    def collate_fn(self, batch_ids):
+    def collate_fn(self, batch_ids, mode):
         """
         Inputs: 
-            batch_ids: is not used in this method
+            batch_ids: only the len of it is used, means how many subgraphs are sampled to construct computation graph
 
-        method: sample fixed size of nodes as a subgraph
+        method: sample len(batch_ids) subgraphs as mini-batch
         
         Outputs: batch_in: global node index
                  batch_out: global node index
                  block: sampled adjs in the form of sparse tensors wrapped in Block class
         """
-        sampled, adj = self.sample()
-        sampled_aggr_norm = self.aggr_norm[sampled, :].tocsc()
-        sampled_aggr_norm = sampled_aggr_norm[:, sampled]
-        adj = adj.multiply(sampled_aggr_norm.transpose())
 
-        self.index = sampled
+        adjs = []
+        batch_in = []
+        for _ in range(len(batch_ids)):
+            if self.used_sample_graphs < self.pre_sampling_times:
+                sampled, adj = self.sampled_graphs[self.used_sample_graphs]
+                self.used_sample_graphs += 1
+            else:
+                sampled, adj = self.sample_graph_ops
+                
+            sampled_aggr_norm = self.aggr_norm[sampled, :]
+            sampled_aggr_norm = sampled_aggr_norm[:, sampled]
+            adj = adj.multiply(sampled_aggr_norm.transpose())
+            adjs.append(adj)
+            batch_in.extend(sampled)
 
-        return sampled,sampled,self._to_Block(adj)
+        batched_adj = sp.block_diag(adjs, format='csr')
+        batch_in = torch.LongTensor(batch_in)
+
+        if mode in ["train", "val", "test"]:
+            mask = self._masks[mode][batch_in]
+            global_inds = batch_in[mask]
+            local_inds = mask_to_index(mask)
+            batch_out = torch.vstack([local_inds, global_inds])
+        else:
+            mode = mode.split("_")
+            batch_out = {}
+            for one_mode in mode:
+                mask = self._masks[one_mode][batch_in]
+                global_inds = batch_in[mask]
+                local_inds = mask_to_index(mask)
+                batch_out.update({one_mode: torch.vstack([local_inds, global_inds])})
+
+        self.cur_index = global_inds
+
+        return batch_in,batch_out,self._to_Block(batched_adj)

@@ -28,7 +28,7 @@ if __name__ == "__main__":
     train_sampler_kwargs = sampler_kwargs["train"]
     train_sampler_kwargs.update({"save_dir": dataset.processed_dir})
 
-    train_sampler = GraphSAINTSampler(dataset.adj, **train_sampler_kwargs)
+    train_sampler = GraphSAINTSampler(dataset, **train_sampler_kwargs)
     if "eval" in sampler_kwargs:
         eval_sampler_kwargs = sampler_kwargs["eval"]
         eval_sampler_name = eval_sampler_kwargs["name"]
@@ -45,11 +45,5 @@ if __name__ == "__main__":
     model_kwargs.update({"device": device})
     model = GraphSAINT(dataset, train_sampler, eval_sampler, **model_kwargs)
     task_kwargs.update({"device": device})
-
-    def myloss(pred,labels):
-        loss = nll_loss(pred, labels, reduction="none")
-        loss = (loss/model.cur_loss_norm).sum()
-        return loss
-
-    task_kwargs.update({"loss_fn":myloss})
+    task_kwargs.update({"loss_fn":model.loss})
     test_acc = NodeClassification_Sampling(dataset, model, **task_kwargs).test_acc
