@@ -1,0 +1,64 @@
+dataset:
+  classname: "Planetoid"
+  name: "cora"
+  root: "/home/ssq/test_data/"
+model:
+  gnnlayer_type: 'gcn'
+  alpha: 1.0
+  temperature: 1.2
+  hidden_dim: 128
+  emb_size: 32
+  dropout: 0.5
+  n_layers: 2
+  gae: true
+  feat_norm: 'row'
+  sample_type: 'add_sample'
+task:
+  lr: 0.01
+  seed: 42
+  warmup: 0
+  beta: 0.8
+  epochs: 200
+  weight_decay: 0.0005
+  pretrain_ep: 160
+  pretrain_nc: 30
+# model:
+#   gnnlayer_type: 'gsage'
+#   alpha: 0.13
+#   temperature: 1.0
+#   hidden_dim: 128
+#   emb_size: 32
+#   dropout: 0.5
+#   n_layers: 2
+#   gae: true
+#   feat_norm: 'row'
+#   sample_type: 'add_sample'
+# task:
+#   lr: 0.01
+#   seed: 42
+#   warmup: 2
+#   beta: 3.2
+#   epochs: 200
+#   weight_decay: 0.0005
+#   pretrain_ep: 195
+#   pretrain_nc: 35
+# model:
+#   gnnlayer_type: 'gat'
+#   alpha: 0.02
+#   temperature: 1.7
+#   hidden_dim: 128
+#   emb_size: 32
+#   dropout: 0.6
+#   n_layers: 2
+#   gae: true
+#   feat_norm: 'row'
+#   sample_type: 'add_sample'
+# task:
+#   lr: 0.01
+#   seed: 42
+#   warmup: 1
+#   beta: 3.2
+#   epochs: 200
+#   weight_decay: 0.0005
+#   pretrain_ep: 175
+#   pretrain_nc: 45
