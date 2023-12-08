@@ -190,7 +190,7 @@ class GCNConv(nn.Module):
     Simple GCN layer, similar to https://arxiv.org/abs/1609.02907
     """
 
-    def __init__(self, in_features, out_features, bias=False):
+    def __init__(self, in_features, out_features, bias=True):
         super(GCNConv, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -202,10 +202,15 @@ class GCNConv(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        stdv = 1.0 / math.sqrt(self.weight.size(1))
-        self.weight.data.uniform_(-stdv, stdv)
-        if self.bias is not None:
-            self.bias.data.uniform_(-stdv, stdv)   
+        # stdv = 1.0 / math.sqrt(self.weight.size(1))
+        # self.weight.data.uniform_(-stdv, stdv)
+        # if self.bias is not None:
+        #     self.bias.data.uniform_(-stdv, stdv)   
+        for param in self.parameters():
+            if len(param.size()) == 2:
+                nn.init.xavier_uniform_(param)
+            else:
+                nn.init.constant_(param, 0.0)
     
     def forward(self, input, adj):
         support = torch.mm(input, self.weight)
@@ -217,7 +222,7 @@ class GCNConv(nn.Module):
         
 class SAGEConv(nn.Module):
     """
-    Simple GraphSAGE layer, use mean as aggregation way
+    Simple GraphSAGE layer
     """
 
     def __init__(self, in_features, out_features, normalize=True):
@@ -252,8 +257,60 @@ class SAGEConv(nn.Module):
         
         return output
     
+class GATConv(nn.Module):
+    """
+    Simple GAT layer
+    """
+    def __init__(self, in_features, out_features, n_heads, bias=True):
+        super(GATConv, self).__init__()
+        self.W = nn.Parameter(torch.FloatTensor(in_features, out_features))
+        self.n_heads = n_heads
+        self.attn_l = nn.Linear(out_features, self.n_heads, bias=False)
+        self.attn_r = nn.Linear(out_features, self.n_heads, bias=False)
+        self.attn_drop = nn.Dropout(p=0.6)
+        if bias:
+            self.b = nn.Parameter(torch.FloatTensor(out_features))
+        else:
+            self.b = None
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        """ Initialize weights with xavier uniform and biases with all zeros """
+        for param in self.parameters():
+            if len(param.size()) == 2:
+                nn.init.xavier_uniform_(param)
+            else:
+                nn.init.constant_(param, 0.0)
+    
+    def forward(self, x, adj):
+        repr = x @ self.W 
+        el = self.attn_l(repr)
+        er = self.attn_r(repr)
+        if isinstance(adj, torch.sparse.FloatTensor):
+            nz_indices = adj._indices()
+        else:
+            nz_indices = adj.nonzero().T 
+        attn = el[nz_indices[0]] + er[nz_indices[1]]
+        attn = F.leaky_relu(attn, negative_slope=0.2).squeeze()
+        attn = torch.exp(attn)
+        if self.n_heads == 1:
+            adj_attn = torch.zeros(size=(adj.size(0), adj.size(1)), device=adj.device)
+            adj_attn.index_put_((nz_indices[0], nz_indices[1]), attn)
+        else:
+            adj_attn = torch.zeros(size=(adj.size(0), adj.size(1), self.n_heads), device=adj.device)
+            adj_attn.index_put_((nz_indices[0], nz_indices[1]), attn)
+            adj_attn.transpose_(1, 2)
+        adj_attn = F.normalize(adj_attn, p=1, dim=-1)
+        adj_attn = self.attn_drop(adj_attn)
+        repr = adj_attn @ repr 
+        if self.b is not None:
+            repr = repr + self.b 
+        if self.n_heads > 1:
+            repr = repr.flatten(start_dim=1)
+        return repr
+    
 class SAGE(nn.Module):
-    def __init__(self, nfeat, nhid, nclass, nlayers=2, dropout=0.5):
+    def __init__(self, nfeat, nhid, nclass, nlayers=2, dropout=0.5, activation=F.relu):
         super(SAGE, self).__init__()
         self.gcs = nn.ModuleList()
         self.gcs.append(SAGEConv(nfeat, nhid))
@@ -262,6 +319,7 @@ class SAGE(nn.Module):
             self.gcs.append(SAGEConv(nhid, nhid))
         self.gcs.append(SAGEConv(nhid, nclass, normalize=False))
         self.dropout = dropout
+        self.activation = activation
 
     def reset_parameter(self):
         for conv in self.gcs:
@@ -269,16 +327,18 @@ class SAGE(nn.Module):
 
     def forward(self, x, block):
         repr = x
+        if isinstance(block, torch.Tensor):
+            block = [block]
         if len(block) == self.nlayers:
             for i in range(self.nlayers-1):
                 repr = self.gcs[i](repr, block[i])
-                repr = F.relu(repr)
+                repr = self.activation(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
             repr = self.gcs[-1](repr, block[-1])
         elif len(block) == 1:
             for gc in self.gcs[:-1]:
                 repr = gc(repr, block[0])
-                repr = F.relu(repr)
+                repr = self.activation(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
             repr = self.gcs[-1](repr, block[0])
         else:
@@ -306,15 +366,16 @@ class SAGE(nn.Module):
         return x_all
 
 class GCN(nn.Module):
-    def __init__(self, nfeat, nhid, nclass, layer=GCNConv, nlayers=2, dropout=0.5):
+    def __init__(self, nfeat, nhid, nclass, nlayers=2, dropout=0.5, activation=F.relu):
         super(GCN, self).__init__()
         self.gcs = nn.ModuleList()
-        self.gcs.append(layer(nfeat, nhid))
+        self.gcs.append(GCNConv(nfeat, nhid))
         self.nlayers = nlayers
         for _ in range(nlayers-2):
-            self.gcs.append(layer(nhid, nhid))
-        self.gcs.append(layer(nhid, nclass))
+            self.gcs.append(GCNConv(nhid, nhid))
+        self.gcs.append(GCNConv(nhid, nclass))
         self.dropout = dropout
+        self.activation = activation
     
     def reset_parameter(self):
         for conv in self.gcs:
@@ -322,16 +383,18 @@ class GCN(nn.Module):
 
     def forward(self, x, block):
         repr = x
+        if isinstance(block, torch.Tensor):
+            block = [block]
         if len(block) == self.nlayers:
             for i in range(self.nlayers-1):
                 repr = self.gcs[i](repr, block[i])
-                repr = F.relu(repr)
+                repr = self.activation(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
             repr = self.gcs[-1](repr, block[-1])
         elif len(block) == 1:
             for gc in self.gcs[:-1]:
                 repr = gc(repr, block[0])
-                repr = F.relu(repr)
+                repr = self.activation(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
             repr = self.gcs[-1](repr, block[0])
         else:
@@ -357,3 +420,36 @@ class GCN(nn.Module):
             x_all = torch.cat(xs, dim=0)
 
         return x_all
+    
+class GAT(nn.Module):
+    def __init__(self, nfeat, nhid, nclass, n_heads, nlayers=2, dropout=0.6, activation=F.elu):
+        super(GAT, self).__init__()
+        self.gcs = nn.ModuleList()       
+        self.gcs.append(GATConv(nfeat, nhid // n_heads[0], n_heads[0]))
+        self.nlayers = nlayers
+        for i in range(nlayers-2):
+            self.gcs.append(GATConv(nhid, nhid // n_heads[i+1], n_heads[i+1]))
+        self.gcs.append(GATConv(nhid, nclass, n_heads[-1]))
+        self.dropout = dropout
+        self.activation = activation
+
+    def forward(self, x, block):
+        repr = x
+        if isinstance(block, torch.Tensor):
+            block = [block]
+        if len(block) == self.nlayers:
+            for i in range(self.nlayers-1):
+                repr = self.gcs[i](repr, block[i])
+                repr = self.activation(repr)
+                repr = F.dropout(repr, self.dropout, training=self.training)
+            repr = self.gcs[-1](repr, block[-1])
+        elif len(block) == 1:
+            for gc in self.gcs[:-1]:
+                repr = gc(repr, block[0])
+                repr = self.activation(repr)
+                repr = F.dropout(repr, self.dropout, training=self.training)
+            repr = self.gcs[-1](repr, block[0])
+        else:
+            raise ValueError('The sampling layer must be equal to GNN layer.')
+        
+        return F.log_softmax(repr, dim=1)
