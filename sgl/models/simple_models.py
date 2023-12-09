@@ -256,7 +256,8 @@ class SAGEConv(nn.Module):
             output = self.norm(output)
         
         return output
-    
+
+
 class GATConv(nn.Module):
     """
     Simple GAT layer
@@ -308,16 +309,17 @@ class GATConv(nn.Module):
         if self.n_heads > 1:
             repr = repr.flatten(start_dim=1)
         return repr
-    
+
+
 class SAGE(nn.Module):
-    def __init__(self, nfeat, nhid, nclass, nlayers=2, dropout=0.5, activation=F.relu):
+    def __init__(self, n_feat, n_hid, n_class, n_layers=2, dropout=0.5, activation=F.relu):
         super(SAGE, self).__init__()
         self.gcs = nn.ModuleList()
-        self.gcs.append(SAGEConv(nfeat, nhid))
-        self.nlayers = nlayers
-        for _ in range(nlayers-2):
-            self.gcs.append(SAGEConv(nhid, nhid))
-        self.gcs.append(SAGEConv(nhid, nclass, normalize=False))
+        self.gcs.append(SAGEConv(n_feat, n_hid))
+        self.n_layers = n_layers
+        for _ in range(n_layers-2):
+            self.gcs.append(SAGEConv(n_hid, n_hid))
+        self.gcs.append(SAGEConv(n_hid, n_class, normalize=False))
         self.dropout = dropout
         self.activation = activation
 
@@ -329,8 +331,8 @@ class SAGE(nn.Module):
         repr = x
         if isinstance(block, torch.Tensor):
             block = [block]
-        if len(block) == self.nlayers:
-            for i in range(self.nlayers-1):
+        if len(block) == self.n_layers:
+            for i in range(self.n_layers-1):
                 repr = self.gcs[i](repr, block[i])
                 repr = self.activation(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
@@ -364,16 +366,17 @@ class SAGE(nn.Module):
             x_all = torch.cat(xs, dim=0)
 
         return x_all
+
 
 class GCN(nn.Module):
-    def __init__(self, nfeat, nhid, nclass, nlayers=2, dropout=0.5, activation=F.relu):
+    def __init__(self, n_feat, n_hid, n_class, n_layers=2, dropout=0.5, activation=F.relu):
         super(GCN, self).__init__()
         self.gcs = nn.ModuleList()
-        self.gcs.append(GCNConv(nfeat, nhid))
-        self.nlayers = nlayers
-        for _ in range(nlayers-2):
-            self.gcs.append(GCNConv(nhid, nhid))
-        self.gcs.append(GCNConv(nhid, nclass))
+        self.gcs.append(GCNConv(n_feat, n_hid))
+        self.n_layers = n_layers
+        for _ in range(n_layers-2):
+            self.gcs.append(GCNConv(n_hid, n_hid))
+        self.gcs.append(GCNConv(n_hid, n_class))
         self.dropout = dropout
         self.activation = activation
     
@@ -385,7 +388,7 @@ class GCN(nn.Module):
         repr = x
         if isinstance(block, torch.Tensor):
             block = [block]
-        if len(block) == self.nlayers:
+        if len(block) == self.n_layers:
             for i in range(self.nlayers-1):
                 repr = self.gcs[i](repr, block[i])
                 repr = self.activation(repr)
@@ -420,16 +423,17 @@ class GCN(nn.Module):
             x_all = torch.cat(xs, dim=0)
 
         return x_all
-    
+
+
 class GAT(nn.Module):
-    def __init__(self, nfeat, nhid, nclass, n_heads, nlayers=2, dropout=0.6, activation=F.elu):
+    def __init__(self, n_feat, n_hid, n_class, n_heads, n_layers=2, dropout=0.6, activation=F.elu):
         super(GAT, self).__init__()
         self.gcs = nn.ModuleList()       
-        self.gcs.append(GATConv(nfeat, nhid // n_heads[0], n_heads[0]))
-        self.nlayers = nlayers
-        for i in range(nlayers-2):
-            self.gcs.append(GATConv(nhid, nhid // n_heads[i+1], n_heads[i+1]))
-        self.gcs.append(GATConv(nhid, nclass, n_heads[-1]))
+        self.gcs.append(GATConv(n_feat, n_hid // n_heads[0], n_heads[0]))
+        self.n_layers = n_layers
+        for i in range(n_layers-2):
+            self.gcs.append(GATConv(n_hid, n_hid // n_heads[i + 1], n_heads[i + 1]))
+        self.gcs.append(GATConv(n_hid, n_class, n_heads[-1]))
         self.dropout = dropout
         self.activation = activation
 
@@ -437,8 +441,8 @@ class GAT(nn.Module):
         repr = x
         if isinstance(block, torch.Tensor):
             block = [block]
-        if len(block) == self.nlayers:
-            for i in range(self.nlayers-1):
+        if len(block) == self.n_layers:
+            for i in range(self.n_layers-1):
                 repr = self.gcs[i](repr, block[i])
                 repr = self.activation(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)

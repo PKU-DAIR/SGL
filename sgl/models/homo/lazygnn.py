@@ -26,7 +26,7 @@ class LazyGNN(BaseSAMPLEModel):
         self._tau = tau 
         # define the base model
         self._base_model = getattr(SimpleModels, basemodel)(
-            nfeat=dataset.num_features, nhid=hidden_dim, nclass=dataset.num_classes, nlayers=num_layers, dropout=dropout
+            n_feat=dataset.num_features, n_hid=hidden_dim, n_class=dataset.num_classes, n_layers=num_layers, dropout=dropout
         ).to(device)
 
     def preprocess(self, adj, x, val_dataloader=None, test_dataloader=None):

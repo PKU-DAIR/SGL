@@ -2,8 +2,8 @@ import yaml
 import argparse
 
 import sgl.dataset as Dataset
-from sgl.models.homo.gda import GAug
-from sgl.tasks import NodeClassification_GAug
+from sgl.models.homo.gda import GAugO, GAugM
+from sgl.tasks import NodeClassificationGAugO, NodeClassificationGAugM
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = "GAug-Model.")
@@ -22,9 +22,12 @@ if __name__ == "__main__":
 
     dataset_classname = dataset_kwargs.pop("classname")
     dataset = getattr(Dataset, dataset_classname)(**dataset_kwargs)
+    Model = {"GAugO": GAugO, "GAugM": GAugM}
+    Task = {"GAugO": NodeClassificationGAugO, "GAugM": NodeClassificationGAugM}
+    model_name = model_kwargs.pop("model_name")
     for seed in range(10):
-        model = GAug(in_dim=dataset.num_features, n_classes=dataset.num_classes, **model_kwargs)
+        model = Model.get(model_name)(in_dim=dataset.num_features, n_classes=dataset.num_classes, **model_kwargs)
         task_kwargs.update({"device": device})
         task_kwargs.update({"seed": seed})
-        test_acc = NodeClassification_GAug(dataset, model, **task_kwargs).test_acc
+        test_acc = Task.get(model_name)(dataset, model, **task_kwargs).test_acc
         print(f"test acc: {test_acc:.4f}")

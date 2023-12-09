@@ -11,5 +11,5 @@ class GraphSAGE(BaseSAMPLEModel):
         self._training_sampling_op = training_sampler
         self._eval_sampling_op = eval_sampler
         self._base_model = SAGE(
-            nfeat=dataset.num_features, nhid=hidden_dim, nclass=dataset.num_classes, nlayers=num_layers, dropout=dropout
+            n_feat=dataset.num_features, n_hid=hidden_dim, n_class=dataset.num_classes, n_layers=num_layers, dropout=dropout
         ).to(device)

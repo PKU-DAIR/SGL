@@ -8,7 +8,7 @@ class ClusterGCN(BaseSAMPLEModel):
         self._pre_graph_op = LaplacianGraphOp(r=0.5)
         self._training_sampling_op = training_sampler
         self._eval_sampling_op = eval_sampler
-        self._base_model = GCN(nfeat=nfeat, nhid=hidden_dim, nclass=nclass, nlayers=num_layers, dropout=dropout).to(device)
+        self._base_model = GCN(n_feat=nfeat, n_hid=hidden_dim, n_class=nclass, n_layers=num_layers, dropout=dropout).to(device)
 
     def pre_sample(self, mode="train"):
         if mode == "train":

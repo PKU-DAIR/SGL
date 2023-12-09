@@ -8,7 +8,7 @@ from .link_prediction import LinkPredictionNAFS
 from .correct_and_smooth import NodeClassification_With_CorrectAndSmooth
 from .node_classification_with_label_use import NodeClassificationWithLabelUse
 from .node_classification_dist import NodeClassificationDist
-from .node_classification_GAug import NodeClassification_GAug
+from .node_classification_GAug import NodeClassificationGAugO, NodeClassificationGAugM
 
 __all__ = [
     "NodeClassification",
@@ -22,5 +22,6 @@ __all__ = [
     "NodeClassificationDist",
     "NodeClassification_Sampling",
     "NodeClassification_RecycleSampling",
-    "NodeClassification_GAug"
+    "NodeClassificationGAugO",
+    "NodeClassificationGAugM"
 ]

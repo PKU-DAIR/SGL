@@ -1,5 +1,6 @@
-from .GAug import GAug
+from .GAug import GAugO, GAugM
 
 __all__ = [
-    "GAug"
+    "GAugO",
+    "GAugM"
 ]
