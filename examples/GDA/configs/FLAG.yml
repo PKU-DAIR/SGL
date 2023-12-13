@@ -1,0 +1,37 @@
+# dataset:
+#  classname: "Ogbn"
+#  name: "arxiv"
+#  root: "/home/ssq/test_data/"
+# model:
+#  gnn_type: 'gcn'
+#  hidden_dim: 256
+#  dropout: 0.5
+#  n_layers: 3
+#  step_size: 0.001
+#  augM: 3
+#  batch_norm: True
+# task:
+#  lr: 0.01
+#  seed: 12345
+#  epochs: 500
+#  patience: 80
+#  weight_decay: 0
+dataset:
+ classname: "Ogbn"
+ name: "arxiv"
+ root: "/home/ssq/test_data/"
+model:
+ gnn_type: 'sage'
+ hidden_dim: 256
+ dropout: 0.5
+ n_layers: 3
+ step_size: 0.001
+ augM: 3
+ batch_norm: True
+ normalize: False
+task:
+ lr: 0.01
+ seed: 12345
+ epochs: 500
+ patience: 80
+ weight_decay: 0

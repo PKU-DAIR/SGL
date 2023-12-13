@@ -312,13 +312,19 @@ class GATConv(nn.Module):
 
 
 class SAGE(nn.Module):
-    def __init__(self, n_feat, n_hid, n_class, n_layers=2, dropout=0.5, activation=F.relu):
+    def __init__(self, n_feat, n_hid, n_class, n_layers=2, dropout=0.5, activation=F.relu, batch_norm=False, normalize=True):
         super(SAGE, self).__init__()
         self.gcs = nn.ModuleList()
-        self.gcs.append(SAGEConv(n_feat, n_hid))
+        self.gcs.append(SAGEConv(n_feat, n_hid, normalize=normalize))
+        self.batch_norm = batch_norm
+        if self.batch_norm:
+            self.bns = nn.ModuleList()
+            self.bns.append(nn.BatchNorm1d(n_hid))
         self.n_layers = n_layers
         for _ in range(n_layers-2):
-            self.gcs.append(SAGEConv(n_hid, n_hid))
+            self.gcs.append(SAGEConv(n_hid, n_hid, normalize=normalize))
+            if self.batch_norm:
+                self.bns.append(nn.BatchNorm1d(n_hid))
         self.gcs.append(SAGEConv(n_hid, n_class, normalize=False))
         self.dropout = dropout
         self.activation = activation
@@ -326,6 +332,9 @@ class SAGE(nn.Module):
     def reset_parameter(self):
         for conv in self.gcs:
             conv.reset_parameters()
+        if self.batch_norm:
+            for bn in self.bns:
+                bn.reset_parameters()
 
     def forward(self, x, block):
         repr = x
@@ -334,12 +343,16 @@ class SAGE(nn.Module):
         if len(block) == self.n_layers:
             for i in range(self.n_layers-1):
                 repr = self.gcs[i](repr, block[i])
+                if self.batch_norm:
+                    repr = self.bns[i](repr)
                 repr = self.activation(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
             repr = self.gcs[-1](repr, block[-1])
         elif len(block) == 1:
-            for gc in self.gcs[:-1]:
-                repr = gc(repr, block[0])
+            for i in range(self.n_layers-1):
+                repr = self.gcs[i](repr, block[0])
+                if self.batch_norm:
+                    repr = self.bns[i](repr)
                 repr = self.activation(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
             repr = self.gcs[-1](repr, block[0])
@@ -352,14 +365,16 @@ class SAGE(nn.Module):
         # Compute representations of nodes layer by layer, using *all*
         # available edges. This leads to faster computation in contrast to
         # immediately computing the final representations of each batch.
-        for i, conv in enumerate(self.gcs):
+        for i in range(self.n_layers):
             xs = []
             for batch in subgraph_loader:
                 batch_in, _, block = batch
                 block.to_device(device)
                 x = x_all[batch_in].to(device)
-                x = conv(x, block[0]) # one-layer sampling
+                x = self.gcs[i](x, block[0]) # one-layer sampling
                 if i != self.nlayers - 1:
+                    if self.batch_norm:
+                        x = self.bns[i](x)   
                     x = F.relu(x)
                 xs.append(x.cpu())
 
@@ -369,13 +384,19 @@ class SAGE(nn.Module):
 
 
 class GCN(nn.Module):
-    def __init__(self, n_feat, n_hid, n_class, n_layers=2, dropout=0.5, activation=F.relu):
+    def __init__(self, n_feat, n_hid, n_class, n_layers=2, dropout=0.5, activation=F.relu, batch_norm=False):
         super(GCN, self).__init__()
         self.gcs = nn.ModuleList()
         self.gcs.append(GCNConv(n_feat, n_hid))
+        self.batch_norm = batch_norm
+        if self.batch_norm:
+            self.bns = nn.ModuleList()
+            self.bns.append(nn.BatchNorm1d(n_hid))
         self.n_layers = n_layers
         for _ in range(n_layers-2):
             self.gcs.append(GCNConv(n_hid, n_hid))
+            if self.batch_norm:
+                self.bns.append(nn.BatchNorm1d(n_hid))
         self.gcs.append(GCNConv(n_hid, n_class))
         self.dropout = dropout
         self.activation = activation
@@ -383,6 +404,9 @@ class GCN(nn.Module):
     def reset_parameter(self):
         for conv in self.gcs:
             conv.reset_parameters()
+        if self.batch_norm:
+            for bn in self.bns:
+                bn.reset_parameters()
 
     def forward(self, x, block):
         repr = x
@@ -391,12 +415,16 @@ class GCN(nn.Module):
         if len(block) == self.n_layers:
             for i in range(self.nlayers-1):
                 repr = self.gcs[i](repr, block[i])
+                if self.batch_norm:
+                    repr = self.bns[i](repr)
                 repr = self.activation(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
             repr = self.gcs[-1](repr, block[-1])
         elif len(block) == 1:
-            for gc in self.gcs[:-1]:
-                repr = gc(repr, block[0])
+            for i in range(self.n_layers-1):
+                repr = self.gcs[i](repr, block[0])
+                if self.batch_norm:
+                    repr = self.bns[i](repr)
                 repr = self.activation(repr)
                 repr = F.dropout(repr, self.dropout, training=self.training)
             repr = self.gcs[-1](repr, block[0])
@@ -409,15 +437,17 @@ class GCN(nn.Module):
         # Compute representations of nodes layer by layer, using *all*
         # available edges. This leads to faster computation in contrast to
         # immediately computing the final representations of each batch.
-        for i, conv in enumerate(self.gcs):
+        for i in range(self.n_layers):
             xs = []
             for batch in subgraph_loader:
                 batch_in, _, block = batch
                 block.to_device(device)
                 x = x_all[batch_in].to(device)
-                x = conv(x, block[0]) # one-layer sampling
+                x = self.gcs[i](x, block[0]) # one-layer sampling            
                 if i != self.nlayers - 1:
-                    x = F.relu(x)
+                    if self.batch_norm:
+                        x = self.bns[i](x)   
+                    x = self.activation(x)
                 xs.append(x.cpu())
 
             x_all = torch.cat(xs, dim=0)
