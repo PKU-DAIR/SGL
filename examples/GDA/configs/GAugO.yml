@@ -1,20 +1,20 @@
-#dataset:
+# dataset:
 #  classname: "Planetoid"
 #  name: "cora"
 #  root: "/home/ssq/test_data/"
-#model:
+# model:
 #  model_name: 'GAugO'
 #  gnn_type: 'gcn'
 #  alpha: 1.0
 #  temperature: 1.2
-#  hidden_dim: 128
+#  hidden_dim: 256
 #  emb_size: 32
 #  dropout: 0.5
 #  n_layers: 2
 #  gae: true
 #  feat_norm: 'row'
 #  sample_type: 'add_sample'
-#task:
+# task:
 #  lr: 0.01
 #  seed: 42
 #  warmup: 0
@@ -23,6 +23,7 @@
 #  weight_decay: 0.0005
 #  pretrain_ep: 160
 #  pretrain_nc: 30
+#  max_patience: 50
 dataset:
   classname: "Planetoid"
   name: "cora"
@@ -38,6 +39,7 @@ model:
   n_layers: 2
   gae: true
   feat_norm: 'row'
+  normalize: True
   sample_type: 'add_sample'
 task:
   lr: 0.01
@@ -48,6 +50,11 @@ task:
   weight_decay: 0.0005
   pretrain_ep: 195
   pretrain_nc: 35
+  max_patience: 50
+# dataset:
+#  classname: "Planetoid"
+#  name: "cora"
+#  root: "/home/ssq/test_data/"
 # model:
 #   model_name: 'GAugO'
 #   gnn_type: 'gat'
@@ -57,6 +64,7 @@ task:
 #   emb_size: 32
 #   dropout: 0.6
 #   n_layers: 2
+#   activation: "elu"
 #   gae: true
 #   feat_norm: 'row'
 #   sample_type: 'add_sample'
@@ -69,3 +77,4 @@ task:
 #   weight_decay: 0.0005
 #   pretrain_ep: 175
 #   pretrain_nc: 45
+#   max_patience: 50

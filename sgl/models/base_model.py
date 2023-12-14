@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from sgl.data.base_data import Block
 from sgl.data.base_dataset import HeteroNodeDataset
-from sgl.utils import sparse_mx_to_torch_sparse_tensor
+from sgl.utils import sparse_mx_to_torch_sparse_tensor, sparse_mx_to_pyg_sparse_tensor
 
 
 class BaseSGAPModel(nn.Module):
@@ -127,7 +127,8 @@ class BaseSAMPLEModel(nn.Module):
             norm_adj = self._pre_graph_op._construct_adj(adj)
         else:
             norm_adj = adj 
-        norm_adj = sparse_mx_to_torch_sparse_tensor(norm_adj)
+        # norm_adj = sparse_mx_to_torch_sparse_tensor(norm_adj)
+        norm_adj = sparse_mx_to_pyg_sparse_tensor(norm_adj)
         self._processed_block = Block(norm_adj)
 
         if hasattr(self, "_pre_feature_op"):

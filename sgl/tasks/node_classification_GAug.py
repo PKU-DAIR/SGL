@@ -11,7 +11,7 @@ from sgl.tasks.base_task import BaseTask
 from sgl.tasks.utils import set_seed, accuracy, MultipleOptimizer
 
 class NodeClassificationGAugO(BaseTask):
-    def __init__(self, dataset, model, lr, weight_decay, epochs, device, seed, beta, warmup, pretrain_ep, pretrain_nc):
+    def __init__(self, dataset, model, lr, weight_decay, epochs, device, seed, beta, warmup, max_patience, pretrain_ep, pretrain_nc):
         super(NodeClassificationGAugO, self).__init__()
 
         self.__dataset = dataset
@@ -30,6 +30,7 @@ class NodeClassificationGAugO(BaseTask):
 
         self.__warmup = warmup
         self.__beta = beta
+        self.__max_patience = max_patience
 
         self.__pretrain_ep = pretrain_ep
         self.__pretrain_nc = pretrain_nc
@@ -126,7 +127,7 @@ class NodeClassificationGAugO(BaseTask):
     def _execute(self):
         set_seed(self.__seed)
 
-        features, adj_orig, adj_norm, adj = self.__model.preprocess(self.__dataset.x, self.__dataset.adj, self.__device)
+        features, adj_orig, adj, adj_norm = self.__model.preprocess(self.__dataset.x, self.__dataset.adj, self.__device)
 
         self.__model = self.__model.to(self.__device)
         self.__labels = self.__labels.to(self.__device)
@@ -167,7 +168,7 @@ class NodeClassificationGAugO(BaseTask):
                 patience_step = 0
             else:
                 patience_step += 1
-                if patience_step == 50:
+                if patience_step == self.__max_patience:
                     break
 
         # release RAM and GPU memory
@@ -179,7 +180,7 @@ class NodeClassificationGAugO(BaseTask):
 
 
 class NodeClassificationGAugM(BaseTask):
-    def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn=nn.CrossEntropyLoss(), seed=42):
+    def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn=nn.CrossEntropyLoss(), seed=42, max_patience=100):
         super(NodeClassificationGAugM, self).__init__()
 
         self.__dataset = dataset
@@ -192,6 +193,7 @@ class NodeClassificationGAugM(BaseTask):
         self.__loss_fn = loss_fn
         self.__device = device
         self.__seed = seed
+        self.__max_patience = max_patience
 
         self.__test_acc = self._execute()
 
@@ -225,8 +227,8 @@ class NodeClassificationGAugM(BaseTask):
         set_seed(self.__seed)
 
         pre_time_st = time.time()
-        A_pred_dir = os.path.join(self.__dataset.processed_dir, "GAugM_edge_probabilities")
-        adj_norm, features = self.__model.preprocess(self.__dataset.adj, self.__dataset.x, A_pred_dir, self.__device)
+        adj_pred_dir = os.path.join(self.__dataset.processed_dir, "GAugM_edge_probabilities")
+        adj, features = self.__model.preprocess(self.__dataset.adj, self.__dataset.x, adj_pred_dir, self.__device)
         pre_time_ed = time.time()
         print(f"Preprocessing done in {(pre_time_ed - pre_time_st):.4f}s")
 
@@ -236,10 +238,11 @@ class NodeClassificationGAugM(BaseTask):
         t_total = time.time()
         best_val = 0.
         best_test = 0.
+        patience = 0
         for epoch in range(self.__epochs):
             t = time.time()
-            loss_train, acc_train = self.train(adj_norm, features)
-            acc_val, acc_test = self.evaluate(adj_norm, features)
+            loss_train, acc_train = self.train(adj, features)
+            acc_val, acc_test = self.evaluate(adj, features)
 
             print('Epoch: {:03d}'.format(epoch + 1),
                   'loss_train: {:.4f}'.format(loss_train),
@@ -251,12 +254,17 @@ class NodeClassificationGAugM(BaseTask):
             if acc_val > best_val:
                 best_val = acc_val
                 best_test = acc_test
+                patience = 0
+            else:
+                patience += 1
+                if patience == self.__max_patience:
+                    break
 
         print("Optimization Finished!")
         print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
         print(f'Best val: {best_val:.4f}, best test: {best_test:.4f}')
 
-        del adj_norm, features
+        del adj, features
         torch.cuda.empty_cache()
         gc.collect()
 

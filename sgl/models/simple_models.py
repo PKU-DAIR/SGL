@@ -1,4 +1,3 @@
-import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -372,7 +371,7 @@ class SAGE(nn.Module):
                 block.to_device(device)
                 x = x_all[batch_in].to(device)
                 x = self.gcs[i](x, block[0]) # one-layer sampling
-                if i != self.nlayers - 1:
+                if i != self.n_layers - 1:
                     if self.batch_norm:
                         x = self.bns[i](x)   
                     x = F.relu(x)
@@ -413,7 +412,7 @@ class GCN(nn.Module):
         if isinstance(block, torch.Tensor):
             block = [block]
         if len(block) == self.n_layers:
-            for i in range(self.nlayers-1):
+            for i in range(self.n_layers-1):
                 repr = self.gcs[i](repr, block[i])
                 if self.batch_norm:
                     repr = self.bns[i](repr)
@@ -444,7 +443,7 @@ class GCN(nn.Module):
                 block.to_device(device)
                 x = x_all[batch_in].to(device)
                 x = self.gcs[i](x, block[0]) # one-layer sampling            
-                if i != self.nlayers - 1:
+                if i != self.n_layers - 1:
                     if self.batch_norm:
                         x = self.bns[i](x)   
                     x = self.activation(x)
@@ -453,7 +452,6 @@ class GCN(nn.Module):
             x_all = torch.cat(xs, dim=0)
 
         return x_all
-
 
 class GAT(nn.Module):
     def __init__(self, n_feat, n_hid, n_class, n_heads, n_layers=2, dropout=0.6, activation=F.elu):

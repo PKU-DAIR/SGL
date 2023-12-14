@@ -8,7 +8,7 @@ from scipy.sparse.linalg import norm as sparse_norm
 from sgl.data.base_data import Block
 import sgl.operators.graph_op as GraphOps
 from sgl.sampler.utils import adj_train_analysis
-from sgl.utils import sparse_mx_to_torch_sparse_tensor
+from sgl.utils import sparse_mx_to_torch_sparse_tensor, sparse_mx_to_pyg_sparse_tensor
 
 from sampling_ops import NodeWiseOneLayer
 
@@ -85,12 +85,14 @@ class BaseSampler:
             if self._post_sampling_op is not None:
                 adjs = [self._post_sampling_op._construct_adj(adj) for adj in adjs]
             if to_sparse_tensor:
-                adjs = [sparse_mx_to_torch_sparse_tensor(adj) for adj in adjs]
+                # adjs = [sparse_mx_to_torch_sparse_tensor(adj) for adj in adjs]
+                adjs = [sparse_mx_to_pyg_sparse_tensor(adj) for adj in adjs]
         else:
             if self._post_sampling_op is not None:
                 adjs = self._post_sampling_op._construct_adj(adjs)
             if to_sparse_tensor:
-                adjs = sparse_mx_to_torch_sparse_tensor(adjs)
+                # adjs = sparse_mx_to_torch_sparse_tensor(adjs)
+                adjs = sparse_mx_to_pyg_sparse_tensor(adjs)
         return adjs
     
     def _to_Block(self, adjs):

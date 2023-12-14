@@ -1,6 +1,7 @@
 import time
 import torch
 import numpy as np
+from typing import Callable
 from torch.optim import Adam
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
@@ -12,7 +13,7 @@ from sgl.tasks.utils import accuracy, set_seed, train, mini_batch_train, evaluat
 
 class NodeClassification_Sampling(BaseTask):
     def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn="nll_loss", seed=42,
-                 inductive=False, train_batch_size=None, eval_batch_size=None, **kwargs):
+                 inductive=False, train_batch_size=None, eval_batch_size=None, eval_freq=1, eval_start=1, **kwargs):
         super(NodeClassification_Sampling, self).__init__()
 
         self.__dataset = dataset
@@ -21,6 +22,8 @@ class NodeClassification_Sampling(BaseTask):
         self.__optimizer = Adam(model.parameters(), lr=lr,
                                 weight_decay=weight_decay)
         self.__epochs = epochs
+        self.__eval_freq = eval_freq
+        self.__eval_start = eval_start
         self.__loss_fn = getattr(F, loss_fn) if isinstance(loss_fn, str) else loss_fn
         self.__device = device
         self.__seed = seed
@@ -98,33 +101,45 @@ class NodeClassification_Sampling(BaseTask):
         for epoch in range(self.__epochs):
             t = time.time()
             if self.__mini_batch_train:
-                loss_train, acc_train = mini_batch_train(self.__model, self.__train_loader, self.__inductive, self.__device, 
-                                                         self.__optimizer, self.__loss_fn)
+                if hasattr(self.__model, "train_func") and isinstance(self.__model.train_func, Callable):
+                    loss_train, acc_train = self.__model.train_func(self.__train_loader, self.__inductive, self.__device, self.__optimizer, self.__loss_fn)
+                else:
+                    loss_train, acc_train = mini_batch_train(self.__model, self.__train_loader, self.__inductive, self.__device, 
+                                                            self.__optimizer, self.__loss_fn)
             else:
                 loss_train, acc_train = train(self.__model, self.__dataset.train_idx, self.__optimizer, self.__loss_fn)
             
-            if self.__mini_batch_eval:
-                if self.__eval_together is False:
-                    acc_val, acc_test = mini_batch_evaluate(self.__model, self.__val_loader, self.__test_loader, self.__device)
+            if epoch + 1 >= self.__eval_start and (epoch + 1) % self.__eval_freq == 0:
+                if self.__mini_batch_eval:
+                    if self.__eval_together is False:
+                        if hasattr(self.__model, "evaluate_func") and isinstance(self.__model.evaluate_func, Callable):
+                            acc_val, acc_test = self.evaluate_func(self.__val_loader, self.__test_loader, self.__device)
+                        else:
+                            acc_val, acc_test = mini_batch_evaluate(self.__model, self.__val_loader, self.__test_loader, self.__device)
+                    else:
+                        self.__model.eval()
+                        outputs = self.__model.inference(self.__all_eval_loader, self.__device)
+                        acc_train = accuracy(outputs[self.__dataset.train_idx], self.__dataset.y[self.__dataset.train_idx])
+                        acc_val = accuracy(outputs[self.__dataset.val_idx], self.__dataset.y[self.__dataset.val_idx])
+                        acc_test = accuracy(outputs[self.__dataset.test_idx], self.__dataset.y[self.__dataset.test_idx])
                 else:
-                    self.__model.eval()
-                    outputs = self.__model.inference(self.__all_eval_loader, self.__device)
-                    acc_train = accuracy(outputs[self.__dataset.train_idx], self.__dataset.y[self.__dataset.train_idx])
-                    acc_val = accuracy(outputs[self.__dataset.val_idx], self.__dataset.y[self.__dataset.val_idx])
-                    acc_test = accuracy(outputs[self.__dataset.test_idx], self.__dataset.y[self.__dataset.test_idx])
+                    acc_val, acc_test = evaluate(self.__model, self.__dataset.val_idx, self.__dataset.test_idx)
+
+                if acc_val > best_val:
+                    best_val = acc_val
+                    best_test = acc_test
+                    
+                print('Epoch: {:03d}'.format(epoch + 1),
+                    'loss_train: {:.4f}'.format(loss_train),
+                    'acc_train: {:.4f}'.format(acc_train),
+                    'acc_val: {:.4f}'.format(acc_val),
+                    'acc_test: {:.4f}'.format(acc_test),
+                    'time: {:.4f}s'.format(time.time() - t))
             else:
-                acc_val, acc_test = evaluate(self.__model, self.__dataset.val_idx, self.__dataset.test_idx)
-
-            print('Epoch: {:03d}'.format(epoch + 1),
-                'loss_train: {:.4f}'.format(loss_train),
-                'acc_train: {:.4f}'.format(acc_train),
-                'acc_val: {:.4f}'.format(acc_val),
-                'acc_test: {:.4f}'.format(acc_test),
-                'time: {:.4f}s'.format(time.time() - t))
-
-            if acc_val > best_val:
-                best_val = acc_val
-                best_test = acc_test
+                print('Epoch: {:03d}'.format(epoch + 1),
+                    'loss_train: {:.4f}'.format(loss_train),
+                    'acc_train: {:.4f}'.format(acc_train),
+                    'time: {:.4f}s'.format(time.time() - t))
 
         acc_val, acc_test = self._postprocess()
         if acc_val > best_val:

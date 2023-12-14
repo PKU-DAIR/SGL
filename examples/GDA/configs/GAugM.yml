@@ -1,54 +1,59 @@
-#dataset:
+dataset:
+ classname: "Planetoid"
+ name: "cora"
+ root: "/home/ssq/test_data/"
+model:
+ model_name: 'GAugM'
+ gnn_type: 'gcn'
+ feat_norm: 'row'
+ hidden_dim: 128
+ dropout: 0.5
+ n_layers: 2
+ choose_idx: 5
+ rm_pct: 2
+ add_pct: 57
+task:
+ lr: 0.01
+ seed: 42
+ epochs: 200
+ weight_decay: 0.0005
+# dataset:
 #  classname: "Planetoid"
 #  name: "cora"
 #  root: "/home/ssq/test_data/"
-#model:
-#  model_name: 'GAugM'
-#  gnn_type: 'gcn'
-#  hidden_dim: 128
-#  dropout: 0.5
-#  n_layers: 2
-#  choose_idx: 5
-#  rm_pct: 2
-#  add_pct: 57
-#task:
-#  lr: 0.01
-#  seed: 42
-#  epochs: 200
-#  weight_decay: 0.0005
-#dataset:
-#  classname: "Planetoid"
-#  name: "cora"
-#  root: "/home/ssq/test_data/"
-#model:
+# model:
 #  model_name: 'GAugM'
 #  gnn_type: 'gsage'
+#  feat_norm: 'row'
+#  normalize: True
 #  hidden_dim: 128
 #  dropout: 0.5
 #  n_layers: 2
 #  choose_idx: 2
 #  rm_pct: 1
 #  add_pct: 80
-#task:
+# task:
 #  lr: 0.01
 #  seed: 42
 #  epochs: 200
 #  weight_decay: 0.0005
-dataset:
-  classname: "Planetoid"
-  name: "cora"
-  root: "/home/ssq/test_data/"
-model:
-  model_name: 'GAugM'
-  gnn_type: 'gat'
-  hidden_dim: 128
-  dropout: 0.5
-  n_layers: 2
-  choose_idx: 2
-  rm_pct: 1
-  add_pct: 68
-task:
-  lr: 0.01
-  seed: 42
-  epochs: 200
-  weight_decay: 0.0005
+# dataset:
+#   classname: "Planetoid"
+#   name: "cora"
+#   root: "/home/ssq/test_data/"
+# model:
+#   model_name: 'GAugM'
+#   gnn_type: 'gat'
+#   feat_norm: 'row'
+#   activation: 'elu'
+#   hidden_dim: 128
+#   dropout: 0.5
+#   n_layers: 2
+#   choose_idx: 2
+#   rm_pct: 1
+#   add_pct: 68
+# task:
+#   lr: 0.01
+#   seed: 42
+#   epochs: 200
+#   weight_decay: 0.0005
