@@ -11,12 +11,14 @@ sampler:
     prob_type: "normalize"
     replace: False
     post_sampling_op: "RwGraphOp"
+    sparse_type: "torch"
   # eval:
   #   name: "NeighborSampler"
   #   inductive: False
   #   layer_sizes: "-1"
   #   prob_type: "normalize"
   #   post_sampling_op: "RwGraphOp"
+  #   sparse_type: "torch"
 model:
   name: "GraphSAGE"
   hidden_dim: 256

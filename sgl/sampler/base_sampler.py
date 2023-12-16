@@ -12,6 +12,8 @@ from sgl.utils import sparse_mx_to_torch_sparse_tensor, sparse_mx_to_pyg_sparse_
 
 from sampling_ops import NodeWiseOneLayer
 
+SPARSE_TRANSFORM = {"pyg": sparse_mx_to_pyg_sparse_tensor, "torch": sparse_mx_to_torch_sparse_tensor}
+
 class BaseSampler:
     def __init__(self, adj, **kwargs):
         self._adj = adj
@@ -34,6 +36,8 @@ class BaseSampler:
                 self._post_sampling_op = getattr(GraphOps, "LaplacianGraphOp")(r=0.5)
             elif graph_op == "RwGraphOp":
                 self._post_sampling_op = getattr(GraphOps, "RwGraphOp")()
+
+        self._sparse_type = kwargs.get("sparse_type", "pyg")
 
         self._pre_process(**kwargs)
 
@@ -85,18 +89,19 @@ class BaseSampler:
             if self._post_sampling_op is not None:
                 adjs = [self._post_sampling_op._construct_adj(adj) for adj in adjs]
             if to_sparse_tensor:
-                # adjs = [sparse_mx_to_torch_sparse_tensor(adj) for adj in adjs]
-                adjs = [sparse_mx_to_pyg_sparse_tensor(adj) for adj in adjs]
+                sparse_transform_func = SPARSE_TRANSFORM.get(self._sparse_type)
+                adjs = [sparse_transform_func(adj) for adj in adjs]
         else:
             if self._post_sampling_op is not None:
                 adjs = self._post_sampling_op._construct_adj(adjs)
             if to_sparse_tensor:
-                # adjs = sparse_mx_to_torch_sparse_tensor(adjs)
-                adjs = sparse_mx_to_pyg_sparse_tensor(adjs)
+                sparse_transform_func = SPARSE_TRANSFORM.get(self._sparse_type)
+                adjs = [sparse_transform_func(adj) for adj in adjs]
         return adjs
     
-    def _to_Block(self, adjs):
-        return Block(adjs)
+    @staticmethod
+    def to_Block(adjs, sparse_type):
+        return Block(adjs, sparse_type)
     
     def collate_fn(self, *args):
         raise NotImplementedError
@@ -111,7 +116,7 @@ class FullSampler(BaseSampler):
         self.sample_level = "graph"
         self.pre_sampling = False
         self.full_batch = kwargs.get("node_ids", range(self._adj.shape[0]))
-        self.full_block = self._to_Block(self._adj)
+        self.full_block = self.to_Block(self._adj, self._sparse_type)
 
     def sampling(self):
         return self.full_batch, self.full_batch, self.full_block

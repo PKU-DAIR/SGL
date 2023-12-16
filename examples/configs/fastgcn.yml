@@ -11,6 +11,7 @@ sampler:
     layer_sizes: "2048,2048"
     prob_type: "normalize"
     replace: False
+    sparse_type: "torch"
 model:
   name: "FastGCN"
   hidden_dim: 128

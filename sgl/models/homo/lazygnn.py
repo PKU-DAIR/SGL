@@ -10,8 +10,8 @@ import numpy as np
 import concurrent.futures
 
 class LazyGNN(BaseSAMPLEModel):
-    def __init__(self, dataset, training_sampler, eval_sampler=None, hidden_dim=128, basemodel="GCN", dropout=0.5, num_layers=2, max_workers=5, max_threads=-1, rho=1.1, tau=2, device="cpu"):
-        super(LazyGNN, self).__init__()
+    def __init__(self, dataset, training_sampler, eval_sampler=None, hidden_dim=128, basemodel="GCN", sparse_type="torch", dropout=0.5, num_layers=2, max_workers=5, max_threads=-1, rho=1.1, tau=2, device="cpu"):
+        super(LazyGNN, self).__init__(sparse_type=sparse_type)
         if basemodel == "SAGE":
             self._pre_graph_op = RwGraphOp()
         elif basemodel == "GCN":

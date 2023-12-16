@@ -5,8 +5,8 @@ from sgl.operators.graph_op import RwGraphOp
 from torch.nn.functional import nll_loss
 
 class GraphSAINT(BaseSAMPLEModel):
-    def __init__(self, dataset, training_sampler, eval_sampler, hidden_dim, dropout=0.5, num_layers=2, device="cpu"):
-        super(GraphSAINT, self).__init__()
+    def __init__(self, dataset, training_sampler, eval_sampler, hidden_dim, sparse_type="torch", dropout=0.5, num_layers=2, device="cpu"):
+        super(GraphSAINT, self).__init__(sparse_type=sparse_type)
         self._pre_graph_op = RwGraphOp()
         self._training_sampling_op = training_sampler
         self._eval_sampling_op = eval_sampler

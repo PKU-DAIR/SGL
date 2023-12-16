@@ -67,7 +67,7 @@ class FLAG(nn.Module):
         loss.backward()
         optimizer.step()
 
-        return loss
+        return loss.item()
 
     def train_func(self, train_idx, labels, device, optimizer, loss_fn, metric):
         loss_train = self.flag(labels[train_idx], optimizer, device, train_idx, loss_fn)
@@ -76,7 +76,7 @@ class FLAG(nn.Module):
         pred_y = self._base_model(self.__features, self.__processed_adj)
         acc_train = metric(pred_y[train_idx], labels[train_idx])
 
-        return loss_train.item(), acc_train
+        return loss_train, acc_train
     
     @torch.no_grad()
     def evaluate_func(self, val_idx, test_idx, labels, device, metric):
@@ -150,7 +150,7 @@ class SampleFLAG(BaseSAMPLEModel):
         loss.backward()
         optimizer.step()
 
-        return loss, pred_y
+        return loss.item(), pred_y
 
     def mini_batch_prepare_forward(self, batch, device, loss_fn, optimizers, inductive=False, transfer_y_to_device=True):
         batch_in, batch_out, block = batch
@@ -179,7 +179,7 @@ class SampleFLAG(BaseSAMPLEModel):
             loss_train, y_out, y_truth = self.mini_batch_prepare_forward(batch, device, loss_fn, optimizer, inductive=inductive)
             pred = y_out.max(1)[1].type_as(y_truth)
             correct_num += pred.eq(y_truth).double().sum()
-            loss_train_sum += loss_train.item()
+            loss_train_sum += loss_train
             train_num += len(y_truth)
 
         loss_train = loss_train_sum / len(train_loader)

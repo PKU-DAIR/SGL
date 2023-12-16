@@ -11,6 +11,7 @@ sampler:
     r: 500
     h: 4
     pre_sampling_op: "RwGraphOp"
+    sparse_type: "torch"
 model:
   hidden_dim: 128
   dropout: 0.5

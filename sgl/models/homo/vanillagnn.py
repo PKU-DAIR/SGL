@@ -7,8 +7,8 @@ class VanillaGNN(BaseSAMPLEModel):
     """
     It is a naive version of Graph Convolutional Network which works in full-batch training.
     """
-    def __init__(self, dataset, training_sampler, eval_sampler, hidden_dim, basemodel="GCN", dropout=0.5, num_layers=2, device="cpu"):
-        super(VanillaGNN, self).__init__(evaluate_mode="full")
+    def __init__(self, dataset, training_sampler, eval_sampler, hidden_dim, basemodel="GCN", sparse_type="torch", dropout=0.5, num_layers=2, device="cpu"):
+        super(VanillaGNN, self).__init__(evaluate_mode="full", sparse_type=sparse_type)
         if basemodel == "SAGE":
             self._pre_graph_op = RwGraphOp()
         elif basemodel == "GCN":

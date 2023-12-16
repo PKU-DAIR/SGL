@@ -49,7 +49,7 @@ class NeighborSampler(NodeWiseSampler):
         
         all_adjs = self._post_process(all_adjs, to_sparse_tensor=False)
      
-        return cur_tgt_nodes, batch_inds, self._to_Block(all_adjs)  
+        return cur_tgt_nodes, batch_inds, self.to_Block(all_adjs, self._sparse_type)  
 
 class FastGCNSampler(LayerWiseSampler):
     def __init__(self, adj, **kwargs):   
@@ -84,7 +84,7 @@ class FastGCNSampler(LayerWiseSampler):
 
         all_adjs = self._post_process(all_adjs, to_sparse_tensor=False)
 
-        return cur_out_nodes, batch_inds, self._to_Block(all_adjs)
+        return cur_out_nodes, batch_inds, self.to_Block(all_adjs, self._sparse_type)
     
 class ClusterGCNSampler(GraphWiseSampler):
     """
@@ -131,7 +131,7 @@ class ClusterGCNSampler(GraphWiseSampler):
         node_idx = torch.cat([torch.arange(s, e) for s, e in zip(start, end)])
         global_node_idx = self.perm_node_idx[node_idx]
         composed_sparse_mx = sp.block_diag([self.splitted_perm_adjs[batch_ind.item()] for batch_ind in batch_inds])
-        block = self._to_Block(composed_sparse_mx)
+        block = self.to_Block(composed_sparse_mx, self._sparse_type)
         if mode in ["train", "val", "test"]:
             mask = self._masks[mode][global_node_idx]
             global_inds = global_node_idx[mask]
@@ -371,4 +371,4 @@ class GraphSAINTSampler(GraphWiseSampler):
 
         self.cur_index = global_inds
 
-        return batch_in,batch_out,self._to_Block(batched_adj)
+        return batch_in, batch_out, self.to_Block(batched_adj, self._sparse_type)

@@ -43,6 +43,7 @@ class NodeClassification_Sampling(BaseTask):
             self.__eval_determined_sample = True
         self.__train_num_workers = kwargs.get("train_num_workers", 0)
         self.__eval_num_workers = kwargs.get("eval_num_workers", 0)
+        self.__pin_memory = kwargs.get("pin_memory", False)
         self.__test_acc = self._execute()
 
     @property
@@ -65,32 +66,32 @@ class NodeClassification_Sampling(BaseTask):
             if self.__train_determined_sample:
                 self.__model.pre_sample("train")
                 self.__train_loader = DataLoader(
-                        range(self.__train_graph_number), batch_size=self.__train_batch_size, num_workers=self.__train_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "train"), shuffle=True, drop_last=False)
+                        range(self.__train_graph_number), batch_size=self.__train_batch_size, num_workers=self.__train_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "train"), shuffle=True, drop_last=False, pin_memory=self.__pin_memory)
             else:
                 if self.__inductive is False:
                     self.__train_loader = DataLoader(
-                            self.__dataset.train_idx, batch_size=self.__train_batch_size, num_workers=self.__train_num_workers, collate_fn=self.__model.train_collate_fn, shuffle=True, drop_last=False)
+                            self.__dataset.train_idx, batch_size=self.__train_batch_size, num_workers=self.__train_num_workers, collate_fn=self.__model.train_collate_fn, shuffle=True, drop_last=False, pin_memory=self.__pin_memory)
                 else:
                     self.__train_loader = DataLoader(
-                            range(len(self.__dataset.train_idx)), batch_size=self.__train_batch_size, num_workers=self.__train_num_workers, collate_fn=self.__model.train_collate_fn, shuffle=True, drop_last=False)
+                            range(len(self.__dataset.train_idx)), batch_size=self.__train_batch_size, num_workers=self.__train_num_workers, collate_fn=self.__model.train_collate_fn, shuffle=True, drop_last=False, pin_memory=self.__pin_memory)
         
         if self.__mini_batch_eval:
             if self.__eval_determined_sample:
                 self.__model.pre_sample("eval")
                 self.__val_loader = DataLoader(
-                        range(self.__eval_graph_number), batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "val"), shuffle=False, drop_last=False)
+                        range(self.__eval_graph_number), batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "val"), shuffle=False, drop_last=False, pin_memory=self.__pin_memory)
                 self.__test_loader = DataLoader(
-                        range(self.__eval_graph_number), batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "test"), shuffle=False, drop_last=False)
+                        range(self.__eval_graph_number), batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "test"), shuffle=False, drop_last=False, pin_memory=self.__pin_memory)
                 self.__all_eval_loader = DataLoader(
-                        range(self.__eval_graph_number), batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "val_test"), shuffle=False, drop_last=False)
+                        range(self.__eval_graph_number), batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=lambda x: self.__model.collate_fn(x, "val_test"), shuffle=False, drop_last=False, pin_memory=self.__pin_memory)
             else:
                 if self.__eval_together is False:
                     self.__val_loader = DataLoader(
-                            self.__dataset.val_idx, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False)
+                            self.__dataset.val_idx, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False, pin_memory=self.__pin_memory)
                     self.__test_loader = DataLoader(
-                            self.__dataset.test_idx, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False)
+                            self.__dataset.test_idx, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False, pin_memory=self.__pin_memory)
                 self.__all_eval_loader = DataLoader(
-                        self.__dataset.node_ids, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False)
+                        self.__dataset.node_ids, batch_size=self.__eval_batch_size, num_workers=self.__eval_num_workers, collate_fn=self.__model.eval_collate_fn, shuffle=False, drop_last=False, pin_memory=self.__pin_memory)
 
         self.__model = self.__model.to(self.__device)
 
@@ -113,7 +114,7 @@ class NodeClassification_Sampling(BaseTask):
                 if self.__mini_batch_eval:
                     if self.__eval_together is False:
                         if hasattr(self.__model, "evaluate_func") and isinstance(self.__model.evaluate_func, Callable):
-                            acc_val, acc_test = self.evaluate_func(self.__val_loader, self.__test_loader, self.__device)
+                            acc_val, acc_test = self.__model.evaluate_func(self.__val_loader, self.__test_loader, self.__device)
                         else:
                             acc_val, acc_test = mini_batch_evaluate(self.__model, self.__val_loader, self.__test_loader, self.__device)
                     else:

@@ -1,18 +1,28 @@
 import torch
 from torch import Tensor
 import numpy as np
+import scipy.sparse as sp
 from scipy.sparse import csr_matrix
-
+from torch_sparse import SparseTensor
 from sgl.utils import sparse_mx_to_torch_sparse_tensor, sparse_mx_to_pyg_sparse_tensor
 
 # A lighter wrapper class for sampled adjacency matrices, 
 # as the Edge class seems contains useless information
 class Block:
-    def __init__(self, adjs):
+    def __init__(self, adjs, sparse_type):
+        self.__sparse_type = sparse_type
         if not isinstance(adjs, list):
             self.__adjs = [adjs]
+            if isinstance(adjs, SparseTensor):
+                self.__root_sizes = [adjs.sparse_size(0)]
+            else:
+                self.__root_sizes = [adjs.shape[0]]
         else:
             self.__adjs = adjs
+            if isinstance(adjs[0], SparseTensor):
+                self.__root_sizes = [adj.sparse_size(0) for adj in adjs]
+            else:
+                self.__root_sizes = [adj.shape[0] for adj in adjs]
         self.__device = None
    
     def __len__(self):
@@ -24,13 +34,18 @@ class Block:
 
     def __getitem__(self, id):
         return self.__adjs[id]
+    
+    def root_size(self, id):
+        return self.__root_sizes[id]
 
     def to_device(self, device):
         if self.__device == device:
             return
-        if not isinstance(self.__adjs[0], torch.sparse.FloatTensor):
-            # self.__adjs = [sparse_mx_to_torch_sparse_tensor(adj) for adj in self.__adjs]
-            self.__adjs = [sparse_mx_to_pyg_sparse_tensor(adj) for adj in self.__adjs]
+        if isinstance(self.__adjs[0], sp.spmatrix):
+            if self.__sparse_type == "pyg":
+                self.__adjs = [sparse_mx_to_pyg_sparse_tensor(adj) for adj in self.__adjs]
+            else:
+                self.__adjs = [sparse_mx_to_torch_sparse_tensor(adj) for adj in self.__adjs]
         self.__adjs = [adj.to(device) for adj in self.__adjs]
         self.__device = device
 

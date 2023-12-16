@@ -7,6 +7,7 @@ sampler:
     cluster_method: "metis"
     cluster_number: 10
     post_sampling_op: "LaplacianGraphOp"
+    sparse_type: "torch"
 model:
   hidden_dim: 128
   dropout: 0.5

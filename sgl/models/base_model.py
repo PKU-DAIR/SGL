@@ -67,9 +67,12 @@ class BaseSGAPModel(nn.Module):
         return output
 
 class BaseSAMPLEModel(nn.Module):
-    def __init__(self, evaluate_mode="full"):
+    def __init__(self, evaluate_mode="full", sparse_type="pyg"):
         super(BaseSAMPLEModel, self).__init__()
         self._evaluate_mode = evaluate_mode
+        if sparse_type not in ["pyg", "torch"]:
+            raise ValueError(f"sparse type {sparse_type} is not supported, please use either pyg or torch.")
+        self._sparse_type = sparse_type
         self._pre_graph_op, self._post_graph_op = None, None
         self._training_sampling_op, self._eval_sampling_op = None, None
         self._base_model = None
@@ -117,7 +120,8 @@ class BaseSAMPLEModel(nn.Module):
         y_pred = self._base_model(self._processed_feature, self._processed_block)[node_idx]
         y_truth = self._vanilla_y[node_idx]
         return y_pred, y_truth
-     
+    
+    @torch.no_grad()
     def inference(self, dataloader, device):
         preds = self._base_model.inference(self.processed_feature, dataloader, device)
         return preds
@@ -127,9 +131,8 @@ class BaseSAMPLEModel(nn.Module):
             norm_adj = self._pre_graph_op._construct_adj(adj)
         else:
             norm_adj = adj 
-        # norm_adj = sparse_mx_to_torch_sparse_tensor(norm_adj)
-        norm_adj = sparse_mx_to_pyg_sparse_tensor(norm_adj)
-        self._processed_block = Block(norm_adj)
+        
+        self._processed_block = Block(norm_adj, self._sparse_type)
 
         if hasattr(self, "_pre_feature_op"):
             self._processed_feature = self._pre_feature_op._transform_x(x)

@@ -454,6 +454,9 @@ class GCN(nn.Module):
         return x_all
 
 class GAT(nn.Module):
+    """
+    This GAT only accepts dense tensor as input (doesn't support torch.sparse.tensor)
+    """
     def __init__(self, n_feat, n_hid, n_class, n_heads, n_layers=2, dropout=0.6, activation=F.elu):
         super(GAT, self).__init__()
         self.gcs = nn.ModuleList()       

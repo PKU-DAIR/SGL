@@ -11,6 +11,7 @@ sampler:
     prob_type: "normalize"
     replace: False
     post_sampling_op: "LaplacianGraphOp"
+    sparse_type: "torch"
 model:
   name: "LazyGNN"
   basemodel: "GCN"
