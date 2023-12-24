@@ -152,7 +152,7 @@ class SampleFLAG(BaseSAMPLEModel):
 
         return loss.item(), pred_y
 
-    def mini_batch_prepare_forward(self, batch, device, loss_fn, optimizers, inductive=False, transfer_y_to_device=True):
+    def mini_batch_prepare_forward(self, batch, device, loss_fn, optimizer, inductive=False, transfer_y_to_device=True):
         batch_in, batch_out, block = batch
         
         if inductive is False:
@@ -166,7 +166,7 @@ class SampleFLAG(BaseSAMPLEModel):
             y_truth = y_truth.to(device)
         
         block.to_device(device)
-        loss, pred_y = self.flag(in_x, y_truth, block, batch_out, optimizers, device, loss_fn)
+        loss, pred_y = self.flag(in_x, y_truth, block, batch_out, optimizer, device, loss_fn)
 
         return loss, pred_y, y_truth
     
@@ -207,6 +207,7 @@ class SampleFLAG(BaseSAMPLEModel):
             pred = test_output.max(1)[1].type_as(out_y)
             correct_num_test += pred.eq(out_y).double().sum()
             test_num += len(out_y)
+        
         acc_test = correct_num_test / test_num
 
         return acc_val.item(), acc_test.item()

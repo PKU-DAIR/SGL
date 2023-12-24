@@ -6,7 +6,7 @@ model:
  model_name: 'GAugM'
  gnn_type: 'gcn'
  feat_norm: 'row'
- hidden_dim: 128
+ hidden_dim: 256
  dropout: 0.5
  n_layers: 2
  choose_idx: 5

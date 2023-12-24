@@ -13,7 +13,7 @@ from sgl.tasks.utils import accuracy, set_seed, train, mini_batch_train, evaluat
 
 class NodeClassification_Sampling(BaseTask):
     def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn="nll_loss", seed=42,
-                 inductive=False, train_batch_size=None, eval_batch_size=None, eval_freq=1, eval_start=1, **kwargs):
+                 inductive=False, train_batch_size=None, eval_batch_size=None, eval_freq=1, eval_start=1, runs=1, verbose=True, **kwargs):
         super(NodeClassification_Sampling, self).__init__()
 
         self.__dataset = dataset
@@ -27,6 +27,8 @@ class NodeClassification_Sampling(BaseTask):
         self.__loss_fn = getattr(F, loss_fn) if isinstance(loss_fn, str) else loss_fn
         self.__device = device
         self.__seed = seed
+        self.__runs = runs 
+        self.__verbose = verbose
         self.__inductive = inductive
         self.__train_batch_size= train_batch_size
         self.__eval_batch_size = eval_batch_size
@@ -60,7 +62,8 @@ class NodeClassification_Sampling(BaseTask):
             kwargs.update({"inductive": self.__inductive, "train_idx": self.__dataset.train_idx})
         self.__model.preprocess(adj=self.__dataset.adj, x=self.__dataset.x, y=self.__dataset.y, device=self.__device, **kwargs)
         pre_time_ed = time.time()
-        print(f"Preprocessing done in {(pre_time_ed - pre_time_st):.4f}s")
+        if self.__verbose:
+            print(f"Preprocessing done in {(pre_time_ed - pre_time_st):.4f}s")
         
         if self.__mini_batch_train:
             if self.__train_determined_sample:
@@ -95,62 +98,69 @@ class NodeClassification_Sampling(BaseTask):
 
         self.__model = self.__model.to(self.__device)
 
-        t_total = time.time()
-        best_val = 0.
-        best_test = 0.
-
-        for epoch in range(self.__epochs):
-            t = time.time()
-            if self.__mini_batch_train:
-                if hasattr(self.__model, "train_func") and isinstance(self.__model.train_func, Callable):
-                    loss_train, acc_train = self.__model.train_func(self.__train_loader, self.__inductive, self.__device, self.__optimizer, self.__loss_fn)
-                else:
-                    loss_train, acc_train = mini_batch_train(self.__model, self.__train_loader, self.__inductive, self.__device, 
-                                                            self.__optimizer, self.__loss_fn)
-            else:
-                loss_train, acc_train = train(self.__model, self.__dataset.train_idx, self.__optimizer, self.__loss_fn)
+        best_test_list = []
+        for _ in range(self.__runs):
+            self.__model.reset_parameters()
             
-            if epoch + 1 >= self.__eval_start and (epoch + 1) % self.__eval_freq == 0:
-                if self.__mini_batch_eval:
-                    if self.__eval_together is False:
-                        if hasattr(self.__model, "evaluate_func") and isinstance(self.__model.evaluate_func, Callable):
-                            acc_val, acc_test = self.__model.evaluate_func(self.__val_loader, self.__test_loader, self.__device)
-                        else:
-                            acc_val, acc_test = mini_batch_evaluate(self.__model, self.__val_loader, self.__test_loader, self.__device)
+            t_total = time.time()
+            best_val = 0.
+            best_test = 0.
+
+            for epoch in range(self.__epochs):
+                t = time.time()
+                if self.__mini_batch_train:
+                    if hasattr(self.__model, "train_func") and isinstance(self.__model.train_func, Callable):
+                        loss_train, acc_train = self.__model.train_func(self.__train_loader, self.__inductive, self.__device, self.__optimizer, self.__loss_fn)
                     else:
-                        self.__model.eval()
-                        outputs = self.__model.inference(self.__all_eval_loader, self.__device)
-                        acc_train = accuracy(outputs[self.__dataset.train_idx], self.__dataset.y[self.__dataset.train_idx])
-                        acc_val = accuracy(outputs[self.__dataset.val_idx], self.__dataset.y[self.__dataset.val_idx])
-                        acc_test = accuracy(outputs[self.__dataset.test_idx], self.__dataset.y[self.__dataset.test_idx])
+                        loss_train, acc_train = mini_batch_train(self.__model, self.__train_loader, self.__inductive, self.__device, 
+                                                                self.__optimizer, self.__loss_fn)
                 else:
-                    acc_val, acc_test = evaluate(self.__model, self.__dataset.val_idx, self.__dataset.test_idx)
+                    loss_train, acc_train = train(self.__model, self.__dataset.train_idx, self.__optimizer, self.__loss_fn)
+                
+                if epoch + 1 >= self.__eval_start and (epoch + 1) % self.__eval_freq == 0:
+                    if self.__mini_batch_eval:
+                        if self.__eval_together is False:
+                            if hasattr(self.__model, "evaluate_func") and isinstance(self.__model.evaluate_func, Callable):
+                                acc_val, acc_test = self.__model.evaluate_func(self.__val_loader, self.__test_loader, self.__device)
+                            else:
+                                acc_val, acc_test = mini_batch_evaluate(self.__model, self.__val_loader, self.__test_loader, self.__device)
+                        else:
+                            self.__model.eval()
+                            outputs = self.__model.inference(self.__all_eval_loader, self.__device)
+                            acc_train = accuracy(outputs[self.__dataset.train_idx], self.__dataset.y[self.__dataset.train_idx])
+                            acc_val = accuracy(outputs[self.__dataset.val_idx], self.__dataset.y[self.__dataset.val_idx])
+                            acc_test = accuracy(outputs[self.__dataset.test_idx], self.__dataset.y[self.__dataset.test_idx])
+                    else:
+                        acc_val, acc_test = evaluate(self.__model, self.__dataset.val_idx, self.__dataset.test_idx)
 
-                if acc_val > best_val:
-                    best_val = acc_val
-                    best_test = acc_test
-                    
-                print('Epoch: {:03d}'.format(epoch + 1),
-                    'loss_train: {:.4f}'.format(loss_train),
-                    'acc_train: {:.4f}'.format(acc_train),
-                    'acc_val: {:.4f}'.format(acc_val),
-                    'acc_test: {:.4f}'.format(acc_test),
-                    'time: {:.4f}s'.format(time.time() - t))
-            else:
-                print('Epoch: {:03d}'.format(epoch + 1),
-                    'loss_train: {:.4f}'.format(loss_train),
-                    'acc_train: {:.4f}'.format(acc_train),
-                    'time: {:.4f}s'.format(time.time() - t))
+                    if acc_val > best_val:
+                        best_val = acc_val
+                        best_test = acc_test
+                        
+                    print('Epoch: {:03d}'.format(epoch + 1),
+                        'loss_train: {:.4f}'.format(loss_train),
+                        'acc_train: {:.4f}'.format(acc_train),
+                        'acc_val: {:.4f}'.format(acc_val),
+                        'acc_test: {:.4f}'.format(acc_test),
+                        'time: {:.4f}s'.format(time.time() - t))
+                else:
+                    print('Epoch: {:03d}'.format(epoch + 1),
+                        'loss_train: {:.4f}'.format(loss_train),
+                        'acc_train: {:.4f}'.format(acc_train),
+                        'time: {:.4f}s'.format(time.time() - t))
 
-        acc_val, acc_test = self._postprocess()
-        if acc_val > best_val:
-            best_val = acc_val
-            best_test = acc_test
+            acc_val, acc_test = self._postprocess()
+            if acc_val > best_val:
+                best_val = acc_val
+                best_test = acc_test
 
-        print("Optimization Finished!")
-        print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
-        print(f'Best val: {best_val:.4f}, best test: {best_test:.4f}')
-        return best_test
+            best_test_list.append(best_test)
+            
+            print("Optimization Finished!")
+            print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
+            print(f'Best val: {best_val:.4f}, best test: {best_test:.4f}')
+        
+        return np.mean(best_test_list)
 
     def _postprocess(self):
         self.__model.eval()

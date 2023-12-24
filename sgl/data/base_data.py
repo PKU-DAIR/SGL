@@ -4,6 +4,7 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.sparse import csr_matrix
 from torch_sparse import SparseTensor
+from torch_geometric.utils import from_scipy_sparse_matrix
 from sgl.utils import sparse_mx_to_torch_sparse_tensor, sparse_mx_to_pyg_sparse_tensor
 
 # A lighter wrapper class for sampled adjacency matrices, 
@@ -44,8 +45,10 @@ class Block:
         if isinstance(self.__adjs[0], sp.spmatrix):
             if self.__sparse_type == "pyg":
                 self.__adjs = [sparse_mx_to_pyg_sparse_tensor(adj) for adj in self.__adjs]
-            else:
+            elif self.__sparse_type == "torch":
                 self.__adjs = [sparse_mx_to_torch_sparse_tensor(adj) for adj in self.__adjs]
+            else:
+                self.__adjs = [from_scipy_sparse_matrix(adj)[0] for adj in self.__adjs]
         self.__adjs = [adj.to(device) for adj in self.__adjs]
         self.__device = device
 

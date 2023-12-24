@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from sgl.data.base_data import Block
 from sgl.data.base_dataset import HeteroNodeDataset
-from sgl.utils import sparse_mx_to_torch_sparse_tensor, sparse_mx_to_pyg_sparse_tensor
 
 
 class BaseSGAPModel(nn.Module):
@@ -70,7 +69,7 @@ class BaseSAMPLEModel(nn.Module):
     def __init__(self, evaluate_mode="full", sparse_type="pyg"):
         super(BaseSAMPLEModel, self).__init__()
         self._evaluate_mode = evaluate_mode
-        if sparse_type not in ["pyg", "torch"]:
+        if sparse_type not in ["pyg", "torch", "2d-tensor"]:
             raise ValueError(f"sparse type {sparse_type} is not supported, please use either pyg or torch.")
         self._sparse_type = sparse_type
         self._pre_graph_op, self._post_graph_op = None, None
@@ -96,6 +95,9 @@ class BaseSAMPLEModel(nn.Module):
     @property
     def eval_collate_fn(self):
         return self._eval_sampling_op.collate_fn
+    
+    def reset_parameters(self):
+        self._base_model.reset_parameters()
     
     def mini_batch_prepare_forward(self, batch, device, inductive=False, transfer_y_to_device=True):
         batch_in, batch_out, block = batch

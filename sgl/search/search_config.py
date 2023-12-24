@@ -1,9 +1,4 @@
 import numpy as np
-<<<<<<< Updated upstream
-from sgl.search.search_models import SearchModel
-from sgl.search.auto_search import SearchManager
-=======
->>>>>>> Stashed changes
 from openbox.utils.config_space import ConfigurationSpace, UniformIntegerHyperparameter
 
 from sgl.search.auto_search import SearchManager

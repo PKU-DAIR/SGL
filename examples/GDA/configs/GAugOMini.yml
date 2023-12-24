@@ -1,0 +1,30 @@
+dataset:
+ classname: "Planetoid"
+ name: "pubmed"
+ root: "/home/ssq/test_data/"
+model:
+ model_name: 'GAugO'
+ gnn_type: 'gcn'
+ alpha: 1.0
+ temperature: 0.2
+ hidden_dim: 128
+ emb_size: 64
+ dropout: 0.5
+ n_layers: 2
+ gae: true
+ feat_norm: 'row'
+ sample_type: 'add_sample'
+ minibatch: True
+task:
+ lr: 0.01
+ ep_lr: 0.002
+ seed: 42
+ warmup: 0
+ beta: 0.8
+ epochs: 200
+ weight_decay: 0.0005
+ pretrain_ep: 160
+ pretrain_nc: 30
+ max_patience: 50
+ train_batch_size: 250
+ pretrain_batch_size: 4096

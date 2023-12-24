@@ -22,7 +22,7 @@ class GCN(nn.Module):
         self.dropout = dropout
         self.activation = activation
     
-    def reset_parameter(self):
+    def reset_parameters(self):
         for conv in self.gcs:
             conv.reset_parameters()
         if self.batch_norm:
@@ -97,7 +97,7 @@ class SAGE(nn.Module):
         self.dropout = dropout
         self.activation = activation
 
-    def reset_parameter(self):
+    def reset_parameters(self):
         for conv in self.gcs:
             conv.reset_parameters()
         if self.batch_norm:
@@ -180,7 +180,7 @@ class GAT(nn.Module):
         self.dropout = dropout
         self.activation = activation
 
-    def reset_parameter(self):
+    def reset_parameters(self):
         for conv in self.gcs:
             conv.reset_parameters()
         if self.batch_norm:

@@ -15,7 +15,7 @@ import sgl.dataset as Dataset
 from sgl.tasks.utils import set_seed
 from sgl.operators.graph_op import LaplacianGraphOp
 from sgl.utils import sparse_mx_to_torch_sparse_tensor
-from utils import sparse_to_tuple, get_scores_gen_graphs
+from sgl.models.homo.gda.utils import sparse_to_tuple, get_scores_gen_graphs
 
 class GraphConv(nn.Module):
     def __init__(self, input_dim, output_dim, activation=True):
