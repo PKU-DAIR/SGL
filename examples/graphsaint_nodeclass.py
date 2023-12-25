@@ -1,8 +1,9 @@
 import yaml
 import argparse
-from torch.nn.functional import nll_loss
+
 import sgl.dataset as Dataset
 from sgl.models.homo import GraphSAINT
+
 import sgl.sampler as Sampler
 from sgl.sampler import GraphSAINTSampler
 from sgl.tasks import NodeClassification_Sampling
@@ -45,5 +46,5 @@ if __name__ == "__main__":
     model_kwargs.update({"device": device})
     model = GraphSAINT(dataset, train_sampler, eval_sampler, **model_kwargs)
     task_kwargs.update({"device": device})
-    task_kwargs.update({"loss_fn":model.loss})
+    task_kwargs.update({"loss_fn": model.loss_fn})
     test_acc = NodeClassification_Sampling(dataset, model, **task_kwargs).test_acc

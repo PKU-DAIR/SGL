@@ -2,12 +2,13 @@ import os
 import torch
 import numpy as np
 import pickle as pkl
-import networkx as nx
 import scipy.sparse as sp
 
 from torch_sparse import SparseTensor
-from torch_geometric.utils import from_networkx, mask_to_index
+from torch_geometric.utils import mask_to_index
 
+from sgl.data.base_data import Block
+from sgl.utils import sparse_mx_to_pyg_sparse_tensor
 from sgl.sampler.base_sampler import NodeWiseSampler, LayerWiseSampler, GraphWiseSampler
 
 
@@ -49,7 +50,7 @@ class NeighborSampler(NodeWiseSampler):
         
         all_adjs = self._post_process(all_adjs, to_sparse_tensor=False)
      
-        return cur_tgt_nodes, batch_inds, self.to_Block(all_adjs, self._sparse_type)  
+        return cur_tgt_nodes, batch_inds, Block(all_adjs, self._sparse_type)  
 
 class FastGCNSampler(LayerWiseSampler):
     def __init__(self, adj, **kwargs):   
@@ -84,18 +85,18 @@ class FastGCNSampler(LayerWiseSampler):
 
         all_adjs = self._post_process(all_adjs, to_sparse_tensor=False)
 
-        return cur_out_nodes, batch_inds, self.to_Block(all_adjs, self._sparse_type)
+        return cur_out_nodes, batch_inds, Block(all_adjs, self._sparse_type)
     
 class ClusterGCNSampler(GraphWiseSampler):
     """
     Clustering the graph, feature set and target.
     """
-    def __init__(self, dataset, **kwargs):
+    def __init__(self, dataset, inductive=False, **kwargs):
         """
         Inputs:
             adj: Adjacency matrix (Networkx Graph).
         """
-        super(ClusterGCNSampler, self).__init__(nx.from_scipy_sparse_matrix(dataset.adj), **kwargs)
+        super(ClusterGCNSampler, self).__init__(dataset.adj[dataset.train_idx, :][:, dataset.train_idx] if inductive else dataset.adj, **kwargs)
         self.sampler_name = "ClusterGCNSampler"
         self.sample_level = "graph"
         self.pre_sampling = True # conduct sampling only once before training
@@ -129,9 +130,23 @@ class ClusterGCNSampler(GraphWiseSampler):
         start = self.partptr[batch_inds].tolist()
         end = self.partptr[batch_inds + 1].tolist()
         node_idx = torch.cat([torch.arange(s, e) for s, e in zip(start, end)])
+        stack_row, stack_col, stack_value = [], [], []
+        num_node = 0
+        for i, batch_ind in enumerate(batch_inds):
+            batch_ind = batch_ind.item()
+            perm_adj = self.splitted_perm_adjs[batch_ind]
+            row, col, value = perm_adj.coo()
+            row = row + num_node
+            col = col + num_node
+            num_node += end[i] - start[i]
+            stack_row.append(row)
+            stack_col.append(col)
+            stack_value.append(value)
+        stack_row = torch.cat(stack_row)
+        stack_col = torch.cat(stack_col)
+        stack_value = torch.cat(stack_value)
+        block = Block(SparseTensor(row=stack_row, col=stack_col, value=stack_value, sparse_sizes=(num_node, num_node)), sparse_type=self._sparse_type)
         global_node_idx = self.perm_node_idx[node_idx]
-        composed_sparse_mx = sp.block_diag([self.splitted_perm_adjs[batch_ind.item()] for batch_ind in batch_inds])
-        block = self.to_Block(composed_sparse_mx, self._sparse_type)
         if mode in ["train", "val", "test"]:
             mask = self._masks[mode][global_node_idx]
             global_inds = global_node_idx[mask]
@@ -148,12 +163,12 @@ class ClusterGCNSampler(GraphWiseSampler):
         return global_node_idx, batch_out, block
 
     def _metis_clustering(self):
-        data = from_networkx(self._adj)
-        N, E = data.num_nodes, data.num_edges
-        adj = SparseTensor(
-            row=data.edge_index[0], col=data.edge_index[1],
-            value=torch.arange(E, device=data.edge_index.device),
-            sparse_sizes=(N, N))
+        adj = sparse_mx_to_pyg_sparse_tensor(self._adj)
+        r"""
+        perm_adjs: SparseTensor
+        len(self.partptr) == self.cluster_number + 1
+        len(self.perm_node_idx) = num_nodes
+        """
         self.perm_adjs, self.partptr, self.perm_node_idx = adj.partition(self.cluster_number, False) 
         self.splitted_perm_adjs = []
         for i in range(len(self.partptr)-1):
@@ -161,12 +176,7 @@ class ClusterGCNSampler(GraphWiseSampler):
             node_idx = torch.arange(start, end)
             perm_adj = self.perm_adjs.narrow(0, start, end-start)
             perm_adj = perm_adj.index_select(1, node_idx)
-            row, col, _ = perm_adj.coo()
-            row, col = row.numpy(), col.numpy()
-            num_nodes = len(node_idx)
-            sparse_mx = sp.coo_matrix((np.ones_like(row), (row, col)), shape=(num_nodes, num_nodes))
-            sparse_mx = self._post_process(sparse_mx, to_sparse_tensor=False)
-            self.splitted_perm_adjs.append(sparse_mx)
+            self.splitted_perm_adjs.append(perm_adj)
         if self._save_dir is not None:
             torch.save((self.perm_adjs, self.partptr, self.perm_node_idx), self._save_path_pt)
             pkl.dump(self.splitted_perm_adjs, open(self._save_path_pkl, "wb"))
@@ -184,43 +194,36 @@ class GraphSAINTSampler(GraphWiseSampler):
         super(GraphSAINTSampler, self).__init__(dataset.adj, **kwargs)
 
         self.replace = True
-        self.sampler_name = "GraphSaintSampler"
+        self.sampler_name = "GraphSAINTSampler"
         self.sample_level = "graph"
         self.pre_sampling = False
         self._masks = {"train": dataset.train_mask, "val": dataset.val_mask, "test": dataset.test_mask}
 
-        self.n = dataset.adj.shape[0]
-        self.e = dataset.adj.nnz
+    def _pre_process(self, **kwargs):
+        self.num_node = self._adj.shape[0]
+        self.num_edge = self._adj.nnz
         self.pre_sampling_times = kwargs.get("pre_sampling_graphs", 1)
         self.used_sample_graphs = 0
 
-        if kwargs['sampler_type'] == "Node":
+        if kwargs["sampler_type"] == "node":
             kwargs.update({"prob_type": "normalize"})
             self._calc_probs(**kwargs)
             self.node_probs = self.probs
-            self.node_budget = kwargs['nodebudget']
-            self.sample_graph_type = "Node"
-        elif kwargs['sampler_type'] == 'Edge':
+            self.node_budget = kwargs["nodebudget"]
+        elif kwargs["sampler_type"] == "edge":
             self._calc_edge_probs()
-            self.edge_budget = kwargs['edgebudget']
-            self.sample_graph_type = "Edge"
-        elif kwargs['sampler_type'] == 'RandomWalk':
-            self.r = kwargs['r']
-            self.h = kwargs['h']
-            self.sample_graph_type = "RandomWalk"
+            self.edge_budget = kwargs["edgebudget"]
+        elif kwargs["sampler_type"] == "random_walk":
+            self.r = kwargs["r"]
+            self.h = kwargs["h"]
         else:
             raise NotImplementedError
 
+        self.sample_graph_type = kwargs["sampler_type"]
+
     @property
     def sample_graph_ops(self):
-        if self.sample_graph_type == "Node":
-            return self.node_sampler()
-        elif self.sample_graph_type == "Edge":
-            return self.edge_sampler()
-        elif self.sample_graph_type == "RandomWalk":
-            return self.random_walk_sampler()
-        else:
-            raise NotImplementedError
+        return getattr(self, f"{self.sample_graph_type}_sampler")
 
     def node_sampler(self):
         """
@@ -233,11 +236,12 @@ class GraphSAINTSampler(GraphWiseSampler):
 
         p = self.node_probs
        
-        sampled_node = np.random.choice(a=self.n, size=self.node_budget, replace=self.replace, p=p)
+        sampled_node = np.random.choice(a=self.num_node, size=self.node_budget, replace=self.replace, p=p)
         sampled_node = np.unique(sampled_node)
 
         subadj = self._adj[sampled_node, :]
         subadj = subadj[:, sampled_node]
+        
         return sampled_node, subadj
 
     def _calc_edge_probs(self):
@@ -251,7 +255,6 @@ class GraphSAINTSampler(GraphWiseSampler):
 
         self.edge_probs = 1 / start_degrees + 1 / end_degrees
         self.edge_probs = self.edge_probs / np.sum(self.edge_probs)
-        return
 
     def edge_sampler(self):
         """
@@ -263,14 +266,14 @@ class GraphSAINTSampler(GraphWiseSampler):
         """
 
         p = self.edge_probs
-        sampled_edges = np.random.choice(a=self.e, size=self.edge_budget, replace=self.replace, p=p)
+        sampled_edges = np.random.choice(a=self.num_edge, size=self.edge_budget, replace=self.replace, p=p)
         sampled_edges = np.unique(sampled_edges)
 
         edges = self._adj.nonzero()
         sampled_start = edges[0][sampled_edges]
         sampled_end = edges[1][sampled_edges]
 
-        sampled_node = np.unique(np.concatenate([sampled_start,sampled_end]))
+        sampled_node = np.unique(np.concatenate([sampled_start, sampled_end]))
         
         subadj = self._adj[sampled_node, :]
         subadj = subadj[:, sampled_node]
@@ -285,7 +288,7 @@ class GraphSAINTSampler(GraphWiseSampler):
                 sampled_node: global node index
                 block: sampled adjs, csr sparse matrix
         """
-        root_nodes = np.random.choice(a=self.n, size=self.r, replace = self.replace)
+        root_nodes = np.random.choice(a=self.num_node, size=self.r, replace=self.replace)
         sampled_node = []
         for v in root_nodes:
             sampled_node.append(v)
@@ -308,22 +311,22 @@ class GraphSAINTSampler(GraphWiseSampler):
         """
         self.sampled_graphs = []
 
-        node_value = np.zeros(self.n)
-        edge_value = sp.lil_matrix((self.n,self.n))
+        node_value = np.zeros(self.num_node)
+        edge_value = sp.lil_matrix((self.num_node, self.num_node))
 
         for _ in range(self.pre_sampling_times):
-            sampled, adj = self.sample_graph_ops
-            self.sampled_graphs.append((sampled,adj))
+            sampled_node, adj = self.sample_graph_ops()
+            adj = self._post_process(adj, to_sparse_tensor=False)
+            self.sampled_graphs.append((sampled_node, adj))
             adj = adj.tocoo()
             for row, col in zip(adj.row, adj.col):
-                edge_value[sampled[row],sampled[col]] += 1
-            node_value[sampled] += 1
+                edge_value[sampled_node[row], sampled_node[col]] += 1
+            node_value[sampled_node] += 1
 
         edge_value = edge_value.tocsr().dot(sp.diags(1.0 / np.maximum(node_value, 1)))
         
         self.aggr_norm = edge_value
-        self.loss_norm = torch.FloatTensor(np.maximum(node_value, 1))
-        return
+        self.loss_norm = torch.FloatTensor(np.maximum(node_value, 1) / self.pre_sampling_times)
 
     def collate_fn(self, batch_ids, mode):
         """
@@ -344,7 +347,7 @@ class GraphSAINTSampler(GraphWiseSampler):
                 sampled, adj = self.sampled_graphs[self.used_sample_graphs]
                 self.used_sample_graphs += 1
             else:
-                sampled, adj = self.sample_graph_ops
+                sampled, adj = self.sample_graph_ops()
                 
             sampled_aggr_norm = self.aggr_norm[sampled, :]
             sampled_aggr_norm = sampled_aggr_norm[:, sampled]
@@ -371,4 +374,4 @@ class GraphSAINTSampler(GraphWiseSampler):
 
         self.cur_index = global_inds
 
-        return batch_in, batch_out, self.to_Block(batched_adj, self._sparse_type)
+        return batch_in, batch_out, Block(batched_adj, self._sparse_type)

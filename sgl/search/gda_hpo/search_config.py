@@ -4,9 +4,8 @@ from openbox import space as osp
 import sgl.models.homo.gda as GDAModel
 import sgl.tasks as Task
 
-class BaseGDAConfigManager():
+class BaseGDAConfigManager:
     def __init__(self, gda_model_name: str, task_name: str, model_keys: List[str], task_keys: List[str], const_model_kwargs: dict, const_task_kwargs: dict, hier_params: dict):
-        super(BaseGDAConfigManager, self).__init__()
         self._gda_model_name = gda_model_name 
         self._task_name = task_name
         self._model_keys = model_keys 

@@ -5,11 +5,11 @@ dataset:
 sampler:
   train:
     pre_sampling_graphs: 20
-    sampler_type: "Node"
+    sampler_type: "random_walk"
     nodebudget: 1000
     edgebudget: 3000
     r: 500
-    h: 4
+    h: 3
     pre_sampling_op: "RwGraphOp"
     sparse_type: "torch"
 model:

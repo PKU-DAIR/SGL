@@ -99,10 +99,6 @@ class BaseSampler:
                 adjs = [sparse_transform_func(adj) for adj in adjs]
         return adjs
     
-    @staticmethod
-    def to_Block(adjs, sparse_type):
-        return Block(adjs, sparse_type)
-    
     def collate_fn(self, *args):
         raise NotImplementedError
 
@@ -116,7 +112,7 @@ class FullSampler(BaseSampler):
         self.sample_level = "graph"
         self.pre_sampling = False
         self.full_batch = kwargs.get("node_ids", range(self._adj.shape[0]))
-        self.full_block = self.to_Block(self._adj, self._sparse_type)
+        self.full_block = Block(self._adj, self._sparse_type)
 
     def sampling(self):
         return self.full_batch, self.full_batch, self.full_block

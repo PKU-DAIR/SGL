@@ -5,9 +5,9 @@ dataset:
 model:
  model_name: 'GAugO'
  gnn_type: 'gcn'
- alpha: 1.0
- temperature: 0.2
- hidden_dim: 128
+ alpha: 0.79
+ temperature: 1.6
+ hidden_dim: 256
  emb_size: 64
  dropout: 0.5
  n_layers: 2
@@ -17,14 +17,14 @@ model:
  minibatch: True
 task:
  lr: 0.01
- ep_lr: 0.002
+ ep_lr: 0.006
  seed: 42
- warmup: 0
- beta: 0.8
+ warmup: 7
+ beta: 3.3
  epochs: 200
  weight_decay: 0.0005
- pretrain_ep: 160
- pretrain_nc: 30
+ pretrain_ep: 10
+ pretrain_nc: 40
  max_patience: 50
- train_batch_size: 250
- pretrain_batch_size: 4096
+ train_batch_size: 8192
+ pretrain_batch_size: 8192

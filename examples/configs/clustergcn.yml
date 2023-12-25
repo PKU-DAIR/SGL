@@ -1,20 +1,43 @@
+# dataset:
+#   classname: "Planetoid"
+#   name: "cora"
+#   root: "/home/ssq/test_data/"
+# sampler:
+#   train:
+#     cluster_method: "metis"
+#     cluster_number: 10
+#     sparse_type: "pyg"
+# model:
+#   hidden_dim: 128
+#   dropout: 0.5
+#   num_layers: 2
+#   sparse_type: "pyg"
+# task:
+#   train_batch_size: 5
+#   epochs: 30
+#   lr: 0.01
+#   weight_decay: 0.00005
+#   loss_fn: "nll_loss"
+#   seed: 42
 dataset:
   classname: "Planetoid"
-  name: "cora"
+  name: "pubmed"
   root: "/home/ssq/test_data/"
+  split: "full"
 sampler:
   train:
     cluster_method: "metis"
     cluster_number: 10
-    post_sampling_op: "LaplacianGraphOp"
-    sparse_type: "torch"
+    sparse_type: "pyg"
+    inductive: True
 model:
   hidden_dim: 128
   dropout: 0.5
   num_layers: 2
+  sparse_type: "pyg"
 task:
   train_batch_size: 5
-  epochs: 20
+  epochs: 50
   lr: 0.01
   weight_decay: 0.00005
   loss_fn: "nll_loss"

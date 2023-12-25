@@ -29,7 +29,12 @@ if __name__ == "__main__":
     train_sampler_kwargs.update({"save_dir": dataset.processed_dir})
     train_cluster_number = train_sampler_kwargs["cluster_number"]
     task_kwargs.update({"train_graph_number": train_cluster_number})
-    train_sampler = ClusterGCNSampler(dataset, **train_sampler_kwargs)
+    if "inductive" in train_sampler_kwargs.keys():
+        inductive = train_sampler_kwargs.pop("inductive")
+    else:
+        inductive = False
+    task_kwargs.update({"inductive": inductive})
+    train_sampler = ClusterGCNSampler(dataset, inductive=inductive, **train_sampler_kwargs)
     if "eval" in sampler_kwargs:
         eval_sampler_kwargs = sampler_kwargs["eval"]
         eval_sampler_name = eval_sampler_kwargs["name"]

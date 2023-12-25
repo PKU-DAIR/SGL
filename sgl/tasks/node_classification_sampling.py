@@ -13,7 +13,7 @@ from sgl.tasks.utils import accuracy, set_seed, train, mini_batch_train, evaluat
 
 class NodeClassification_Sampling(BaseTask):
     def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn="nll_loss", seed=42,
-                 inductive=False, train_batch_size=None, eval_batch_size=None, eval_freq=1, eval_start=1, runs=1, verbose=True, **kwargs):
+                 inductive=False, train_batch_size=None, eval_batch_size=None, eval_freq=1, eval_start=1, runs=1, verbose=True, max_patience=50, **kwargs):
         super(NodeClassification_Sampling, self).__init__()
 
         self.__dataset = dataset
@@ -29,6 +29,7 @@ class NodeClassification_Sampling(BaseTask):
         self.__seed = seed
         self.__runs = runs 
         self.__verbose = verbose
+        self.__max_patience = max_patience
         self.__inductive = inductive
         self.__train_batch_size= train_batch_size
         self.__eval_batch_size = eval_batch_size
@@ -103,6 +104,7 @@ class NodeClassification_Sampling(BaseTask):
             self.__model.reset_parameters()
             
             t_total = time.time()
+            patience = 0
             best_val = 0.
             best_test = 0.
 
@@ -136,18 +138,25 @@ class NodeClassification_Sampling(BaseTask):
                     if acc_val > best_val:
                         best_val = acc_val
                         best_test = acc_test
-                        
-                    print('Epoch: {:03d}'.format(epoch + 1),
-                        'loss_train: {:.4f}'.format(loss_train),
-                        'acc_train: {:.4f}'.format(acc_train),
-                        'acc_val: {:.4f}'.format(acc_val),
-                        'acc_test: {:.4f}'.format(acc_test),
-                        'time: {:.4f}s'.format(time.time() - t))
+                        patience = 0
+                    else:
+                        patience += 1
+                        if patience == self.__max_patience:
+                            break
+
+                    if self.__verbose:   
+                        print('Epoch: {:03d}'.format(epoch + 1),
+                            'loss_train: {:.4f}'.format(loss_train),
+                            'acc_train: {:.4f}'.format(acc_train),
+                            'acc_val: {:.4f}'.format(acc_val),
+                            'acc_test: {:.4f}'.format(acc_test),
+                            'time: {:.4f}s'.format(time.time() - t))
                 else:
-                    print('Epoch: {:03d}'.format(epoch + 1),
-                        'loss_train: {:.4f}'.format(loss_train),
-                        'acc_train: {:.4f}'.format(acc_train),
-                        'time: {:.4f}s'.format(time.time() - t))
+                    if self.__verbose:
+                        print('Epoch: {:03d}'.format(epoch + 1),
+                            'loss_train: {:.4f}'.format(loss_train),
+                            'acc_train: {:.4f}'.format(acc_train),
+                            'time: {:.4f}s'.format(time.time() - t))
 
             acc_val, acc_test = self._postprocess()
             if acc_val > best_val:
