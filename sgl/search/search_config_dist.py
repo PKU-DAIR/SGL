@@ -1,4 +1,3 @@
-import argparse
 import numpy as np
 from sgl.search.auto_search_dist import SearchManagerDist
 from sgl.search.search_models_dist import SearchModelDist

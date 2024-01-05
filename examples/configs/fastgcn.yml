@@ -1,0 +1,28 @@
+dataset:
+  classname: "Planetoid"
+  name: "pubmed"
+  root: "/home/ssq/test_data/"
+  split: "full"
+sampler:
+  training:
+    name: "FastGCNSampler"
+    inductive: False
+    pre_sampling_op: "LaplacianGraphOp"
+    layer_sizes: "2048,2048"
+    prob_type: "normalize"
+    replace: False
+    sparse_type: "torch"
+model:
+  name: "FastGCN"
+  hidden_dim: 128
+  dropout: 0.5
+  num_layers: 2
+task:
+  name: "NodeClassification_Sampling"
+  train_batch_size: 2048
+  train_num_workers: 3
+  epochs: 30
+  lr: 0.1
+  weight_decay: 0.00005
+  loss_fn: "nll_loss"
+

@@ -1,7 +1,5 @@
-import random
-import math
 import torch
-import torch.nn.functional as F
+import random
 import numpy as np
 import scipy.sparse as sp
 from sklearn.cluster import KMeans
@@ -35,65 +33,74 @@ def add_labels(features, labels, idx, num_classes):
     onehot[idx, labels[idx]] = 1
     return np.concatenate([features, onehot], axis=-1)
 
-def evaluate(model, val_idx, test_idx, labels, device):
+@torch.no_grad()
+def evaluate(model, val_idx, test_idx):
     model.eval()
-    val_output = model.model_forward(val_idx, device)
-    test_output = model.model_forward(test_idx, device)
+    output, y = model(model.processed_feature, model.processed_block)
 
-    acc_val = accuracy(val_output, labels[val_idx])
-    acc_test = accuracy(test_output, labels[test_idx])
+    acc_val = accuracy(output[val_idx], y[val_idx])
+    acc_test = accuracy(output[test_idx], y[test_idx])
     return acc_val, acc_test
 
-
-def mini_batch_evaluate(model, val_idx, val_loader, test_idx, test_loader, labels, device):
+@torch.no_grad()
+def mini_batch_evaluate(model, val_loader, test_loader, device):
     model.eval()
     correct_num_val, correct_num_test = 0, 0
-    for batch in val_loader:
-        val_output = model.model_forward(batch, device)
-        pred = val_output.max(1)[1].type_as(labels)
-        correct_num_val += pred.eq(labels[batch]).double().sum()
-    acc_val = correct_num_val / len(val_idx)
 
+    val_num = 0
+    for batch in val_loader:
+        val_output, out_y = model.mini_batch_prepare_forward(batch, device)
+        pred = val_output.max(1)[1].type_as(out_y)
+        correct_num_val += pred.eq(out_y).double().sum()
+        val_num += len(out_y)
+        
+    acc_val = correct_num_val / val_num
+
+    test_num = 0
     for batch in test_loader:
-        test_output = model.model_forward(batch, device)
-        pred = test_output.max(1)[1].type_as(labels)
-        correct_num_test += pred.eq(labels[batch]).double().sum()
-    acc_test = correct_num_test / len(test_idx)
+        test_output, out_y = model.mini_batch_prepare_forward(batch, device)
+        pred = test_output.max(1)[1].type_as(out_y)
+        correct_num_test += pred.eq(out_y).double().sum()
+        test_num += len(out_y)
+    acc_test = correct_num_test / test_num
 
     return acc_val.item(), acc_test.item()
 
 
-def train(model, train_idx, labels, device, optimizer, loss_fn):
+def train(model, train_idx, optimizer, loss_fn):
     model.train()
     optimizer.zero_grad()
 
-    train_output = model.model_forward(train_idx, device)
-    loss_train = loss_fn(train_output, labels[train_idx])
-    acc_train = accuracy(train_output, labels[train_idx])
+    train_output, out_y = model.full_batch_prepare_forward(train_idx)
+    loss_train = loss_fn(train_output, out_y)
+    acc_train = accuracy(train_output, out_y)
     loss_train.backward()
     optimizer.step()
 
     return loss_train.item(), acc_train
 
 
-def mini_batch_train(model, train_idx, train_loader, labels, device, optimizer, loss_fn):
+def mini_batch_train(model, train_loader, inductive, device, optimizer, loss_fn):
     model.train()
     correct_num = 0
     loss_train_sum = 0.
+    train_num = 0
+
     for batch in train_loader:
-        train_output = model.model_forward(batch, device)
-        loss_train = loss_fn(train_output, labels[batch])
-
-        pred = train_output.max(1)[1].type_as(labels)
-        correct_num += pred.eq(labels[batch]).double().sum()
-        loss_train_sum += loss_train.item()
-
         optimizer.zero_grad()
+
+        train_output, out_y = model.mini_batch_prepare_forward(batch, device, inductive=inductive)
+        loss_train = loss_fn(train_output, out_y)
+        pred = train_output.max(1)[1].type_as(out_y)
+        correct_num += pred.eq(out_y).double().sum()
+        loss_train_sum += loss_train.item()
+        train_num += len(out_y)
+        
         loss_train.backward()
         optimizer.step()
 
     loss_train = loss_train_sum / len(train_loader)
-    acc_train = correct_num / len(train_idx)
+    acc_train = correct_num / train_num
 
     return loss_train, acc_train.item()
 
@@ -431,3 +438,23 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     values = torch.from_numpy(sparse_mx.data)
     shape = torch.Size(sparse_mx.shape)
     return torch.sparse.FloatTensor(indices, values, shape)
+
+class MultipleOptimizer():
+    """ a class that wraps multiple optimizers """
+    def __init__(self, *op):
+        self.optimizers = op
+
+    def zero_grad(self):
+        for op in self.optimizers:
+            op.zero_grad()
+
+    def step(self):
+        for op in self.optimizers:
+            op.step()
+
+    def update_lr(self, op_index, new_lr):
+        """ update the learning rate of one optimizer
+        Parameters: op_index: the index of the optimizer to update
+                    new_lr:   new learning rate for that optimizer """
+        for param_group in self.optimizers[op_index].param_groups:
+            param_group['lr'] = new_lr

@@ -9,6 +9,7 @@ from .projected_concat_message_op import ProjectedConcatMessageOp
 from .simple_weighted_message_op import SimpleWeightedMessageOp
 from .sum_message_op import SumMessageOp
 from .over_smooth_distance_op import OverSmoothDistanceWeightedOp
+from .pre_normalize_message_op import PreNormMessageOp
 
 __all__ = [
     "ConcatMessageOp",
@@ -21,5 +22,6 @@ __all__ = [
     "ProjectedConcatMessageOp",
     "SimpleWeightedMessageOp",
     "SumMessageOp",
-    "OverSmoothDistanceWeightedOp"
+    "OverSmoothDistanceWeightedOp",
+    "PreNormMessageOp"
 ]

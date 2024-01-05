@@ -21,7 +21,7 @@ class GraphOp:
 
         if not isinstance(adj, sp.csr_matrix):
             raise TypeError("The adjacency matrix must be a scipy csr sparse matrix!")
-        elif not isinstance(feature, np.ndarray):
+        elif not isinstance(feature, np.ndarray):  ###代码Node类中已经转成了torch.FloatTensor
             raise TypeError("The feature matrix must be a numpy.ndarray!")
         elif self._adj.shape[1] != feature.shape[0]:
             raise ValueError("Dimension mismatch detected for the adjacency and the feature matrix!")
@@ -35,6 +35,12 @@ class GraphOp:
             prop_feat_list.append(feat_temp)
         return [torch.FloatTensor(feat) for feat in prop_feat_list]
 
+class PreMessageOp:
+    def __init__(self, dim=1):
+        self._dim = dim
+
+    def _transform_x(self, x):
+        raise NotImplementedError
 
 # Might include training parameters
 class MessageOp(nn.Module):

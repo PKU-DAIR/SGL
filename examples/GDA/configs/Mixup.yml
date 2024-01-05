@@ -1,0 +1,20 @@
+dataset:
+  classname: "Planetoid"
+  name: "pubmed"
+  root: "/home/ssq/test_data/"
+  split: "full"
+model:
+  gnn_type: 'sage'
+  hidden_dim: 256
+  dropout: 0.5
+  alpha: 4
+  beta: 4
+  n_layers: 3
+  feat_norm: "none"
+  batch_norm: True
+task:
+  lr: 0.01
+  seed: 12345
+  epochs: 300
+  patience: 30
+  weight_decay: 0

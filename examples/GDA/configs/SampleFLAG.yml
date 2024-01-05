@@ -1,0 +1,78 @@
+# dataset:
+#   classname: "Ogbn"
+#   name: "products"
+#   root: "/home/ssq/test_data/"
+# sampler:
+#   training:
+#     name: "NeighborSampler"
+#     layer_sizes: "15,10,5"
+#     prob_type: "normalize"
+#     replace: False
+#   eval:
+#     name: "NeighborSampler"
+#     layer_sizes: "-1"
+#     replace: False
+# model:
+#   gnn_type: 'sage'
+#   hidden_dim: 256
+#   dropout: 0.5
+#   n_layers: 3
+#   step_size: 0.008
+#   augM: 3
+#   amp: 2
+#   batch_norm: False
+# task:
+#   name: "NodeClassification_Sampling"
+#   lr: 0.003
+#   seed: 12345
+#   epochs: 20
+#   patience: 10
+#   weight_decay: 0
+#   train_batch_size: 1024
+#   eval_batch_size: 4096
+#   train_num_workers: 12
+#   eval_num_workers: 12
+#   eval_together: True
+#   eval_freq: 2
+#   eval_start: 10
+#   loss_fn: "nll_loss"
+dataset:
+  classname: "Ogbn"
+  name: "arxiv"
+  root: "/home/ssq/test_data/"
+sampler:
+  training:
+    name: "NeighborSampler"
+    layer_sizes: "15,10,5"
+    prob_type: "normalize"
+    replace: False
+  eval:
+    name: "NeighborSampler"
+    layer_sizes: "-1"
+    replace: False
+model:
+  gnn_type: 'gat'
+  hidden_dim: 64
+  n_heads: "8,8,1"
+  dropout: 0.5
+  n_layers: 3
+  step_size: 0.008
+  augM: 3
+  amp: 2
+  batch_norm: False
+task:
+  name: "NodeClassification_Sampling"
+  lr: 0.002
+  seed: 12345
+  epochs: 500
+  patience: 50
+  weight_decay: 0
+  train_batch_size: 1024
+  eval_batch_size: 4096
+  train_num_workers: 12
+  eval_num_workers: 12
+  eval_together: True
+  pin_memory: True
+  eval_freq: 2
+  eval_start: 1
+  loss_fn: "nll_loss"

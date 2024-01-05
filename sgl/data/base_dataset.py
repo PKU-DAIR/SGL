@@ -1,10 +1,10 @@
-import itertools
-import numpy as np
 import os
 import os.path as osp
+import numpy as np
 import torch
 import warnings
 from scipy.sparse import csr_matrix
+from torch_geometric.utils import index_to_mask
 
 from sgl.data.base_data import Node, Edge
 from sgl.data.utils import file_exist, to_undirected
@@ -96,6 +96,10 @@ class NodeDataset:
         return self._data.node_type
 
     @property
+    def node_ids(self):
+        return self._data.node_ids
+    
+    @property
     def train_idx(self):
         return self._train_idx
 
@@ -106,6 +110,24 @@ class NodeDataset:
     @property
     def test_idx(self):
         return self._test_idx
+    
+    @property
+    def train_mask(self):
+        mask = torch.zeros((self.num_node, ), dtype=torch.bool)
+        mask[self._train_idx] = True
+        return mask
+    
+    @property
+    def val_mask(self):
+        mask = torch.zeros((self.num_node, ), dtype=torch.bool)
+        mask[self._val_idx] = True
+        return mask
+    
+    @property
+    def test_mask(self):
+        mask = torch.zeros((self.num_node, ), dtype=torch.bool)
+        mask[self._test_idx] = True
+        return mask
 
     @property
     def num_features(self):
@@ -118,6 +140,10 @@ class NodeDataset:
     @property
     def num_node(self):
         return self._data.num_node
+    
+    @property 
+    def processed_dir(self):
+        return self._processed_dir
 
 
 # Base class for graph-level tasks

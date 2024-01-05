@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from sgl.data.base_data import Block
 from sgl.data.base_dataset import HeteroNodeDataset
 
 
@@ -62,10 +62,120 @@ class BaseSGAPModel(nn.Module):
             processed_feature = self._pre_msg_op.aggregate(
                 transferred_feat_list)
 
-        output = self._base_model(processed_feature)
+        output = self._base_model(processed_feature) # model training
         return output
 
+class BaseSAMPLEModel(nn.Module):
+    def __init__(self, evaluate_mode="full", sparse_type="pyg"):
+        super(BaseSAMPLEModel, self).__init__()
+        self._evaluate_mode = evaluate_mode
+        if sparse_type not in ["pyg", "torch", "2d-tensor"]:
+            raise ValueError(f"sparse type {sparse_type} is not supported, please use either pyg or torch.")
+        self._sparse_type = sparse_type
+        self._pre_graph_op, self._post_graph_op = None, None
+        self._training_sampling_op, self._eval_sampling_op = None, None
+        self._base_model = None
 
+    @property
+    def evaluate_mode(self):
+        return self._evaluate_mode
+    
+    @property
+    def processed_block(self):
+        return self._processed_block
+    
+    @property
+    def processed_feature(self):
+        return self._processed_feature
+
+    @property
+    def train_collate_fn(self):
+        return self._training_sampling_op.collate_fn 
+
+    @property
+    def eval_collate_fn(self):
+        return self._eval_sampling_op.collate_fn
+    
+    def reset_parameters(self):
+        self._base_model.reset_parameters()
+    
+    def mini_batch_prepare_forward(self, batch, device, inductive=False, transfer_y_to_device=True):
+        batch_in, batch_out, block = batch
+        
+        if inductive is False:
+            in_x = self._processed_feature[batch_in].to(device)
+            y_truth = self._vanilla_y[batch_out]
+        else:
+            in_x = self._processed_train_feature[batch_in].to(device)
+            y_truth = self._vanilla_train_y[batch_out]
+        
+        if transfer_y_to_device is True:
+            y_truth = y_truth.to(device)
+        
+        block.to_device(device)
+        
+        y_pred = self._base_model(in_x, block)
+        
+        return y_pred, y_truth
+    
+    def full_batch_prepare_forward(self, node_idx):
+        y_pred = self._base_model(self._processed_feature, self._processed_block)[node_idx]
+        y_truth = self._vanilla_y[node_idx]
+        return y_pred, y_truth
+    
+    @torch.no_grad()
+    def inference(self, dataloader, device):
+        preds = self._base_model.inference(self.processed_feature, dataloader, device)
+        return preds
+
+    def preprocess(self, adj, x, y, device, **kwargs):
+        if self._pre_graph_op is not None:
+            norm_adj = self._pre_graph_op._construct_adj(adj)
+        else:
+            norm_adj = adj 
+        
+        self._processed_block = Block(norm_adj, self._sparse_type)
+
+        if hasattr(self, "_pre_feature_op"):
+            self._processed_feature = self._pre_feature_op._transform_x(x)
+        else:
+            self._processed_feature = x
+
+        self._vanilla_y = y
+        mini_batch = kwargs.get("mini_batch", True)
+        if mini_batch is False:
+            self._processed_block.to_device(device)
+            self._processed_feature = self._processed_feature.to(device)
+            self._vanilla_y = self._vanilla_y.to(device)
+        
+        inductive = kwargs.get("inductive", False)
+        if inductive is True:
+            train_idx = kwargs.get("train_idx", None)
+            if train_idx is None:
+                raise ValueError(f"For inductive learning, "
+                                 "please pass train idx "
+                                 "as the parameters of preprocess function.")
+            if hasattr(self, "_pre_feature_op"):
+                self._processed_train_feature = self._pre_feature_op._transform_x(x[train_idx])
+            else:
+                self._processed_train_feature = x[train_idx]
+            self._vanilla_train_y = y[train_idx]
+            
+    
+    def postprocess(self, adj, output):
+        if self._post_graph_op is not None:
+            raise NotImplementedError
+        return output
+
+    def model_forward(self, batch_in, block, device):
+        x = self._processed_feature[batch_in].to(device)
+        block.to_device(device)
+        return self.forward(x, block)
+    
+    def forward(self, x, block):  
+        return self._base_model(x, block), self._vanilla_y
+    
+    
 class BaseHeteroSGAPModel(nn.Module):
     def __init__(self, prop_steps, feat_dim, output_dim):
         super(BaseHeteroSGAPModel, self).__init__()

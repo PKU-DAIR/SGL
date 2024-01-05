@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader
+import numpy as np
+from typing import Callable
 
 from sgl.tasks.base_task import BaseTask
 from sgl.tasks.utils import accuracy, set_seed, train, mini_batch_train, evaluate, mini_batch_evaluate
@@ -10,7 +12,7 @@ from sgl.tasks.utils import accuracy, set_seed, train, mini_batch_train, evaluat
 
 class NodeClassification(BaseTask):
     def __init__(self, dataset, model, lr, weight_decay, epochs, device, loss_fn=nn.CrossEntropyLoss(), seed=42,
-                 train_batch_size=None, eval_batch_size=None):
+                 patience=100, runs=1, verbose=True, train_batch_size=None, eval_batch_size=None):
         super(NodeClassification, self).__init__()
 
         self.__dataset = dataset
@@ -23,6 +25,9 @@ class NodeClassification(BaseTask):
         self.__loss_fn = loss_fn
         self.__device = device
         self.__seed = seed
+        self.__patience = patience
+        self.__runs = runs 
+        self.__verbose = verbose
 
         self.__mini_batch = False
         if train_batch_size is not None:
@@ -46,49 +51,73 @@ class NodeClassification(BaseTask):
         set_seed(self.__seed)
 
         pre_time_st = time.time()
-        self.__model.preprocess(self.__dataset.adj, self.__dataset.x)
+        self.__model.preprocess(self.__dataset.adj, self.__dataset.x, self.__device)
         pre_time_ed = time.time()
-        print(f"Preprocessing done in {(pre_time_ed - pre_time_st):.4f}s")
+        if self.__verbose:
+            print(f"Preprocessing done in {(pre_time_ed - pre_time_st):.4f}s")
 
         self.__model = self.__model.to(self.__device)
         self.__labels = self.__labels.to(self.__device)
 
-        t_total = time.time()
-        best_val = 0.
-        best_test = 0.
-        for epoch in range(self.__epochs):
-            t = time.time()
-            if self.__mini_batch is False:
-                loss_train, acc_train = train(self.__model, self.__dataset.train_idx, self.__labels, self.__device,
-                                              self.__optimizer, self.__loss_fn)
-                acc_val, acc_test = evaluate(self.__model, self.__dataset.val_idx, self.__dataset.test_idx,
-                                             self.__labels, self.__device)
-            else:
-                loss_train, acc_train = mini_batch_train(self.__model, self.__dataset.train_idx, self.__train_loader,
-                                                         self.__labels, self.__device, self.__optimizer, self.__loss_fn)
-                acc_val, acc_test = mini_batch_evaluate(self.__model, self.__dataset.val_idx, self.__val_loader,
-                                                        self.__dataset.test_idx, self.__test_loader, self.__labels,
-                                                        self.__device)
+        best_test_list = []
+        for _ in range(self.__runs):
 
-            print('Epoch: {:03d}'.format(epoch + 1),
-                  'loss_train: {:.4f}'.format(loss_train),
-                  'acc_train: {:.4f}'.format(acc_train),
-                  'acc_val: {:.4f}'.format(acc_val),
-                  'acc_test: {:.4f}'.format(acc_test),
-                  'time: {:.4f}s'.format(time.time() - t))
+            self.__model.reset_parameters()
+            t_total = time.time()
+            best_val = 0.
+            best_test = 0.
+            patience = 0
+            for epoch in range(self.__epochs):
+                t = time.time()
+                if self.__mini_batch is False:
+                    if hasattr(self.__model, "train_func") and isinstance(self.__model.train_func, Callable):
+                        loss_train, acc_train = self.__model.train_func(self.__dataset.train_idx, self.__labels, self.__device,
+                                                self.__optimizer, self.__loss_fn, accuracy)
+                    else:
+                        loss_train, acc_train = train(self.__model, self.__dataset.train_idx, self.__labels, self.__device,
+                                                self.__optimizer, self.__loss_fn, accuracy)
+                    if hasattr(self.__model, "evaluate_func") and isinstance(self.__model.evaluate_func, Callable):
+                        acc_val, acc_test = self.__model.evaluate_func(self.__dataset.val_idx, self.__dataset.test_idx,
+                                                self.__labels, self.__device, accuracy)
+                    else:
+                        acc_val, acc_test = evaluate(self.__model, self.__dataset.val_idx, self.__dataset.test_idx,
+                                                self.__labels, self.__device, accuracy)
+                else:
+                    loss_train, acc_train = mini_batch_train(self.__model, self.__dataset.train_idx, self.__train_loader,
+                                                            self.__labels, self.__device, self.__optimizer, self.__loss_fn)
+                    acc_val, acc_test = mini_batch_evaluate(self.__model, self.__dataset.val_idx, self.__val_loader,
+                                                            self.__dataset.test_idx, self.__test_loader, self.__labels,
+                                                            self.__device)
+                if self.__verbose:
+                    print('Epoch: {:03d}'.format(epoch + 1),
+                        'loss_train: {:.4f}'.format(loss_train),
+                        'acc_train: {:.4f}'.format(acc_train),
+                        'acc_val: {:.4f}'.format(acc_val),
+                        'acc_test: {:.4f}'.format(acc_test),
+                        'time: {:.4f}s'.format(time.time() - t))
+                
+                if acc_val > best_val:
+                    patience = 0
+                    best_val = acc_val
+                    best_test = acc_test
+                else:
+                    patience += 1
+                    if patience == self.__patience:
+                        break
+
+            acc_val, acc_test = self._postprocess()
             if acc_val > best_val:
                 best_val = acc_val
                 best_test = acc_test
 
-        acc_val, acc_test = self._postprocess()
-        if acc_val > best_val:
-            best_val = acc_val
-            best_test = acc_test
-
-        print("Optimization Finished!")
-        print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
-        print(f'Best val: {best_val:.4f}, best test: {best_test:.4f}')
-        return best_test
+            best_test_list.append(best_test)
+            if self.__verbose:
+                print("Optimization Finished!")
+                print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
+                print(f'Best val: {best_val:.4f}, best test: {best_test:.4f}')
+            
+        mean_best_test = np.mean(best_test_list)
+        return mean_best_test
 
     def _postprocess(self):
         self.__model.eval()

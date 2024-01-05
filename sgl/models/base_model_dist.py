@@ -1,8 +1,5 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from sgl.data.base_dataset import HeteroNodeDataset
 
 
 class BaseSGAPModelDist(nn.Module):

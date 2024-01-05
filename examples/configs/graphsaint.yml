@@ -1,0 +1,26 @@
+dataset:
+  classname: "Planetoid"
+  name: "cora"
+  root: "/home/ssq/test_data/"
+sampler:
+  train:
+    pre_sampling_graphs: 20
+    sampler_type: "random_walk"
+    nodebudget: 1000
+    edgebudget: 3000
+    r: 500
+    h: 3
+    pre_sampling_op: "RwGraphOp"
+    sparse_type: "torch"
+model:
+  hidden_dim: 128
+  dropout: 0.5
+  num_layers: 2
+task:
+  train_graph_number: 10
+  train_batch_size: 5
+  epochs: 100
+  lr: 0.01
+  weight_decay: 0.00005
+  seed: 42
+

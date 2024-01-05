@@ -1,0 +1,23 @@
+dataset:
+  classname: "Planetoid"  
+  name: "cora"
+  root: "/home/ssq/test_data/"
+  split: "official"
+sampler:
+  training:
+    name: "FullSampler"
+    inductive: False
+    sparse_type: "torch"
+model:
+  name: "VanillaGNN"
+  basemodel: "SAGE"
+  hidden_dim: 128
+  dropout: 0.5
+  num_layers: 2
+task:
+  name: "NodeClassification_Sampling"
+  epochs: 50
+  lr: 0.1
+  weight_decay: 0.00005
+  loss_fn: "nll_loss"
+

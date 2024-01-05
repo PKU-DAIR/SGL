@@ -1,0 +1,30 @@
+dataset:
+  classname: "Planetoid"  
+  name: "pubmed"
+  root: "/home/ssq/test_data/"
+  split: "full"
+sampler:
+  training:
+    name: "NeighborSampler"
+    inductive: False
+    layer_sizes: "10,5"
+    prob_type: "normalize"
+    replace: False
+    post_sampling_op: "LaplacianGraphOp"
+    sparse_type: "torch"
+model:
+  name: "LazyGNN"
+  basemodel: "GCN"
+  hidden_dim: 256
+  dropout: 0.5
+  num_layers: 2
+  max_workers: 8
+  max_threads: 10
+task:
+  name: "NodeClassification_RecycleSampling"
+  num_iters: 100
+  lr: 0.01
+  weight_decay: 0.00005
+  loss_fn: "nll_loss"
+  train_batch_size: 1024
+

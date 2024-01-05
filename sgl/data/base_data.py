@@ -1,7 +1,56 @@
-import numpy as np
 import torch
-from scipy.sparse import csr_matrix
 from torch import Tensor
+import numpy as np
+import scipy.sparse as sp
+from scipy.sparse import csr_matrix
+from torch_sparse import SparseTensor
+from torch_geometric.utils import from_scipy_sparse_matrix
+from sgl.utils import sparse_mx_to_torch_sparse_tensor, sparse_mx_to_pyg_sparse_tensor
+
+# A lighter wrapper class for sampled adjacency matrices, 
+# as the Edge class seems contains useless information
+class Block:
+    def __init__(self, adjs, sparse_type):
+        self.__sparse_type = sparse_type
+        if not isinstance(adjs, list):
+            self.__adjs = [adjs]
+            if isinstance(adjs, SparseTensor):
+                self.__root_sizes = [adjs.sparse_size(0)]
+            else:
+                self.__root_sizes = [adjs.shape[0]]
+        else:
+            self.__adjs = adjs
+            if isinstance(adjs[0], SparseTensor):
+                self.__root_sizes = [adj.sparse_size(0) for adj in adjs]
+            else:
+                self.__root_sizes = [adj.shape[0] for adj in adjs]
+        self.__device = None
+   
+    def __len__(self):
+        return len(self.__adjs)
+    
+    def __iter__(self):
+        for adj in self.__adjs:
+            yield adj
+
+    def __getitem__(self, id):
+        return self.__adjs[id]
+    
+    def root_size(self, id):
+        return self.__root_sizes[id]
+
+    def to_device(self, device):
+        if self.__device == device:
+            return
+        if isinstance(self.__adjs[0], sp.spmatrix):
+            if self.__sparse_type == "pyg":
+                self.__adjs = [sparse_mx_to_pyg_sparse_tensor(adj) for adj in self.__adjs]
+            elif self.__sparse_type == "torch":
+                self.__adjs = [sparse_mx_to_torch_sparse_tensor(adj) for adj in self.__adjs]
+            else:
+                self.__adjs = [from_scipy_sparse_matrix(adj)[0] for adj in self.__adjs]
+        self.__adjs = [adj.to(device) for adj in self.__adjs]
+        self.__device = device
 
 
 # Base class for adjacency matrix
@@ -32,7 +81,7 @@ class Edge:
     @property
     def sparse_matrix(self):
         return self.__sparse_matrix
-
+    
     @property
     def edge_type(self):
         return self.__edge_type
@@ -86,7 +135,7 @@ class Node:
         
         if x is not None:
             if isinstance(x, np.ndarray):
-                x = torch.FloatTensor(x)
+                x = torch.FloatTensor(x)   #这里是原始实现，但是是有bug的
             elif not isinstance(x, Tensor):
                 raise TypeError("x must be a np.ndarray or Tensor!")
         self.__x = x
@@ -160,7 +209,7 @@ class Graph:
     @property
     def adj(self):
         return self.__edge.sparse_matrix
-
+    
     @property
     def edge_index(self):
         return self.__edge.edge_index
@@ -181,6 +230,10 @@ class Graph:
     def node_type(self):
         return self.__node.node_type
 
+    @property
+    def node_ids(self):
+        return self.__node.node_ids
+    
     @property
     def x(self):
         return self.__node.x

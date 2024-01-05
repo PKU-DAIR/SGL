@@ -2,7 +2,7 @@ from sgl.models.base_model import BaseSGAPModel
 from sgl.models.simple_models import LogisticRegression, ResMultiLayerPerceptron
 from sgl.operators.graph_op import LaplacianGraphOp, PprGraphOp
 from sgl.operators.message_op import LastMessageOp, ConcatMessageOp, MeanMessageOp, SimpleWeightedMessageOp, \
-    LearnableWeightedMessageOp, IterateLearnableWeightedMessageOp, SumMessageOp, MaxMessageOp, MinMessageOp
+    LearnableWeightedMessageOp, SumMessageOp, MaxMessageOp, MinMessageOp
 
 
 class SearchModel(BaseSGAPModel):

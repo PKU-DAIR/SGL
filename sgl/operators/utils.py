@@ -74,17 +74,26 @@ def cuda_csr_sparse_dense_matmul(adj, feature):
 
 
 def adj_to_symmetric_norm(adj, r):
-    adj = adj + sp.eye(adj.shape[0])
-    degrees = np.array(adj.sum(1))
-    r_inv_sqrt_left = np.power(degrees, r - 1).flatten()
+    adj = adj + sp.eye(*adj.shape)
+    degrees_left = np.array(adj.sum(1))
+    r_inv_sqrt_left = np.power(degrees_left, r - 1).flatten()
     r_inv_sqrt_left[np.isinf(r_inv_sqrt_left)] = 0.
     r_mat_inv_sqrt_left = sp.diags(r_inv_sqrt_left)
 
-    r_inv_sqrt_right = np.power(degrees, -r).flatten()
+    degrees_right = np.array(adj.sum(0))
+    r_inv_sqrt_right = np.power(degrees_right, -r).flatten()
     r_inv_sqrt_right[np.isinf(r_inv_sqrt_right)] = 0.
     r_mat_inv_sqrt_right = sp.diags(r_inv_sqrt_right)
+    adj_normalized = r_mat_inv_sqrt_left.dot(adj).dot(r_mat_inv_sqrt_right)
+    return adj_normalized
 
-    adj_normalized = adj.dot(r_mat_inv_sqrt_left).transpose().dot(r_mat_inv_sqrt_right)
+def adj_to_row_norm(adj):
+    degrees = np.array(adj.sum(1))
+    r_inv_row = np.power(degrees, -1).flatten()
+    r_inv_row[np.isinf(r_inv_row)] = 0.
+    r_mat_inv_row = sp.diags(r_inv_row)
+
+    adj_normalized = r_mat_inv_row.dot(adj)
     return adj_normalized
 
 
