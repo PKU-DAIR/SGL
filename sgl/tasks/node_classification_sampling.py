@@ -8,7 +8,8 @@ from torch.utils.data import DataLoader
 
 from sgl.data.utils import RandomLoader, SplitLoader
 from sgl.tasks.base_task import BaseTask
-from sgl.tasks.utils import accuracy, set_seed, train, mini_batch_train, evaluate, mini_batch_evaluate
+from sgl.tasks.utils import accuracy, set_seed, train, evaluate
+from sgl.tasks.utils import mini_batch_train as vanilla_mini_batch_train, mini_batch_evaluate as vanilla_mini_batch_evaluate
 
 
 class NodeClassification_Sampling(BaseTask):
@@ -111,21 +112,18 @@ class NodeClassification_Sampling(BaseTask):
             for epoch in range(self.__epochs):
                 t = time.time()
                 if self.__mini_batch_train:
-                    if hasattr(self.__model, "train_func") and isinstance(self.__model.train_func, Callable):
-                        loss_train, acc_train = self.__model.train_func(self.__train_loader, self.__inductive, self.__device, self.__optimizer, self.__loss_fn)
-                    else:
-                        loss_train, acc_train = mini_batch_train(self.__model, self.__train_loader, self.__inductive, self.__device, 
-                                                                self.__optimizer, self.__loss_fn)
+                    mini_batch_train = self.__model.model_train if hasattr(self.__model, "model_train") and isinstance(self.__model.model_train, Callable) \
+                                        else vanilla_mini_batch_train
+                    loss_train, acc_train = mini_batch_train(self.__model, self.__train_loader, self.__inductive, self.__device, self.__optimizer, self.__loss_fn)
                 else:
                     loss_train, acc_train = train(self.__model, self.__dataset.train_idx, self.__optimizer, self.__loss_fn)
                 
                 if epoch + 1 >= self.__eval_start and (epoch + 1) % self.__eval_freq == 0:
                     if self.__mini_batch_eval:
                         if self.__eval_together is False:
-                            if hasattr(self.__model, "evaluate_func") and isinstance(self.__model.evaluate_func, Callable):
-                                acc_val, acc_test = self.__model.evaluate_func(self.__val_loader, self.__test_loader, self.__device)
-                            else:
-                                acc_val, acc_test = mini_batch_evaluate(self.__model, self.__val_loader, self.__test_loader, self.__device)
+                            mini_batch_evaluate = self.__model.model_evaluate if hasattr(self.__model, "model_evaluate") and isinstance(self.__model.model_evaluate, Callable) \
+                                        else vanilla_mini_batch_evaluate
+                            acc_val, acc_test = mini_batch_evaluate(self.__model, self.__val_loader, self.__test_loader, self.__device)
                         else:
                             self.__model.eval()
                             outputs = self.__model.inference(self.__all_eval_loader, self.__device)

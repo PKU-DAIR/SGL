@@ -7,7 +7,9 @@ import numpy as np
 from typing import Callable
 
 from sgl.tasks.base_task import BaseTask
-from sgl.tasks.utils import accuracy, set_seed, train, mini_batch_train, evaluate, mini_batch_evaluate
+from sgl.tasks.utils import accuracy, set_seed
+from sgl.tasks.utils import train as vanilla_train, evaluate as vanilla_evaluate
+from sgl.tasks.utils import mini_batch_train as vanilla_mini_batch_train, mini_batch_evaluate as vanilla_mini_batch_evaluate
 
 
 class NodeClassification(BaseTask):
@@ -70,21 +72,22 @@ class NodeClassification(BaseTask):
             for epoch in range(self.__epochs):
                 t = time.time()
                 if self.__mini_batch is False:
-                    if hasattr(self.__model, "train_func") and isinstance(self.__model.train_func, Callable):
-                        loss_train, acc_train = self.__model.train_func(self.__dataset.train_idx, self.__labels, self.__device,
+                    train = self.__model.model_train if hasattr(self.__model, "model_train") and isinstance(self.__model.model_train, Callable) \
+                            else vanilla_train
+                    loss_train, acc_train = train(self.__model, self.__dataset.train_idx, self.__labels, self.__device,
                                                 self.__optimizer, self.__loss_fn, accuracy)
-                    else:
-                        loss_train, acc_train = train(self.__model, self.__dataset.train_idx, self.__labels, self.__device,
-                                                self.__optimizer, self.__loss_fn, accuracy)
-                    if hasattr(self.__model, "evaluate_func") and isinstance(self.__model.evaluate_func, Callable):
-                        acc_val, acc_test = self.__model.evaluate_func(self.__dataset.val_idx, self.__dataset.test_idx,
-                                                self.__labels, self.__device, accuracy)
-                    else:
-                        acc_val, acc_test = evaluate(self.__model, self.__dataset.val_idx, self.__dataset.test_idx,
+
+                    evaluate = self.__model.model_evaluate if hasattr(self.__model, "model_evaluate") and isinstance(self.__model.model_evaluate, Callable) \
+                                else vanilla_evaluate
+                    acc_val, acc_test = evaluate(self.__model, self.__dataset.val_idx, self.__dataset.test_idx,
                                                 self.__labels, self.__device, accuracy)
                 else:
+                    mini_batch_train = self.__model.model_mini_batch_train if hasattr(self.__model, "model_mini_batch_train") and isinstance(self.__model.model_mini_batch_train, Callable) \
+                                        else vanilla_mini_batch_train
                     loss_train, acc_train = mini_batch_train(self.__model, self.__dataset.train_idx, self.__train_loader,
                                                             self.__labels, self.__device, self.__optimizer, self.__loss_fn)
+                    mini_batch_evaluate = self.__model.model_mini_batch_evaluate if hasattr(self.__model, "model_mini_batch_evaluate") and isinstance(self.__model.model_mini_batch_evaluate, Callable) \
+                                        else vanilla_mini_batch_evaluate
                     acc_val, acc_test = mini_batch_evaluate(self.__model, self.__dataset.val_idx, self.__val_loader,
                                                             self.__dataset.test_idx, self.__test_loader, self.__labels,
                                                             self.__device)
@@ -213,14 +216,14 @@ class HeteroNodeClassification(BaseTask):
         for epoch in range(self.__epochs):
             t = time.time()
             if self.__mini_batch is False:
-                loss_train, acc_train = train(self.__model, self.__dataset.train_idx, self.__labels, self.__device,
+                loss_train, acc_train = vanilla_train(self.__model, self.__dataset.train_idx, self.__labels, self.__device,
                                               self.__optimizer, self.__loss_fn)
-                acc_val, acc_test = evaluate(self.__model, self.__dataset.val_idx, self.__dataset.test_idx,
+                acc_val, acc_test = vanilla_evaluate(self.__model, self.__dataset.val_idx, self.__dataset.test_idx,
                                              self.__labels, self.__device)
             else:
-                loss_train, acc_train = mini_batch_train(self.__model, self.__dataset.train_idx, self.__train_loader,
+                loss_train, acc_train = vanilla_mini_batch_train(self.__model, self.__dataset.train_idx, self.__train_loader,
                                                          self.__labels, self.__device, self.__optimizer, self.__loss_fn)
-                acc_val, acc_test = mini_batch_evaluate(self.__model, self.__dataset.val_idx, self.__val_loader,
+                acc_val, acc_test = vanilla_mini_batch_evaluate(self.__model, self.__dataset.val_idx, self.__val_loader,
                                                         self.__dataset.test_idx, self.__test_loader, self.__labels,
                                                         self.__device)
 

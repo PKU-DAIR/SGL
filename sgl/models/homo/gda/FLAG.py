@@ -69,19 +69,21 @@ class FLAG(nn.Module):
 
         return loss.item()
 
-    def train_func(self, train_idx, labels, device, optimizer, loss_fn, metric):
-        loss_train = self.flag(labels[train_idx], optimizer, device, train_idx, loss_fn)
+    @staticmethod
+    def model_train(model, train_idx, labels, device, optimizer, loss_fn, metric):
+        loss_train = model.flag(labels[train_idx], optimizer, device, train_idx, loss_fn)
 
-        self._base_model.eval()
-        pred_y = self._base_model(self.__features, self.__processed_adj)
+        model.eval()
+        pred_y = model(model.processed_feature, model.processed_adj)
         acc_train = metric(pred_y[train_idx], labels[train_idx])
 
         return loss_train, acc_train
     
+    @staticmethod
     @torch.no_grad()
-    def evaluate_func(self, val_idx, test_idx, labels, device, metric):
-        self._base_model.eval()
-        pred_y = self._base_model(self.__features, self.__processed_adj)
+    def model_evaluate(model, val_idx, test_idx, labels, device, metric):
+        model.eval()
+        pred_y = model(model.processed_feature, model.processed_adj)
 
         acc_val = metric(pred_y[val_idx], labels[val_idx])
         acc_test = metric(pred_y[test_idx], labels[test_idx])
@@ -170,13 +172,14 @@ class SampleFLAG(BaseSAMPLEModel):
 
         return loss, pred_y, y_truth
     
-    def train_func(self, train_loader, inductive, device, optimizer, loss_fn):
+    @staticmethod
+    def model_train(model, train_loader, inductive, device, optimizer, loss_fn):
         correct_num = 0
         loss_train_sum = 0.
         train_num = 0
 
         for batch in train_loader:
-            loss_train, y_out, y_truth = self.mini_batch_prepare_forward(batch, device, loss_fn, optimizer, inductive=inductive)
+            loss_train, y_out, y_truth = model.mini_batch_prepare_forward(batch, device, loss_fn, optimizer, inductive=inductive)
             pred = y_out.max(1)[1].type_as(y_truth)
             correct_num += pred.eq(y_truth).double().sum()
             loss_train_sum += loss_train
@@ -187,14 +190,15 @@ class SampleFLAG(BaseSAMPLEModel):
 
         return loss_train, acc_train.item()
     
+    @staticmethod
     @torch.no_grad()
-    def evaluate_func(self, val_loader, test_loader, device):
-        self._base_model.eval()
+    def model_evaluate(model, val_loader, test_loader, device):
+        model.eval()
 
         correct_num_val, correct_num_test = 0, 0
         val_num = 0
         for batch in val_loader:
-            val_output, out_y = self.model_forward(batch, device)
+            val_output, out_y = model.model_forward(batch, device)
             pred = val_output.max(1)[1].type_as(out_y)
             correct_num_val += pred.eq(out_y).double().sum()
             val_num += len(out_y)
@@ -203,7 +207,7 @@ class SampleFLAG(BaseSAMPLEModel):
 
         test_num = 0
         for batch in test_loader:
-            test_output, out_y = self.model_forward(batch, device)
+            test_output, out_y = model.model_forward(batch, device)
             pred = test_output.max(1)[1].type_as(out_y)
             correct_num_test += pred.eq(out_y).double().sum()
             test_num += len(out_y)

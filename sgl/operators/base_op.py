@@ -18,10 +18,13 @@ class GraphOp:
 
     def propagate(self, adj, feature):
         self._adj = self._construct_adj(adj)
+        
+        if isinstance(feature, Tensor):
+            feature = feature.numpy()
 
         if not isinstance(adj, sp.csr_matrix):
             raise TypeError("The adjacency matrix must be a scipy csr sparse matrix!")
-        elif not isinstance(feature, np.ndarray):  ###代码Node类中已经转成了torch.FloatTensor
+        elif not isinstance(feature, np.ndarray):
             raise TypeError("The feature matrix must be a numpy.ndarray!")
         elif self._adj.shape[1] != feature.shape[0]:
             raise ValueError("Dimension mismatch detected for the adjacency and the feature matrix!")

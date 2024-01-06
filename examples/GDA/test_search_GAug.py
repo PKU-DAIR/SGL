@@ -11,7 +11,7 @@ if __name__ == "__main__":
     parser.add_argument("--device", type=int, default=0, help="gpu device id or cpu(-1)")
     parser.add_argument("--dataset_classname", type=str, default="Planetoid", help="class name of the dataset")
     parser.add_argument("--name", type=str, default="cora", help="dataset name")
-    parser.add_argument("--root", type=str, default="/home/ssq/test_data/", help="root dir for dataset")
+    parser.add_argument("--root", type=str, default="data/", help="root dir for dataset")
     parser.add_argument("--gnn_type", type=str, default="gcn", choices=["gcn", "gsage", "gat"], help="gnn backbone")
     parser.add_argument("--not_gae", action="store_true", default=False, help="whether not to use gae")
     parser.add_argument("--minibatch", action="store_true", default=False, help="whether to use minibatch")

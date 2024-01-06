@@ -45,10 +45,10 @@ class VGAE(nn.Module):
         self.gcn_mean = GraphConv(dim_h, dim_z, activation=False)
         self.gcn_logstd = GraphConv(dim_h, dim_z, activation=False)
 
-    def encode(self, adj, X):
+    def encode(self, adj, X, gen_Z=False):
         hidden = self.base_gcn(adj, X)
         self.mean = self.gcn_mean(adj, hidden)
-        if self.gae:
+        if self.gae or gen_Z:
             return self.mean
         else:
             self.logstd = self.gcn_logstd(adj, hidden)

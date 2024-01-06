@@ -12,8 +12,8 @@ from sgl.models.base_model import BaseSAMPLEModel
 class Mixup(nn.Module):
     def __init__(self, in_dim, hidden_dim, n_classes, n_layers, dropout, alpha, beta, gnn_type="sage", feat_norm="row", activation=F.relu, **kwargs):
         super(Mixup, self).__init__()
-        self.__alpha = alpha 
-        self.__beta = beta 
+        self.alpha = alpha 
+        self.beta = beta 
         self.__feat_norm = feat_norm
         self.nc_net = TwoBranchGNN(in_dim, hidden_dim, n_classes, n_layers, dropout, gnn_type, activation, **kwargs)
 
@@ -46,35 +46,37 @@ class Mixup(nn.Module):
     def reset_parameters(self):
         self.nc_net.reset_parameters()
 
-    def train_func(self, train_idx, y_raw, device, optimizer, loss_fn, metric):
-        self.nc_net.train()
-        mix_ratio = np.random.beta(self.__alpha, self.__beta) 
-        id_old_value_new, adj_b, y_b = self._mixup(train_idx, y_raw, device)  
-        output = self.nc_net(self.__features, self.__adj, adj_b, mix_ratio, id_old_value_new)
+    @staticmethod
+    def model_train(model, train_idx, y_raw, device, optimizer, loss_fn, metric):
+        model.nc_net.train()
+        mix_ratio = np.random.beta(model.alpha, model.beta) 
+        id_old_value_new, adj_b, y_b = model.mixup(train_idx, y_raw, device)  
+        output = model.nc_net(model.processed_feature, model.processed_block, adj_b, mix_ratio, id_old_value_new)
 
         loss = loss_fn(mix_ratio, output, y_raw, y_b, train_idx)
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        self.nc_net.eval()
-        output = self.forward(self.__features, self.__adj)
+        model.nc_net.eval()
+        output = model(model.processed_feature, model.processed_block)
         acc = metric(output[train_idx], y_raw[train_idx])
 
         return loss.item(), acc
-    
-    @torch.no_grad()
-    def evaluate_func(self, val_idx, test_idx, labels, device, metric):
-        self.nc_net.eval()
 
-        pred_y = self.forward(self.__features, self.__adj)
+    @staticmethod 
+    @torch.no_grad()
+    def model_evaluate(model, val_idx, test_idx, labels, device, metric):
+        model.nc_net.eval()
+
+        pred_y = model(model.processed_feature, model.processed_block)
         
         acc_val = metric(pred_y[val_idx], labels[val_idx])
         acc_test = metric(pred_y[test_idx], labels[test_idx])
         
         return acc_val, acc_test
     
-    def _mixup(self, train_idx, y_raw, device):
+    def mixup(self, train_idx, y_raw, device):
         id_old_value_new = torch.arange(self.__num_nodes, dtype=torch.long)
         train_idx_shuffle = np.asarray(train_idx)
         np.random.shuffle(train_idx_shuffle)
@@ -107,8 +109,8 @@ class Mixup(nn.Module):
 class SampleMixup(BaseSAMPLEModel):
     def __init__(self, training_sampler, eval_sampler, in_dim, hidden_dim, n_classes, n_layers, dropout, alpha, beta, gnn_type="sage", feat_norm="row", activation=F.relu, **kwargs):
         super(SampleMixup, self).__init__(sparse_type="pyg")
-        self.__alpha = alpha 
-        self.__beta = beta 
+        self.alpha = alpha 
+        self.beta = beta 
         self.__feat_norm = feat_norm
         self._training_sampling_op = training_sampler
         self._eval_sampling_op = eval_sampler
@@ -175,16 +177,17 @@ class SampleMixup(BaseSAMPLEModel):
 
         return loss.item(), output, y_raw 
     
-    def train_func(self, train_loader, inductive, device, optimizer, loss_fn):
+    @staticmethod
+    def train_func(model, train_loader, inductive, device, optimizer, loss_fn):
         correct_num = 0
         loss_train_sum = 0.
         train_num = 0
 
-        self._base_model.train()
-        mix_ratio = np.random.beta(self.__alpha, self.__beta) 
+        model.train()
+        mix_ratio = np.random.beta(model.alpha, model.beta) 
         
         for batch in train_loader:
-            loss_train, y_out, y_truth = self.mini_batch_prepare_forward(batch, device, loss_fn, optimizer, inductive=inductive, mix_ratio=mix_ratio)
+            loss_train, y_out, y_truth = model.mini_batch_prepare_forward(batch, device, loss_fn, optimizer, inductive=inductive, mix_ratio=mix_ratio)
             pred = y_out.max(1)[1].type_as(y_truth)
             correct_num += pred.eq(y_truth).double().sum()
             loss_train_sum += loss_train
@@ -195,14 +198,15 @@ class SampleMixup(BaseSAMPLEModel):
 
         return loss_train, acc_train.item()
     
+    @staticmethod
     @torch.no_grad()
-    def evaluate_func(self, val_loader, test_loader, device):
-        self._base_model.eval()
+    def model_evaluate(model, val_loader, test_loader, device):
+        model.eval()
 
         correct_num_val, correct_num_test = 0, 0
         val_num = 0
         for batch in val_loader:
-            val_output, out_y = self.model_forward(batch, device)
+            val_output, out_y = model.model_forward(batch, device)
             pred = val_output.max(1)[1].type_as(out_y)
             correct_num_val += pred.eq(out_y).double().sum()
             val_num += len(out_y)
@@ -211,7 +215,7 @@ class SampleMixup(BaseSAMPLEModel):
 
         test_num = 0
         for batch in test_loader:
-            test_output, out_y = self.model_forward(batch, device)
+            test_output, out_y = model.model_forward(batch, device)
             pred = test_output.max(1)[1].type_as(out_y)
             correct_num_test += pred.eq(out_y).double().sum()
             test_num += len(out_y)
