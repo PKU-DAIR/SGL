@@ -23,7 +23,7 @@ To scale GNNs to extremely large graphs, existing works can be classified into t
 
 ## 1. Sampling
 <p class="center">
-    <img src="img/Sampling.jpg" width="60%">
+    <img src="img/Sampling.jpg" width="80%">
     <br>
     <em>Illustration of different graph sampling methods. Red nodes are selected nodes in the current batch as n<sup>(L)</sup>, blue nodes are nodes sampled in the 1st layer as n<sup>(1)</sup> and green nodes are sampled in the 2st layer as n<sup>(0)</sup>. n<sup>(0)</sup> and n<sup>(1)</sup> form Block<sup>(1)</sup>, n<sup>(1)</sup> and n<sup>(2)</sup> form Block<sup>(2)</sup>. The node-wise sampling method samples 2 nodes for each node (e.g. sampling v<sub>1</sub> and v<sub>6</sub> for v<sub>3</sub> in layer 1. The layer-wise sampling method samples 3 nodes for each GNN layer. The graph-wise sampling method samples a sub-graph for all layers.</em>
 </p>
@@ -49,16 +49,24 @@ To scale GNNs to extremely large graphs, existing works can be classified into t
 
 1. **Cluster-GCN: An Efficient Algorithm for Training Deep and Large Graph Convolutional Networks** [KDD 2019] [[paper]](https://arxiv.org/abs/1905.07953) [[code]](https://github.com/google-research/google-research/tree/master/cluster_gcn)
 2. **GraphSAINT: Graph Sampling Based Inductive Learning Method** [ICLR 2020] [[paper]](https://arxiv.org/abs/1907.04931) [[code]](https://github.com/GraphSAINT/GraphSAINT)
-3. **Minimal variance sampling with provable guarantees for fast training of graph neural networks** [KDD 2020][[paper]](https://arxiv.org/pdf/2006.13866.pdf)[[code]](https://github.com/CongWeilin/mvs_gcn)
-4. **Gnnautoscale: Scalable and expressive graph neural networks via historical embeddings** [ICLR 2021] [[paper]](https://arxiv.org/pdf/2106.05609.pdf)[[code]](https://github.com/rusty1s/pyg_autoscale)
-5. **Decoupling the depth and scope of graph neural networks** [NeurIPS 2021][[paper]](https://openreview.net/pdf?id=_IY3_4psXuf)[[code]](https://github.com/facebookresearch/shaDow_GNN)
-6. **Ripple walk training: A subgraph-based training framework for large and deep graph neural network** [IJCNN 2021] [[paper]](https://arxiv.org/pdf/2002.07206.pdf)[[code]](https://github.com/anonymous2review/RippleWalk)
-7. **LMC: Fast Training of GNNs via Subgraph Sampling with Provable Convergence** [ICLR 2023]  [[paper]](https://openreview.net/pdf?id=5VBBA91N6n)[[code]](https://github.com/MIRALab-USTC/GNN-LMC)
+3. **Large-Scale Learnable Graph Convolutional Networks** [KDD 2018][[paper]](https://dl.acm.org/doi/abs/10.1145/3219819.3219947)[[code]](https://github.com/divelab/lgcn)
+4. **Minimal variance sampling with provable guarantees for fast training of graph neural networks** [KDD 2020][[paper]](https://arxiv.org/pdf/2006.13866.pdf)[[code]](https://github.com/CongWeilin/mvs_gcn)
+5. **Gnnautoscale: Scalable and expressive graph neural networks via historical embeddings** [ICLR 2021] [[paper]](https://arxiv.org/pdf/2106.05609.pdf)[[code]](https://github.com/rusty1s/pyg_autoscale)
+6. **Decoupling the depth and scope of graph neural networks** [NeurIPS 2021][[paper]](https://openreview.net/pdf?id=_IY3_4psXuf)[[code]](https://github.com/facebookresearch/shaDow_GNN)
+7. **Ripple walk training: A subgraph-based training framework for large and deep graph neural network** [IJCNN 2021] [[paper]](https://arxiv.org/pdf/2002.07206.pdf)[[code]](https://github.com/anonymous2review/RippleWalk)
+8. **LMC: Fast Training of GNNs via Subgraph Sampling with Provable Convergence** [ICLR 2023]  [[paper]](https://openreview.net/pdf?id=5VBBA91N6n)[[code]](https://github.com/MIRALab-USTC/GNN-LMC)
 
 
 <a name="Linear-Model" />
 
 ## 2. Linear Model
+
+<p class="center">
+    <img src="img/SGAP.png" width="80%">
+    <br>
+    <em>Illustration of SGAP for Linear model</em>
+</p>
+
 ### Simple model without attention
 
 1. **Simplifying Graph Convolutional Networks** [ICML 2019] [[paper]](https://arxiv.org/abs/1902.07153) [[code]](https://github.com/Tiiiger/SGC)
@@ -102,6 +110,9 @@ To scale GNNs to extremely large graphs, existing works can be classified into t
 4. **Learning mlps on graphs: A unified view of effectiveness, robustness, and efficiency** [ICLR 2022] [[paper]](https://openreview.net/pdf?id=Cs3r5KLdoj)[[code]](https://github.com/meettyj/NOSMOG)
 5. **VQGraph: Graph Vector-Quantization for Bridging GNNs and MLPs** [ICLR 2024] [[paper]](https://arxiv.org/pdf/2308.02117.pdf)[[code]](https://github.com/YangLing0818/VQGraph)
 6. **Quantifying the Knowledge in GNNs for Reliable Distillation into MLPs** [ICML 2023] [[paper]](https://arxiv.org/pdf/2306.05628.pdf)[[code]](https://github.com/LirongWu/KRD)
+7. **Propagate & Distill: Towards Effective Graph Learners Using Propagation-Embracing MLPs** [[paper]](https://openreview.net/pdf?id=2A14hhZsnA) 
+
+<a name="Quantization"/>
 
 ## 4. Quantization
 1. **Learned low precision graph neural networks** [Arxiv 2009] [[paper]](https://arxiv.org/pdf/2009.09232.pdf)
